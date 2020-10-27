@@ -7,12 +7,18 @@
 </head>
 <body>
 <h1>首页</h1>
+<div shiro:notAuthenticated="">
+    <a th:href="@{/login}">登录</a>
+</div>
+<div shiro:Authenticated="">
+    <a th:href="@{/logout}">注销</a>
+</div>
 <p th:text="${msg}"></p>
 <hr/>
 
 <div shiro:hasPermission="user:add">
     <a th:href="@{/user/add}">add</a>
-</div> |
+</div>
 <div shiro:hasPermission="user:update">
     <a th:href="@{/user/update}">update</a>
 </div>
