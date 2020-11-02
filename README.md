@@ -64,7 +64,7 @@
 
        核心文件，META-INF/spring.factories
 
-       ![image-20200502131503955](README.assets/image-20200502131503955.png)
+       ![image-20200502131503955](README.assets/image-20200502131503955-1604334268612.png)
 
        
 
@@ -900,7 +900,7 @@
 
    官网：https://shiro.apache.org
 
-   ![image-20201019223100598](README.assets/image-20201019223100598.png)
+   ![image-20201019223100598](README.assets/image-20201019223100598-1604334268613.png)
 
    1. 导入依赖，
 
@@ -1287,4 +1287,275 @@
    }
    ```
 
+   #### 6.整合thymeleaf，完成注销
+   
+   依赖
+   
+   ```xml
+   <!--shiro-thymeleaf-->
+   <dependency>
+       <groupId>com.github.theborakompanioni</groupId>
+       <artifactId>thymeleaf-extras-shiro</artifactId>
+       <version>2.0.0</version>
+   </dependency>
+   ```
+   
+   `Controller`类的注销接口
+   
+   ```java
+   @RequestMapping("logout")
+   public String logout() {
+       Subject subject = SecurityUtils.getSubject();
+       subject.logout();
+       return  "index";
+   }
+   ```
+   
+   页面的简单实现
+   
+   ```html
+   <body>
+   <h1>首页</h1>
+   <div shiro:notAuthenticated="">
+       <a th:href="@{/login}">登录</a>
+   </div>
+   <div shiro:Authenticated="">
+       <a th:href="@{/logout}">注销</a>
+   </div>
+   <p th:text="${msg}"></p>
+   <hr/>
+   
+   <div shiro:hasPermission="user:add">
+       <a th:href="@{/user/add}">add</a>
+   </div>
+   <div shiro:hasPermission="user:update">
+       <a th:href="@{/user/update}">update</a>
+   </div>
+   
+   </body>
+   ```
+   
+   ## 整合Swagger
+   
+   * Swagger是RestfulApiwendang 在线文档自动生产工具=>Api文档与API定义东部更新
+   * 直接运行，可以在线测试API接口；
+   * 支持多种语言
+   
+   1. 引入pom依赖
+   
+      ```xml
+      <!--swagger-->
+      <dependency>
+          <groupId>io.springfox</groupId>
+          <artifactId>springfox-boot-starter</artifactId>
+          <version>3.0.0</version>
+      </dependency>
+      ```
+   
+   2. 编写配置类`SwaggerConfig`（记得添加注解），以及Controller层
+   
+      ```
+      @Configuration
+      @EnableSwagger2 //开启Swagger
+      public class SwaggerConfig {
+      }
+      ```
+   
+      至此就已经可以运行项目了，http://localhost:xxxx/swagger-ui/index.html
+   
+   3. 配置Swagger接口
+   
+      可以配置多个`Docket`，过滤不同的api接口，以达到不同的分组（设置不同的
+   
+      ```java
+      @Configuration
+      @EnableSwagger2 //开启Swagger
+      public class SwaggerConfig {
+      
+          @Bean
+          public Docket getDocket(Environment environment) {
+              //获取项目环境
+              Boolean enableFlag = false;
+              String[] activeProfiles = environment.getActiveProfiles();
+              for (String profile : activeProfiles) {
+                  if ("dev".equals(profile))  enableFlag=true;
+              }
+      
+              return new Docket(DocumentationType.OAS_30)
+                      .apiInfo(apiInfo())
+                      //是否启用swagger
+                      .enable(enableFlag) //根据当前运行环境决定是否开启
+                  	//分组组名
+                      .groupName("CK")
+                      .select()
+                      //RequestHandlerSelectors,配置要扫描接口的方式
+                      //  basePackage()指定要扫描的包
+                      //  any()都扫描
+                      //  none()都不扫描
+                      //  withClassAnnotation()扫描类上的注解
+                      //  withMethodAnnotation()扫描方法上的注解
+                      //          GetMapping()、PostMapper()
+                      .apis(RequestHandlerSelectors.withMethodAnnotation(GetMapping.class))
+                      //过滤xxx路径
+                      //  ant()路径
+      //                .paths(PathSelectors.ant("/"))
+                      .build();
+          }
+      
+          private ApiInfo apiInfo() {
+              Contact contact = new Contact("作者", "主页地址", "邮箱地址");
+              return new ApiInfo(
+                      "Api 文档",
+                      "Api 文档描述",
+                      "1.0",
+                      "https://space.bilibili.com/95256449/",
+                      contact,
+                      "Apache 2.0",
+                      "http://www.apache.org/licenses/LICENSE-2.0",
+                      new ArrayList());
+          }
+      
+      ```
+   
+   }
+   
+      ```
+      
+      可以对各层的类和方法做注解（Controller、Entity......）
+      
+      如Controller层
+      
+      ```java
+      /接口描述
+      @Api(tags = "用户相关")
+      @RestController
+      public class Controller {
+          @GetMapping(value = "/hello")
+          public String hello() {
+              return "hello";
+          }
+      
+          //只要接口中存在实体类，接口就会被扫描到swagger中
+          @ApiOperation("post测试")
+          @PostMapping("/user")
+          public User user(User user) {
+              return new User();
+          }
+      
+          //接口描述
+          @ApiOperation("Hello控制类")
+          @PostMapping("/hello")
+          public String hello2(@ApiParam("用户名") String username) {
+              return "index"+username;
+          }
+      }
+      ```
+   
+      如Entity层
+   
+      ```java
+      @ApiModel("用户实体类")
+      public class User {
+          @ApiModelProperty("用户名")
+          public String name;
+          @ApiModelProperty("密码")
+          public String password;
+      }
+      ```
+   
+      如此便可在页面方便的使用Swagger做测试了，http://localhost:8080/swagger-ui/
+   
+   
+   
+   ## 任务（多线程）
+   
+   ### 异步任务
+   
+   在启动类上加`@EnableAsync`注解，开启异步功能；
+   在需要异步的方法上加上`@Async`注解，当使用此方法是springboot既会自动使用异步方法去调用。
+   
+   ```java
+   //模拟一个线程延迟
+   @Async  //标识此此方法是异步的方法
+   public void hello() {
+       try {
+           Thread.sleep(3000);
+       } catch (InterruptedException e) {
+           e.printStackTrace();
+       }
+       System.out.println("----数据正在处理。。。。。。------");
+   }
+   ```
+   
+   ### 邮件任务
+   
+   1. 导入pom依赖
+   
+      ```xml
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-mail</artifactId>
+      </dependency>
+      ```
+   
+   2. 配置配置文件（用户名、密码（授权码）、主机等.....(QQ邮箱需要加密验证配置)
+   
+   3. 编写业务代码。设置标题、内容、收件人等
+   
+      ```java
+      @Test
+      void contextLoads() {
+          //一个简单邮件
+          SimpleMailMessage message = new SimpleMailMessage();
+          message.setSubject("通知");   //主题
+          message.setText("Thanks for you test!");    //内容
+          message.setTo("ckisaboy@qq.com");   //收件人
+          message.setFrom("ckisaboy@qq.com"); //发件人
+      
+          mailSender.send(message);
+      }
+      ```
+   
+   4. 可以使用复杂构造，去实现复杂的邮件内容。设置标题、内容（及格式）、附件、收件人等
+   
+      ```java
+      @Test
+      void contextLoads2() throws MessagingException {
+          //一个复杂邮件
+          MimeMessage mimeMessage = mailSender.createMimeMessage();
+      
+          //组装
+          MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+      
+          //正文
+          helper.setSubject("公告");
+          helper.setText("<p style='color:red'>Thanks for U look it!</p>");
+      
+          //附件
+          helper.addAttachment("1.jpg",new File("X:/img/1.jpg"));
+      
+          helper.setTo("ckisaboy@qq.com");   //收件人
+          helper.setFrom("ckisaboy@qq.com"); //发件人
+      
+          mailSender.send(mimeMessage);
+      }
+      ```
+   
+   ### 定时任务（timer)
+   
+   在启动类上加`@EnableScheduling`注解，开启定时功能；
+   
+   在需要异步的方法上加上`@AsyncSchedued(cron=xxx)`注解，标注此方法是定时任务，且定时器满足cron表达式
+   
+   *底层是实现了`TaskScheduler`、`TaskExcutor`这两个接口来实现定时（再底层使用了`Runable`接口）*
+   
+   ```java
+   TaskScheduler	//任务调度者
+   TaskExcutor		//任务执行者
+   
+   @EnableScheduledAutoConfig	//开启定时任务
+   @Scheduled(cron=xxx)	//标注此方法是定时任务
+   cron表达式
+   ```
+   
    
