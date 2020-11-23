@@ -64,7 +64,7 @@
 
        核心文件，META-INF/spring.factories
 
-       ![image-20200502131503955](README.assets/image-20200502131503955-1605886617872.png)
+       ![image-20200502131503955](README.assets/image-20200502131503955-1606143883205.png)
 
        
 
@@ -247,11 +247,11 @@
    日志级别trace、debug、info、warn、error；springboot默认是info级别，
    
    * 可以在配置文件中通过loging.level=xxx来控制日志输出级别；
-* 可以通过loging.file.path指定日志输出文件、甚至可以修改日志输出格式。
+   * 可以通过loging.file.path指定日志输出文件、甚至可以修改日志输出格式。
    * 也可以xml文件去配置（配置日志在指定环境输出）
-
    
-
+   
+   
    
    
    # SpringBoot Web开发
@@ -271,19 +271,19 @@
    > * 国际化
    
    ## 静态资源导入
-
+   
    WebMvcAutoCongifuration源码中的addResourceHandlers()方法
-
+   
    ```java
            public void addResourceHandlers(ResourceHandlerRegistry registry) {
                if (!this.resourceProperties.isAddMappings()) {
-                logger.debug("Default resource handling disabled");
+                   logger.debug("Default resource handling disabled");
                } else {
-                Duration cachePeriod = this.resourceProperties.getCache().getPeriod();
+                   Duration cachePeriod = this.resourceProperties.getCache().getPeriod();
                    CacheControl cacheControl = this.resourceProperties.getCache().getCachecontrol().toHttpCacheControl();
-                if (!registry.hasMappingForPattern("/webjars/**")) {
+                   if (!registry.hasMappingForPattern("/webjars/**")) {
                        this.customizeResourceHandlerRegistration(registry.addResourceHandler(new String[]{"/webjars/**"}).addResourceLocations(new String[]{"classpath:/META-INF/resources/webjars/"}).setCachePeriod(this.getSeconds(cachePeriod)).setCacheControl(cacheControl));
-                }
+                   }
    
                    String staticPathPattern = this.mvcProperties.getStaticPathPattern();
                    if (!registry.hasMappingForPattern(staticPathPattern)) {
@@ -292,34 +292,34 @@
    
                }
            }
-```
+   ```
    
-**总结：**在springboot中，我们可以使用一下方式处理静态资源
+   **总结：**在springboot中，我们可以使用一下方式处理静态资源
    
-1. webjars，访问localhost/8080/wejars/xxx
+   1. webjars，访问localhost/8080/wejars/xxx
    2. pulic、static、resources、/**，访问localhost/8080/xxx
       * 优先级：resources > static(默认) > public
    
    
-
+   
    ## 模板引擎（thymeleaf）
-
+   
    1. 导入thymeleaf依赖
    
       ```java
-           <!-- Thymeleaf Start -->
+              <!-- Thymeleaf Start -->
               <dependency>
-               <groupId>org.springframework.boot</groupId>
+                  <groupId>org.springframework.boot</groupId>
                   <artifactId>spring-boot-starter-thymeleaf</artifactId>
               </dependency>
               <!-- Thymeleaf End -->
-   ```
+      ```
    
-2. 将html页面放到temolates目录下即可
+   2. 将html页面放到temolates目录下即可
    
-   thymeleafProperties部分源码：
+      thymeleafProperties部分源码：
    
-   ```java
+      ```java
       	private String prefix = "classpath:/templates/";
           private String suffix = ".html";
       ```
@@ -328,43 +328,43 @@
    
       ```html
       <html xmlns:th="http://www.thymeleaf.org">
-   ```
+      ```
    
-   thymeleaf可以使用html的所有标签，使用方法：给标签添加‘th:元素名'，如：
+      thymeleaf可以使用html的所有标签，使用方法：给标签添加‘th:元素名'，如：
    
-   ```html
+      ```html
       <div th:text="${msg}"></div>
-   ```
+      ```
    
-
    
-### thymeleaf语法
    
-#### th属性
+   ### thymeleaf语法
    
-html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个。
+   #### th属性
+   
+   html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个。
     1.**th:text**  : 设置当前元素的文本内容，相同功能的还有**th:utext**，两者的区别在于前者不会转义html标签，后者会。
- 2.**th:value**  : 设置当前元素的value值，类似修改指定html标签属性的还有**th:src**,**th:href**。
+    2.**th:value**  : 设置当前元素的value值，类似修改指定html标签属性的还有**th:src**,**th:href**。
     3.**th:each**  : 遍历循环元素，和**th:text**或**th:value**一起使用。注意该属性修饰的标签位置，详细看后文。
- 4.**th:if**  : 条件判断，类似的还有**th:unless，th:switch，th:case**。
+    4.**th:if**  : 条件判断，类似的还有**th:unless，th:switch，th:case**。
     5.**th:insert** :  代码块引入，类似的还有**th:replace，th:include**，三者区别很大，若使用不恰当会破坏html结构，常用于公共代码块的提取复用。
- 6.**th:fragment**  :  定义代码块，方便被**th:insert**引用。
+    6.**th:fragment**  :  定义代码块，方便被**th:insert**引用。
     7.**th:object**  :  声明变量，一般和*{}一起配合使用，达到偷懒的效果。
-
+   
     8.**th:attr**  :  修改任意属性，实际开发中用的较少，因为有丰富的其他th属性帮忙。
-
+   
    #### 标准表达式语法
    
    变量表达式：``${...}``
-
+   
    链接表达式：``@{...}``
-
+   
    消息表达式：``#{...}``（国际化）
-
+   
    代码块表达式：``~{...}``
-
+   
    选择变量表达式：``*{...}``
-
+   
    ***这里不过多叙述，更多自行查阅***
    
    ## MVC配置原理和扩展
@@ -385,39 +385,39 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
    
    
    
-自定以一个视图解析器
+   自定以一个视图解析器
    
-```java
+   ```java
    //扩展springMVC
-@Configuration
+   @Configuration
    public class MyMvcConfig implements WebMvcConfigurer {
-
+   
        //自定一个自己的试图解析器
-    public static class MyViewResolver implements ViewResolver{
+       public static class MyViewResolver implements ViewResolver{
            @Override
-        public View resolveViewName(String s, Locale locale) throws Exception {
+           public View resolveViewName(String s, Locale locale) throws Exception {
                return null;
-        }
+           }
        }
-
+   
        //将自定义的视图解析器放到bean中
-   @Bean
+      @Bean
        public ViewResolver myViewResolver(){
-        return new MyViewResolver();
+           return new MyViewResolver();
        }
    }
    ```
-
    
-
+   
+   
    源码中，`DispatcherServlet`类的`doDispatch(request, response)`方法，所有请求和响应都会经过这里，此处会选择适合的视图解析器，打断点DeBug后会发现我们自定以的视图解析器已经注入到其中了。
-
    
-
+   
+   
    ### 消息转换
-
+   
    源码中，`WebMvcAutoConfiguration`类的`FormattingConversionService`控制了消息转换。而我们查看`WebMvcProperties`类的`dataFormat`属性，配置此属性(spring.mvc.data-format=xxx)可以修改默认的时间格式。
-
+   
    
    
    ## 项目实例
@@ -444,47 +444,47 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
          @Configuration
          public class MyLocaleResolver implements LocaleResolver {
              //解析请求
-          @Override
+             @Override
              public Locale resolveLocale(HttpServletRequest request) {
-              //解析请求中的语言参数
+                 //解析请求中的语言参数
                  String language = request.getParameter("language");
          
                  Locale locale = Locale.getDefault();    //  默认的
          
                  //如果请求连接的国际化语言参数为空
                  if (language!=null){
-                  //zh_CN||en_US
+                     //zh_CN||en_US
                      String[] split = language.split("_");
-                  //国家，地区
+                     //国家，地区
                      locale = new Locale(split[0],split[1]);
                  }
                  return locale;
-          }
+             }
          
-          @Override
+             @Override
              public void setLocale(HttpServletRequest request, HttpServletResponse response, Locale locale) {
-          }
+             }
          }
-      ```
-   
-   2. 记得将自己写的组件配置到spring容器中`@Bean`
-   
-      ```java
-         @Bean
-      public LocaleResolver localeResolver(){
-             return new MyLocaleResolver();
-      }
          ```
-
+   
+      2. 记得将自己写的组件配置到spring容器中`@Bean`
+   
+         ```java
+         @Bean
+         public LocaleResolver localeResolver(){
+             return new MyLocaleResolver();
+         }
+         ```
+   
    3. 配置文件，将国际化配置文件的位置配置好
-
+   
       ```java
       spring.messages.basename=i18n.login
       ```
    
+      
    
    
-
    
    ### 登录
    
@@ -505,9 +505,9 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
       return "redirect:/main.html";
       ```
    
-2. 写拦截器配置类（如：`MyLoginHandlerInterceptor`），实现HandlerInterceptor接口。在配置中实现：判断有无登录成功的session，有的通过拦截器，否则返回错误信息返回首页不予通过）
+   2. 写拦截器配置类（如：`MyLoginHandlerInterceptor`），实现HandlerInterceptor接口。在配置中实现：判断有无登录成功的session，有的通过拦截器，否则返回错误信息返回首页不予通过）
    
-   ```java
+      ```java
       @Configuration
       public class MyLoginHandlerInterceptor implements HandlerInterceptor {
           @Override
@@ -517,29 +517,29 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
               //登录成功之后会保存session
               Object loginUser = request.getSession().getAttribute("loginUser");
       
-           if (loginUser==null){   //用户未登录，重定向回主页
+              if (loginUser==null){   //用户未登录，重定向回主页
                   request.setAttribute("msg","没有权限，请先登录！");
-               request.getRequestDispatcher("/index.html").forward(request,response);
+                  request.getRequestDispatcher("/index.html").forward(request,response);
                   return false;
-           }else {
+              }else {
                   return true;
-           }
+              }
           }
-   }
+      }
       ```
-
+   
    3. 将拦截器组件配置到容器中，并配置拦截路径和不拦截路径
-
+   
       ```jav
-   //配置拦截器及拦截路径
+      //配置拦截器及拦截路径
       @Override
-   public void addInterceptors(InterceptorRegistry registry) {
+      public void addInterceptors(InterceptorRegistry registry) {
           registry.addInterceptor(new MyLoginHandlerInterceptor())
-               .addPathPatterns("/**")     //添加拦截的路径
+                  .addPathPatterns("/**")     //添加拦截的路径
                   .excludePathPatterns("/index.html","/","/user/login","/static/**");     //排除拦截的路径
-   }
+      }
       ```
-
+   
    
    
    ### 员工展示
@@ -547,129 +547,129 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
    1. 提取公共页面
    
       * **th:fragment="XXX" 定义组件**
-
+   
         `<nav th:fragment="sidebar"></nav>`
-
+   
       * **th:insert="~{XX页面::xx组件名}**
-
+   
         `<div th:insert="~{commons/nav::sidebar}"></div>`
-
+   
       * **th:insert="~{XX页面::xx组件名}(XXX)传递参数给组件**
-
+   
         `<div th:insert="~{commons/nav::sidebar(active='main.html')}"></div>`
-
+   
    2. 循环展示
-
+   
       **th:each="emp:${emps}**
-
+   
       ```
-   <tr th:each="emp:${emps}">
+      <tr th:each="emp:${emps}">
          <td th:text="${emp.getId()}"></td>
          <td>[[${emp.getLastName()}]]</td>
          <td th:text="${#dates.format(emp.getBirth(),'yyyy-MM-dd HH:mm:ss')}"></td>
-   </tr>
+      </tr>
       ```
-
+   
       *通过`#dates.format(emp.getBirth(),'yyyy-MM-dd HH:mm:ss')`来对日期做格式化
-
+   
    ### 添加员工
-
+   
    1. 设置添加按钮
-
+   
    2. 跳转至添加页面
-
+   
       * 新增添加页面（设置name)
-
+   
         **返回departments**
-
+   
       * 在页面中将departments遍历到下拉框中(value是dept的id)
-
+   
    3. 添加员工
-
+   
       * *重定向到列表页面*
-     * *redirect和forward可以在themleaf的视图解析器配置文件中做配置*
+        * *redirect和forward可以在themleaf的视图解析器配置文件中做配置*
       * 时间的格式，*需要在配置`spring.mvc.format.date=yyyy-MM-dd`，默认为`dd/MM/yyy`
-
+   
    4. 返回首页
-
+   
    ###  修改信息
-
+   
    1. 点击修改按钮
-
+   
       * 页面按钮携带员工的id
    
-     *注意链接跳转时参数携带方式*
+        *注意链接跳转时参数携带方式*
    
-2. 跳转至员工信息页面（edit.html)
+   2. 跳转至员工信息页面（edit.html)
    
-   ​		**根据id查询到员工页面返回**
+      ​		**根据id查询到员工页面返回**
    
-   ​		*注意需要将部门信息也返回*
+      ​		*注意需要将部门信息也返回*
    
-3. 填写好修改的信息后提交
+   3. 填写好修改的信息后提交
    
-   * 将员工id不可丢失，赋到隐藏域中
+      * 将员工id不可丢失，赋到隐藏域中
    
-4. 跳转回list页面
+   4. 跳转回list页面
    
-   ​		**保存，返回list页面**
+      ​		**保存，返回list页面**
    
    
-
+   
    ### 删除员工
-
+   
    1. 删除按钮，附带id
-   **根据ID底层删除**
+      **根据ID底层删除**
    
-2. 返回list页面
+   2. 返回list页面
    
-   ​	**重定向到列表**
+      ​	**重定向到列表**
    
-
    
-### 错误处理
    
-​	将错误页面（404.html，500.html）放入error文件夹下，springboot会自动定向
+   ### 错误处理
+   
+   ​	将错误页面（404.html，500.html）放入error文件夹下，springboot会自动定向
    
    
    
    ### 注销
    
-​	nav页面，点击注销按钮
+   ​	nav页面，点击注销按钮
       	 传入HttpSession，用`session.invalidate()`注销，然后重定向到登录页
-
+   
    
    
    ### 开发总结
-
+   
    #### 前端怎么写
-
+   
    * 使用模板（模板之家），现成、美观
-
+   
    * 使用框架：灵活。
-
+   
      需要了解框架的栅格系统、导航栏、侧边栏、表单。其中组件，自己组合拼接
-
+   
    #### 开发流程
    
    1. 设计前端的样子，确定所需数据
    2. 设计数据库##文件和图片的上传下载、富文本编辑
    3. 使前端能够独立运行，独立化工程
    4. 数据接口的对接：json、all in one
-5. 前后台联调测试
+   5. 前后台联调测试
    
-#### 其他必要的
+   #### 其他必要的
    
-1. 有一套自己熟悉的后台模板(x-admin)
+   1. 有一套自己熟悉的后台模板(x-admin)
    2. 前端界面，自己至少能通过前端框架，组合出一个网站页面(index、about、blog、post、user)
-3. 让这个网站能独立运行
+   3. 让这个网站能独立运行
    
-
+   
    
    # SpringBoot整合
-
+   
    ## 使用JDBC
-
+   
    1. 引入依赖（pom）,或创建项目时勾选即可
    
       ```xml
@@ -678,22 +678,22 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
           <artifactId>mysql-connector-java</artifactId>
       </dependency>
       ```
-
+   
    2. 配置配置文件（application.yml）。如用户名、密码、数据库、数据源等
-
+   
       配置为就可以获取数据源、连接等信息了。
-
+   
       *假如报市区错误，配置文件中加上时间参数*
-
+   
    3. 查看源码：
    
       * 能使用配置文件，则就就曾在XXXAutoConfig文件，即可查看配置的参数
       * xxxTemplate:SpringBoot已经配置好的模板bean，拿来即用，写了一些基本的CRUD
    
    4. 有了template后可以方便的使用CRUD了，如
-
+   
       ```java
-   @GetMapping("/userList")
+      @GetMapping("/userList")
       public List<Map<String, Object>> userList(){
           String sql = "select * from tb_user";
           List<Map<String, Object>> list_maps = jdbcTemplate.queryForList(sql);
@@ -703,13 +703,13 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
    
       *增和改也可以封装成Object对数据库操作（省略实体类）*
    
-## 整合Druid
+   ## 整合Druid
    
-1. 引入依赖，看源码
+   1. 引入依赖，看源码
    
-   ```xml
+      ```xml
       <dependency>
-       <groupId>com.alibaba</groupId>
+          <groupId>com.alibaba</groupId>
           <artifactId>druid</artifactId>
       </dependency>
       ```
@@ -717,15 +717,15 @@ html有的属性，Thymeleaf基本都有，而常用的属性大概有七八个�
    2. 配置配置文件（datasource-username、password、url、type、其他池的配置（mysql配置修改数据源类型时druid即可）），如
    
    ```java
-spring:
+   spring:
      datasource:
-    username: root
+       username: root
        password: root
-    url: jdbc:mysql://localhost:3306/mp?serverTimezone=GMT&useUnicode=true&characterEncoding=utf-8
+       url: jdbc:mysql://localhost:3306/mp?serverTimezone=GMT&useUnicode=true&characterEncoding=utf-8
        driver-class-name: com.mysql.cj.jdbc.Driver
        type: com.alibaba.druid.pool.DruidDataSource
    ```
-
+   
       *druid支持监控（支持filter.start、filter.log4j、filter.wall等日志）——引入log4j*
    
    3. 写`DruidConfig.class`配置druid
@@ -748,17 +748,17 @@ spring:
       * 然后通过Map.put设置参数以`bean.setInitParameters(xxx)`方式配置地址、、权限、用户名及密码等
       * *别忘了方法也需要注入到`@Bean`中*
    
-   ```java
+      ```java
       //因为SpringBoot 内置了servlet容器，所以没有web.xml,代替方法是ServletRegistrationBean
-   @Bean
+      @Bean
       public ServletRegistrationBean statViewServlet() {
-       ServletRegistrationBean<StatViewServlet> bean = new ServletRegistrationBean<>(new StatViewServlet(),"/druid/*");
+          ServletRegistrationBean<StatViewServlet> bean = new ServletRegistrationBean<>(new StatViewServlet(),"/druid/*");
       
-       //后台需要有人登录，账号密码设置
+          //后台需要有人登录，账号密码设置
           HashMap<String, String> initParameters = new HashMap<>();
           
           //添加配置
-       initParameters.put("loginUsername","admin");    //登录的key是固定的 loginUsername和loginPassword
+          initParameters.put("loginUsername","admin");    //登录的key是固定的 loginUsername和loginPassword
           initParameters.put("loginPassword","123456");
       
           //允许谁可以访问
@@ -776,37 +776,37 @@ spring:
       
    
       2）filter（过滤器）：获取serlet实例对象设置参数后注入Bean中(大致同上)
-
-      + 获取FilterRegistrationBean<Filter>的获取到bean实例
-   + 然后通过Map.put设置参数以`bean.setInitParameters(xxx)`方式配置过滤路径、排除路径等
-      + *别忘了方法也需要注入到`@Bean`中*
-
-      ```java
-   //filter
-      @Bean
-   public FilterRegistrationBean wevStatFilter() {
-          FilterRegistrationBean<Filter> bean = new FilterRegistrationBean<>();
-       bean.setFilter(new WebStatFilter());
-      
-       //过滤的请求
-          Map<String, String> initParameters = new HashMap<>();
    
-          //排除统计的路径
-       initParameters.put("exclusions","*.js,*.css,/druid/*");
+      + 获取FilterRegistrationBean<Filter>的获取到bean实例
+      + 然后通过Map.put设置参数以`bean.setInitParameters(xxx)`方式配置过滤路径、排除路径等
+      + *别忘了方法也需要注入到`@Bean`中*
+   
+      ```java
+      //filter
+      @Bean
+      public FilterRegistrationBean wevStatFilter() {
+          FilterRegistrationBean<Filter> bean = new FilterRegistrationBean<>();
+          bean.setFilter(new WebStatFilter());
       
-       bean.setInitParameters(initParameters);
+          //过滤的请求
+          Map<String, String> initParameters = new HashMap<>();
+      
+          //排除统计的路径
+          initParameters.put("exclusions","*.js,*.css,/druid/*");
+      
+          bean.setInitParameters(initParameters);
           return bean;
-   }
+      }
       ```
-
+   
    ## 整合MyBatis
    
-1. 引入依赖(pom)
+   1. 引入依赖(pom)
    
-2. 写实体类、dao层mapper（记得使用`@Mapper`注解，或在启动类使用`@MapperScan("XXX")`注解）
+   2. 写实体类、dao层mapper（记得使用`@Mapper`注解，或在启动类使用`@MapperScan("XXX")`注解）
    
    3. 写xml文件，编写sql，（头文件自行百度）
-
+   
       * 写完后需要在配置文件中指定xml文件位置，如：
    
         `mybatis.mapper-locations=classpath:mybatis/mapper/*.xml`
@@ -835,39 +835,39 @@ spring:
        //授权。规则：首页开放，功能页做权限校验
        http.authorizeRequests()
                .antMatchers("/").permitAll()
-            .antMatchers("/level1/**").hasRole("vip1")
+               .antMatchers("/level1/**").hasRole("vip1")
                .antMatchers("/level2/**").hasRole("vip2")
-            .antMatchers("/level3/**").hasRole("vip3");
+               .antMatchers("/level3/**").hasRole("vip3");
    
-    //没有权限的定向到登录页
+       //没有权限的定向到登录页
        //http.formLogin();
-    http.formLogin().loginPage("/toLogin") //也可以指定登出成功页
+       http.formLogin().loginPage("/toLogin") //也可以指定登出成功页
                .usernameParameter("user").passwordParameter("pwd") //指定登录表单参数
-            .loginProcessingUrl("/login");  //指定登录的url接口地址
+               .loginProcessingUrl("/login");  //指定登录的url接口地址
        
-    //关闭csrf功能
+       //关闭csrf功能
        http.csrf().disable();
-    
+       
        //注销，重定向到(/logout)
        //http.logout();
        http.logout().logoutSuccessUrl("/login"); //也可以指定登出成功页
        
        //记住我功能(cookie)
-    http.rememberMe()
+       http.rememberMe()
            .rememberMeParameter("remember");   //指定登录表单'记住我'参数，缺省值为'rememberMe'
-}
+   }
    ```
    
-
    
-#### web-记住我
    
-`http.rememberMe()`，SpringSecurity将信息存到了cookie中、
+   #### web-记住我
    
-#### web-注销
+   `http.rememberMe()`，SpringSecurity将信息存到了cookie中、
+   
+   #### web-注销
    
    接前节，使用`http.logout()`;可以选择（链式编程）可以清空coockie和session;还可以设置`http.logoutSuccessUrl`(注销后跳转的页面)
-
+   
    #### web-权限控制
    
    1导包，（springsecrit有整合themyleaf的包）
@@ -879,7 +879,7 @@ spring:
    #### web-定制首页
    
    通过`http.fromLogin().loginPage("/toLogin")`来指定跳转的登录页（注意与前端请求接口保持一致，可以继续拼接，用`loginProcessUrl("/xxx")`指定到正确接口）
-*注意：登录表单参数不一定与SpringSecurity的默认相同，可以指定前端的参数(username和password)*
+   *注意：登录表单参数不一定与SpringSecurity的默认相同，可以指定前端的参数(username和password)*
    
    remenberme同上
    
@@ -891,19 +891,19 @@ spring:
    ②正常从数据库读。为方便这里从内存读，使用auth.innerMameryAuthentization((可以加加加密方式passwordencoder)). withUser ("usernmae").password("password"). role ("xxx")(链式编程) 
    
    ```java
-//认证，以内存方式
+   //认证，以内存方式
    @Override
-public void configure(AuthenticationManagerBuilder auth) throws Exception {
+   public void configure(AuthenticationManagerBuilder auth) throws Exception {
        //一般是从数据库中读取数据，也可以自定义从内存中读取（如下）
-    auth.inMemoryAuthentication().passwordEncoder(new BCryptPasswordEncoder())  //编码加密
+       auth.inMemoryAuthentication().passwordEncoder(new BCryptPasswordEncoder())  //编码加密
                .withUser("admin").password(new BCryptPasswordEncoder().encode("123456")).roles("vip1","vip2")
-            .and()
+               .and()
                .withUser("root").password(new BCryptPasswordEncoder().encode("123456")).roles("vip1","vip2","vip3");
-}
+   }
    ```
-
+   
    ```java
-//认证,以JDBC方式
+   //认证,以JDBC方式
    @Override
    public void configure(AuthenticationManagerBuilder auth) throws Exception {
        auth.dbcentication()
@@ -911,18 +911,18 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
            .withDefaulttScaheme()
            .withUser(users.username("username")).password("password").roles("USER")
            .withUser(users.username("username")).password("password").roles("USER","ADMIN")
-}
+   }
    ```
-
    
-
+   
+   
    ## 整合 Shiro
-
+   
    ### shiro快速开始
    
    官网：https://shiro.apache.org
    
-   ![image-20201019223100598](README.assets/image-20201019223100598-1605886617873.png)
+   ![image-20201019223100598](README.assets/image-20201019223100598-1606143883205.png)
    
    1. 导入依赖，
    
@@ -1003,9 +1003,9 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
               //测试用户权限（粗粒度）
               if (currentUser.isPermitted("lightsaber:wield")) {
                   log.info("You may use a lightsaber ring.  Use it wisely.");
-           } else {
+              } else {
                   log.info("Sorry, lightsaber rings are for schwartz masters only.");
-           }
+              }
       
               //a (very powerful) Instance Level permission:
               //测试用户权限（细粒度）
@@ -1015,13 +1015,13 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
               } else {
                   log.info("Sorry, you aren't allowed to drive the 'eagle5' winnebago!");
               }
-   
+      
               //all done - log out!
-           //注销
+              //注销
               currentUser.logout();
-   
+      
               //系统结束
-           System.exit(0);
+              System.exit(0);
           }
       }
       ```
@@ -1029,11 +1029,11 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
       重要代码：
    
       ```java
-   Subject currentUser = SecurityUtils.getSubject(); //获取用户对象
+      Subject currentUser = SecurityUtils.getSubject(); //获取用户对象
       Session session = currentUser.getSession(); //通过当前用户获取session
-   currentUser.isAuthenticated() //验证用户是否被认证
+      currentUser.isAuthenticated() //验证用户是否被认证
       currentUser.getPrincipal() ////获取用户信息
-   currentUser.hasRole("schwartz") //测试用户角色
+      currentUser.hasRole("schwartz") //测试用户角色
       currentUser.isPermitted("lightsaber:wield") //测试用户权限
       currentUser.logout(); //注销
       ```
@@ -1063,9 +1063,9 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
        //ShrioFilterFactoryBean,具体实现看4
        @Bean
        public ShiroFilterFactoryBean getShiroFilterFactoryBean(DefaultWebSecurityManager manager) {
-        ShiroFilterFactoryBean bean = new ShiroFilterFactoryBean();
+           ShiroFilterFactoryBean bean = new ShiroFilterFactoryBean();
            //关联安全管理器
-        bean.setSecurityManager(manager);
+           bean.setSecurityManager(manager);
            return bean;
        }
    
@@ -1085,13 +1085,13 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
        }
    }
    ```
-
+   
    其中`UserRealm`类需继承`AuthorizingRealm`并实现其方法
-
+   
    ```java
-//自定义的Realm,具体实现看3
+   //自定义的Realm,具体实现看3
    public class UserRealm extends AuthorizingRealm {
-    //授权
+       //授权
        @Override
        protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principalCollection) {
            System.out.println("=========授权================");
@@ -1118,13 +1118,13 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
    //ShrioFilterFactoryBean
    @Bean
    public ShiroFilterFactoryBean getShiroFilterFactoryBean(DefaultWebSecurityManager manager) {
-    ShiroFilterFactoryBean bean = new ShiroFilterFactoryBean();
+       ShiroFilterFactoryBean bean = new ShiroFilterFactoryBean();
        //关联安全管理器
-    bean.setSecurityManager(manager);
+       bean.setSecurityManager(manager);
    
-    //关联shiro的内置过滤器
+       //关联shiro的内置过滤器
        /*
-        anno:   无需认证就可以访问
+           anno:   无需认证就可以访问
            authc:  必须认证才能访问
            user:   必须拥有 记住我 功能才能用
            perms:  拥有对某个资源的权限才能访问
@@ -1148,11 +1148,11 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
    用户登录，由`Controller`层经过登录认证。
    
    ```java
-@RequestMapping("/login")
+   @RequestMapping("/login")
    public String login(String username, String password, Model model) {
-    //获取当前用户
+       //获取当前用户
        Subject subject = SecurityUtils.getSubject();
-    //封装用户的登录数据
+       //封装用户的登录数据
        UsernamePasswordToken token = new UsernamePasswordToken(username, password);
    
        try {
@@ -1171,17 +1171,17 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
    }
    ```
    
-具体的认证操作在`Realm`中实现：
+   具体的认证操作在`Realm`中实现：
    
-接2的`UserRealm`类的`doGetAuthenticationInfo()`方法的具体实现：
+   接2的`UserRealm`类的`doGetAuthenticationInfo()`方法的具体实现：
    
-```java
+   ```java
    @Override
-protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+   protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
        System.out.println("===============认证==========");
-
+   
        //用户名、密码（实际上应来自数据库）
-    String name = "root";
+       String name = "root";
        String password = "123456";
    
        UsernamePasswordToken userToken = (UsernamePasswordToken) token;
@@ -1200,13 +1200,13 @@ protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) 
    
    1.添加依赖（jdbc、mysql、druid\log4j），并写配置（账户、密码、数据源、扫描包等），以及MVC层的代码
    
-2.改造Realm，是的该实体从数据库中获取用户名和密码（连接真是数据库）。从token中获取用户输入值，解析后到数据库中比对。
+   2.改造Realm，是的该实体从数据库中获取用户名和密码（连接真是数据库）。从token中获取用户输入值，解析后到数据库中比对。
    
-​	接上，`UserRealm`类的`AuthenticationInfo()`认证方法：
+   ​	接上，`UserRealm`类的`AuthenticationInfo()`认证方法：
    
-```java
+   ```java
    @Override
-protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+   protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
        System.out.println("===============认证==========");
        UsernamePasswordToken userToken = (UsernamePasswordToken) token;
    
@@ -1240,9 +1240,9 @@ protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) 
        //关联shiro的内置过滤器
        /*
            anno:   无需认证就可以访问
-        authc:  必须认证才能访问
+           authc:  必须认证才能访问
            user:   必须拥有 记住我 功能才能用
-        perms:  拥有对某个资源的权限才能访问
+           perms:  拥有对某个资源的权限才能访问
            role：   拥有某个角色权限才能访问
         */
        //拦截，没登录跳到登录页面
@@ -1286,7 +1286,7 @@ protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) 
            //设置当前用户权限
            info.addStringPermission(user.getPerms());
    
-        return info;
+           return info;
        }
    
        
@@ -1647,8 +1647,6 @@ protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) 
    
    
    
-   
-   
    ## 整合RabbitMQ
    
    ### 概述
@@ -1666,3 +1664,308 @@ protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) 
    3. 然后就可以生成消息和消费消息了
    
    ### 整合RabbitMQ
+   
+   1. 引入依赖（pom）,或创建项目时勾选即可
+   
+      ```xml
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-amqp</artifactId>
+      </dependency>
+      <dependency>
+          <groupId>org.springframework.amqp</groupId>
+          <artifactId>spring-rabbit-test</artifactId>
+          <scope>test</scope>
+       </dependency>
+      ```
+   
+   2. 编写MQ相关配置，如主机地址、用户名和密码，端口默认是5672
+   
+      ```properties
+      spring.rabbitmq.host=localhost
+      spring.rabbitmq.username=guest
+      spring.rabbitmq.password=guest
+      ```
+   
+   3. 使用自动注入一个`RabbitTemplate`实例来对MQ操作（可以类比JDBCTeamplate）
+   
+   4. 发送消息
+   
+      1. 以direct(单播)的方式发送消息
+   
+         ```java
+         @Autowired
+         RabbitTemplate rabbitTemplate;
+         
+         /**
+          * 1.diret单播（点对点）
+          */
+         @Test
+         void directTest() {
+             //message需要自己构造，定义消息体内容和消息头
+             //rabbitTemplate.convertAndSend(exchange, routerKey, message);
+         
+             //object为默认消息体，传入要发送的对象，自动序列化发送个rabbitmq
+             //rabbitTemplate.convertAndSend(exchange, routerKey, message);
+         
+             Map<String, Object> map = new HashMap<>();
+             map.put("msg", "消息");
+             map.put("data", Arrays.asList("hello", 123, "world", true));
+             rabbitTemplate.convertAndSend("exchange.direct", "bilibili.news", map);
+         
+         }
+         ```
+   
+      2. 以fonout(广播)的凡是发送消息
+   
+         *可以修改默认序列化的方式*
+   
+         ```java
+         @Autowired
+         RabbitTemplate rabbitTemplate;
+         
+         /**
+          * 2fonout广播
+          */
+         @Test
+         void fonout广播Test() {
+             rabbitTemplate.convertAndSend("exchange.direct", "bilibili.news", new User("YBM", "委员长"));
+         }
+         ```
+   
+      3. 
+   
+      4. 
+   
+   5. 接收消息
+   
+      ```java
+      @Test
+      void receive() {
+          Object o = rabbitTemplate.receiveAndConvert("bilibili.news");
+          System.out.println(o.getClass());
+          System.out.println(o);
+      }
+      ```
+   
+      可以修改AMQP的一些默认设置如下，（记得注入到**Bean**中如）
+   
+      ```java
+      @Configuration
+      public class MyAMQPConfig {
+          /** 替换AMQP默认的序列化方式为json */
+          @Bean
+          public MessageConverter messageConverter() {
+              return new Jackson2JsonMessageConverter();
+          }
+      }
+      ```
+   
+   6. 监听消息队列
+   
+      不仅可以接收消息，还可以对消息队列进行监听（基于注解）
+   
+      在启动类中使用`@EnableRabbit`，在方法上使用`@RabbitListener(queues = "XXX")`，如
+   
+      ```java
+      @Service
+      public class UserSerice {
+          @RabbitListener(queues = "bilibili.news")
+          public void receive(User user){
+              System.out.println("接收到消息user：" + user);
+          }
+      
+          @RabbitListener(queues = "bilibili")
+          public void receive(Message message){
+              //消息头
+              System.out.println("message.getMessageProperties() = " + message.getMessageProperties());
+              //消息体
+              System.out.println("message.getBody() = " + message.getBody());
+          }
+      }
+      ```
+   
+   7. 通过amqpAdmin管理amqp
+   
+      通过AmqpAdmin实例进行管理
+   
+      ```java
+      @SpringBootTest
+      class Springboot11AmqpApplicationTests {
+          @Autowired
+          AmqpAdmin amqpAdmin;
+      
+          @Test
+          void createExchange() {
+              //创建exchange
+              amqpAdmin.declareExchange(new DirectExchange("amqpadmin.exchange"));
+      
+              //创建消息队列
+              amqpAdmin.declareQueue(new Queue("amqpadmin.queue", true));
+      
+              //创建绑定规则
+              amqpAdmin.declareBinding(new Binding(
+                      "amqpadmin.queue",  //地址
+                      Binding.DestinationType.QUEUE,  //消息队列
+                      "amqpadmin.exchange",   //交换器
+                      "amqp.binding",     //路由键
+                      null));
+          }
+      }
+      ```
+   
+   
+   
+   ## 整合Dubbo(Zookeeper)
+   
+   ![Dubbo-RPC](README.assets/dubbo-architecture-roadmap.jpg)
+   
+   架构
+   
+   ![Dubbo-架构](README.assets/20180610115731445)
+   
+   1. 注册中心(Register)。下载安装zookeeper并启动，即启动注册中心。可以是远程主机也可以是本地，默认使用2181端口。
+   
+   2. 提供者(provider)。提供者需要将自己提供的服务注册到注册中心(zookeeper)。
+   
+      1. 新建提供者项目，引入dubbo、zookeeper和zkclient相关依赖
+   
+         ```xml
+         <!--dubbo-->
+         		<dependency>
+         			<groupId>org.apache.dubbo</groupId>
+         			<artifactId>dubbo-spring-boot-starter</artifactId>
+         			<version>2.7.7</version>
+         		</dependency>
+         		<dependency>
+         			<groupId>org.apache.curator</groupId>
+         			<artifactId>curator-framework</artifactId>
+         			<version>4.0.1</version>
+         		</dependency>
+         		<dependency>
+         			<groupId>org.apache.curator</groupId>
+         			<artifactId>curator-recipes</artifactId>
+         			<version>2.8.0</version>
+         		</dependency>
+         
+         		<!--zookeeper-->
+         		<dependency>
+         			<groupId>org.apache.zookeeper</groupId>
+         			<artifactId>zookeeper</artifactId>
+         			<version>3.4.10</version>
+         			<exclusions>
+         				<exclusion>
+         					<groupId>org.slf4j</groupId>
+         					<artifactId>slf4j-log4j12</artifactId>
+         				</exclusion>
+         				<exclusion>
+         					<groupId>log4j</groupId>
+         					<artifactId>log4j</artifactId>
+         				</exclusion>
+         			</exclusions>
+         		</dependency>
+         		<!--zookeeper客户端
+         			日志冲突，排除日志
+         		-->
+         		<dependency>
+         			<groupId>com.101tec</groupId>
+         			<artifactId>zkclient</artifactId>
+         			<version>0.11</version>
+         			<exclusions>
+         				<exclusion>
+         					<groupId>org.slf4j</groupId>
+         					<artifactId>slf4j-log4j12</artifactId>
+         				</exclusion>
+         			</exclusions>
+         		</dependency>
+         ```
+   
+      2. 编写配置文件，配置服务应用名、注册中心地址、dubbo要扫描等信息
+   
+         ```properties
+         # 服务应用名
+         dubbo.application.name=provider-server
+         # 注册中心地址
+         dubbo.registry.address=zookeeper://localhost:2181
+         # 注册扫描的包
+         dubbo.scan.base-packages=com.bilibili.tickt.service
+         ```
+   
+      3. 在需要发布的服务的类上使用`@DubboService`注解，运行时就会将服务发布到注册中心
+   
+         *务必写服务的接口，消费者需要通过接口来调用服务*
+   
+         ```java
+         @DubboService   //发布到注册中心
+         public class TicketServiceImpl implements TicketService {
+             /** 提供票的服务 */
+             @Override
+             public String getTicket() {
+                 return "《TENET》";
+             }
+         }
+         ```
+   
+      4. 
+   
+      5. 
+   
+   3. 消费者(consumer)。消费者向注册中心获取到服务地址并到此地址获取提供者提供的服务。
+   
+      1. 新建消费者项目，引入dubbo、zookeeper和zkclient相关依赖（同提供者）
+   
+      2. 编写配置文件
+   
+         ```properties
+         # 服务应用名
+         dubbo.application.name=consumer-server
+         # 注册中心地址
+         dubbo.registry.address=zookeeper://localhost:2181
+         ```
+   
+      3. 消费者调用的提供者提供的服务
+   
+         1. 写（复制）提供者服务的抽象接口
+   
+            ```java
+            public interface TicketService {
+                public String getTicket();
+            }
+            ```
+   
+         2. 编写消费者的引用接口
+   
+            ```java
+            @Service
+            public class UserService {
+                @DubboReference //声明提供者的服务
+                TicketService ticketService;
+            
+                public void hello() {
+                    String ticket = ticketService.getTicket();
+                    System.out.println("买了票了，"+ticket);
+                }
+            }
+            ```
+   
+      4. 测试
+   
+         ```java
+         @Autowired
+         UserService userService;
+         
+         @Test
+         void contextLoads() {
+             userService.hello();
+         }
+         ```
+   
+         结果
+   
+         ```java
+         买了票了，《TENET》
+         ```
+   
+         
+   
+   
