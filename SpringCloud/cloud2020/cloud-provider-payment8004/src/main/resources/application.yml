@@ -1,0 +1,10 @@
+server:
+  port: 8004
+
+spring:
+  application:
+    # \u670D\u52A1\u522B\u540D---\u6CE8\u518Czookeeper\u5230\u6CE8\u518C\u4E2D\u5FC3\u7684\u540D\u79F0
+    name: cloud-provider-payment
+  cloud:
+    zookeeper:
+      connect-string: localhost:2181
