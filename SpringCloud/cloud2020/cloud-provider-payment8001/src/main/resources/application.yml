@@ -1,10 +1,10 @@
 server:
-  port: 8002
+  port: 8001
+#  port: 8002
 
 spring:
   application:
     name: cloud-payment-service
-
   datasource:
     # 当前数据源操作类型
     type: com.alibaba.druid.pool.DruidDataSource
@@ -13,6 +13,13 @@ spring:
     url: jdbc:mysql://localhost:3306/mp?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=GMT%2B8
     username: root
     password: root
+    # zipkin/sleuth链路跟踪
+    zipkin:
+      base-url: http://localhost:9411
+    sleuth:
+      sampler:
+        # 采样值介于0到1之间,1表示全部采集
+        probability: 1
 
 eureka:
   client:
@@ -25,7 +32,8 @@ eureka:
       defaultZone: http://eureka7001.com:7001/eureka,http://eureka7002.com:7002/eureka    # 集群版
   instance:
     # 主机名称，服务名修改
-    instance-id: payment8002
+    instance-id: payment8001
+#    instance-id: payment8002
     # 访问路径可以显示ip地址
     prefer-ip-address: true
     # 通过下面的命令控制客户端发送心跳包的时间（默认30秒）
