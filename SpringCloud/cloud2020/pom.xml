@@ -41,9 +41,12 @@
         <module>cloudalibaba-sentinel-service8401</module>
         <module>cloudalibaba-provider-payment9003</module>
         <module>cloudalibaba-consumer-nacos-order84</module>
+<<<<<<< HEAD
         <module>seata-order-service2001</module>
         <module>seata-storage-service2002</module>
         <module>seata-account-service2003</module>
+=======
+>>>>>>> b2a17aa5b6a7cb7f27993f063d15a006d33855d1
 
 
         <!--config-->

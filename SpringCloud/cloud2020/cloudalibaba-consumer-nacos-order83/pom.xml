@@ -17,8 +17,13 @@
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
         </dependency>
         <dependency>
+<<<<<<< HEAD
             <groupId>com.bilibili.springcloud</groupId>
             <artifactId>cloud-api-commons</artifactId>
+=======
+            <groupId>com.atguigu.springcloud</groupId>
+            <artifactId>cloud-api-common</artifactId>
+>>>>>>> b2a17aa5b6a7cb7f27993f063d15a006d33855d1
             <version>${project.version}</version>
         </dependency>
         <dependency>
