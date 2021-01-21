@@ -6,7 +6,6 @@
       <list>
         <option value="$PROJECT_DIR$/cloud-provider-pament8004/pom.xml" />
         <option value="$PROJECT_DIR$/pom.xml" />
-        <option value="$PROJECT_DIR$/cloud-consumerzk-order80/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
