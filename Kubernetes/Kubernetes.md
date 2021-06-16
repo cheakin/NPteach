@@ -1959,6 +1959,8 @@ kubectl get pods
 
 ```
 kubectl expose deployment web --port=80 --target-port=80 --type:NodePort
+#查看
+kubectl get s
 ```
 
 #### 部署 ingress controller
