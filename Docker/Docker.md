@@ -554,7 +554,7 @@ services:
       replicas: 3
 ```
 
-##  
+
 
 ## Docker Secret
 
@@ -570,14 +570,6 @@ services:
 
 
 
-##  
-
-##  
-
-##  
-
-##  
-
 ## 其他
 
 ### [Docker容器启用Spring Profiles](https://segmentfault.com/a/1190000011367595)
@@ -585,3 +577,21 @@ services:
 https://segmentfault.com/a/1190000011367595
 
 https://www.cnblogs.com/woshimrf/p/springboot-docker.html
+
+### Docker中的容器与宿主机共享网络的方式
+
+1. docker在创建时就会在宿主机上创建一张虚拟网卡，docker中的容器都会使用这张虚拟网考。所以，在运行容器时，配置住宿主机的ip未此即可（一般是x.x.x.1）
+2. 将容器的网络模式使用host就可以将容器和宿主机共享网络了。网络模式有host、bridge、none。
+
+### docker设置容器重启方式
+
+`docker update redis --restart=alwasys`
+
+|                |                                                              |
+| -------------- | ------------------------------------------------------------ |
+| no             | 默认策略，在容器退出时不重启容器                             |
+| on-failure     | 在容器非正常退出时（退出状态非0），才会重启容器              |
+| on-failure:3   | 在容器非正常退出时重启容器，最多重启3次                      |
+| always         | 在容器退出时总是重启容器                                     |
+| unless-stopped | 在容器退出时总是重启容器，但是不考虑在Docker守护进程启动时就已经停止了的容器 |
+
