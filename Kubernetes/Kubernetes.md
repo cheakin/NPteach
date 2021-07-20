@@ -3355,11 +3355,17 @@ docker images -qa|xargs docker rmi -f	# 删除容器及镜像
 
 
 
-
-
-
-
 ## 其他
 
 `journalctl -u kubelet -n 1000`	#查看节点日志
+
+
+
+
+
+## 参考
+
+> [k8s教程由浅入深-尚硅谷](https://www.bilibili.com/video/BV1GT4y1A756)
+>
+> [k8s教程由浅入深-尚硅谷(笔记)](https://gitee.com/moxi159753/LearningNotes/tree/master/K8S#/moxi159753/LearningNotes/blob/master/K8S/8_Kubernetes%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AFPod/README.md)
 

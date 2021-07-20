@@ -15,6 +15,12 @@
 
 
 
+## swagger的json路径
+
+`localhost:8086/v2/api-docs?group=1.x`
+
+
+
 
 
 

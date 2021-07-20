@@ -595,3 +595,10 @@ https://www.cnblogs.com/woshimrf/p/springboot-docker.html
 | always         | 在容器退出时总是重启容器                                     |
 | unless-stopped | 在容器退出时总是重启容器，但是不考虑在Docker守护进程启动时就已经停止了的容器 |
 
+
+
+## docker远程连接
+
+windows下开启了远程连接且已打开端口，但还是无法连接，可以尝试管理员cmd执行下面的命令（your-public-ip就是你本机的IP地址）
+
+`netsh interface portproxy add v4tov4 listenport=2375 connectaddress=127.0.0.1 connectport=2375 listenaddress=<your-public-ip> protocol=tcp`
