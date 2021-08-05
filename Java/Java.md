@@ -25,3 +25,42 @@
 
 
 
+## Java使用新线程执行命令，waitFor()一直等待，线程阻塞
+
+在执行命令的过程中可能又使用了新线程，可能导致第二个线程报错后停止，而第一个线程一直处于等待状态而阻塞。所以应该使用流去获取线程的内容，知道没有内容了就关闭流然后再结束，不应该仅仅使用waitFor()去判断。
+
+```java
+String s;  
+Process process = Runtime.getRuntime().exec("cmd /c dir \\windows");  
+BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream());  
+while((s=bufferedReader.readLine()) != null)  
+System.out.println(s);  
+process.waitfor();  
+```
+
+> 参考:[waitFor（）一直等待，线程阻塞问题_灰色年华-CSDN博客_waitfor](https://blog.csdn.net/barry_hui/article/details/69261616)
+
+
+
+## 先执行try，再执行finally，再执行try的return
+
+> [JAVA中 try - finally 与return的爱恨情仇_nO0b-CSDN博客](https://blog.csdn.net/q5706503/article/details/84543406)
+
+
+
+
+
+# 用 response 做文件下载, 图片预览
+
+> [springboot| 使用 response 做文件下载, 图片预览 - douniwan 的回帖 - 链滴 (ld246.com)](https://ld246.com/article/1573812977277/comment/1573818095346)
+
+
+
+
+
+## lombok注解
+
+>[lombok注解介绍_sunsfan的博客-CSDN博客_lombok注解](https://blog.csdn.net/sunsfan/article/details/53542374)
+>
+>[Lombok常用注解 - 草木物语 - 博客园 (cnblogs.com)](https://www.cnblogs.com/ooo0/p/12448096.html)
+
