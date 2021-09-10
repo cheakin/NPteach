@@ -13,6 +13,13 @@
 
 
 
+## @RequestParam接收application/json
+
+@RequestParam --->  application/x-www-form-urlencoded
+@RequestBody --->  application/json
+
+> https://blog.csdn.net/qq_40470612/article/details/104225419
+
 
 
 ## swagger的json路径
@@ -50,7 +57,7 @@ process.waitfor();
 
 
 
-# 用 response 做文件下载, 图片预览
+## 用 response 做文件下载, 图片预览
 
 > [springboot| 使用 response 做文件下载, 图片预览 - douniwan 的回帖 - 链滴 (ld246.com)](https://ld246.com/article/1573812977277/comment/1573818095346)
 
@@ -63,4 +70,14 @@ process.waitfor();
 >[lombok注解介绍_sunsfan的博客-CSDN博客_lombok注解](https://blog.csdn.net/sunsfan/article/details/53542374)
 >
 >[Lombok常用注解 - 草木物语 - 博客园 (cnblogs.com)](https://www.cnblogs.com/ooo0/p/12448096.html)
+
+
+
+
+
+## @Resource和@Autowired
+
+@Resource是JAVA自己的注解，只可以根据名称自动注入
+
+@Autowired是Spring的注解，可更具类型和名称自动注入
 

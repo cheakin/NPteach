@@ -277,3 +277,26 @@
 >3. [java实现mysql增量备份_MySQL备份案例_weixin_42204930的博客-CSDN博客](https://blog.csdn.net/weixin_42204930/article/details/112082353)
 >4. [【MySQL】全量+增量的备份/恢复 - wwcom123 - 博客园 (cnblogs.com)](https://www.cnblogs.com/wwcom123/p/10920678.html)
 
+
+
+
+
+# 服务器中修改过配置文件(my.ini)后就无法启动
+
+### 原因不明
+
+### 解决
+
+在本机中修改配置，然后将修改后的配置文件放到服务器中对应的位置，就可以了！
+
+
+
+
+
+# 设置数据库可以远程访问
+
+```shell
+GRANT ALL PRIVILEGES ON *.* TO ‘root’@’%’IDENTIFIED BY ‘sybase’ WITH GRANT OPTION;	#任意IP可连接
+FLUSH PRIVILEGES;	#刷新
+```
+

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="8fb62316-d2c1-4f2c-a795-59423d76e164" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="new-activiti-diagram.bpmn20" />
+        <option value="Class" />
+        <option value="BPMN 2.0 XML" />
+        <option value="new-flowable-diagram.bpmn20" />
+      </list>
+    </option>
+  </component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="userSettingsFile" value="C:\Users\CK\.m2\settings.xml" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectId" id="1ovuhDyaBh4wJbQJrKUII19VnCn" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="last_directory_selection" value="$PROJECT_DIR$/activiti01/src/main/java/com/itheima/demo" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/activiti01/src/main/resources/bpmn" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="nodejs_package_manager_path" value="npm" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+  </component>
+  <component name="RebelAgentSelection">
+    <selection>jr</selection>
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\CK\activiti\activiti01\src\main\resources\bpmn" />
+    </key>
+  </component>
+  <component name="RunManager" selected="JUnit.TestAssigneeUel.startAssigneeUel">
+    <configuration default="true" type="ArquillianJUnit" factoryName="" nameIsGenerated="true">
+      <option name="arquillianRunConfiguration">
+        <value>
+          <option name="containerStateName" value="" />
+        </value>
+      </option>
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestAssigneeUel.startAssigneeUel" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="activiti01" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.itheima.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.itheima.test" />
+      <option name="MAIN_CLASS_NAME" value="com.itheima.test.TestAssigneeUel" />
+      <option name="METHOD_NAME" value="startAssigneeUel" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestAssigneeUel.testDeployment" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="activiti01" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.itheima.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.itheima.test" />
+      <option name="MAIN_CLASS_NAME" value="com.itheima.test.TestAssigneeUel" />
+      <option name="METHOD_NAME" value="testDeployment" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestVaribles1_start.completTask" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="activiti01" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.itheima.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.itheima.test" />
+      <option name="MAIN_CLASS_NAME" value="com.itheima.test.TestVaribles1_start" />
+      <option name="METHOD_NAME" value="completTask" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestVaribles1_start.testDeployment" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="activiti01" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.itheima.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.itheima.test" />
+      <option name="MAIN_CLASS_NAME" value="com.itheima.test.TestVaribles1_start" />
+      <option name="METHOD_NAME" value="testDeployment" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestVaribles1_start.testStartProcess" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="activiti01" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.itheima.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="com.itheima.test" />
+      <option name="MAIN_CLASS_NAME" value="com.itheima.test.TestVaribles1_start" />
+      <option name="METHOD_NAME" value="testStartProcess" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ActivitiSpringDemoApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+      <module name="activitiSpringDemo" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.itheima.ActivitiSpringDemoApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ActivitiSpringbootApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+      <module name="activitISpringbootDemo" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.itheima.ActivitiSpringbootApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.TestAssigneeUel.startAssigneeUel" />
+        <item itemvalue="JUnit.TestAssigneeUel.testDeployment" />
+        <item itemvalue="JUnit.TestVaribles1_start.completTask" />
+        <item itemvalue="JUnit.TestVaribles1_start.testStartProcess" />
+        <item itemvalue="JUnit.TestVaribles1_start.testDeployment" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="8fb62316-d2c1-4f2c-a795-59423d76e164" name="Default Changelist" comment="" />
+      <created>1614179504194</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1614179504194</updated>
+      <workItem from="1614179505393" duration="2158000" />
+      <workItem from="1614213284111" duration="2159000" />
+      <workItem from="1614229817341" duration="2765000" />
+      <workItem from="1614261440402" duration="914000" />
+      <workItem from="1614262376959" duration="59000" />
+      <workItem from="1614262450760" duration="904000" />
+      <workItem from="1614263380235" duration="239000" />
+      <workItem from="1614263636479" duration="1602000" />
+      <workItem from="1614265264990" duration="30104000" />
+      <workItem from="1614447337635" duration="7000" />
+      <workItem from="1614482053389" duration="17991000" />
+      <workItem from="1614513417650" duration="12147000" />
+      <workItem from="1614560160660" duration="3029000" />
+      <workItem from="1614611036349" duration="11250000" />
+      <workItem from="1614819397933" duration="6000" />
+      <workItem from="1615097604252" duration="405000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XPathView.XPathProjectComponent">
+    <history />
+    <find-history />
+  </component>
+</project>
