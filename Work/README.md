@@ -48,3 +48,30 @@
 4. 启动
 
    略
+
+
+
+
+
+## Spring中的切面
+
+### 拦截器和过滤器执行顺序：
+
+ 1）.Filter.init();
+ 2）.Filter.doFilter(); before doFilter
+ 3）.HandlerInterceptor.preHandle();
+ 4）.Controller方法执行
+ 5）.HandlerInterceptor.postHandle();
+ 6）.DispatcherServlet视图渲染
+ 7）.HandlerInterceptor.afterCompletion();
+ 8）.Filter.doFilter(); after doFilter
+ 9）.Filter.destroy();
+
+### 示意图
+
+![image-20210916101902441](C:\Users\Miittech\AppData\Roaming\Typora\typora-user-images\image-20210916101902441.png)
+
+![image-20210916101851184](C:\Users\Miittech\AppData\Roaming\Typora\typora-user-images\image-20210916101851184.png)
+
+另外，Filter与Interceptor相比。Filter使用的是ServerletRequest，而Interceptor使用的是HttpServerletRequest。HttpServerletRequest继承于ServerletRequest，ServerletRequest比HttpServerletRequest少了请求头和session，在使用身份校验功能时需要留意
+

@@ -290,6 +290,8 @@ docker network ls  #产看docker的网络配置
 
 docker network inspect redis-net  #查看指定网络配置的详细信息
 
+docker network rm XXX # 删除指定网络配置
+
 
 
 #### 网络模式：

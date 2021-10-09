@@ -81,3 +81,13 @@ process.waitfor();
 
 @Autowired是Spring的注解，可更具类型和名称自动注入
 
+
+
+
+
+# java.lang.IllegalStateException: Cannot call sendError() after the response has been committed
+
+在文件下载时流未正确关闭
+
+> [轻松解决java.lang.IllegalStateException: Cannot call sendError() after the response has been committed！_Melo_FengZhi的博客-CSDN博客](https://blog.csdn.net/Melo_FengZhi/article/details/111408177)
+
