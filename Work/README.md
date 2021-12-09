@@ -75,3 +75,21 @@
 
 另外，Filter与Interceptor相比。Filter使用的是ServerletRequest，而Interceptor使用的是HttpServerletRequest。HttpServerletRequest继承于ServerletRequest，ServerletRequest比HttpServerletRequest少了请求头和session，在使用身份校验功能时需要留意
 
+
+
+## bat脚本
+
+可以使用`%~dp0`替换`cd`来获取（切换）目录
+
+>  参考：[win7/10中以管理员身份运行bat脚本时，获取当前文件所在目录_zzy7075的专栏-CSDN博客](https://blog.csdn.net/zzy7075/article/details/83269923)
+
+
+
+
+
+## java 实现验证
+
+使用`easy-captcha`包
+
+> 参考
+

@@ -85,9 +85,91 @@ process.waitfor();
 
 
 
-# java.lang.IllegalStateException: Cannot call sendError() after the response has been committed
+## java.lang.IllegalStateException: Cannot call sendError() after the response has been committed
 
 在文件下载时流未正确关闭
 
 > [轻松解决java.lang.IllegalStateException: Cannot call sendError() after the response has been committed！_Melo_FengZhi的博客-CSDN博客](https://blog.csdn.net/Melo_FengZhi/article/details/111408177)
+
+
+
+
+
+## 解决跨域
+
+### 解决
+
+1. 重写使用SpringBoot的配置
+
+   ```java
+   @Configuration
+   public class CorsConfig implements WebMvcConfigurer {
+       @Override
+       public void addCorsMappings(CorsRegistry registry) {
+           registry.addMapping("/**")//项目中的所有接口都支持跨域
+                   .allowedOrigins("*")//所有地址都可以访问，也可以配置具体地址(SpringBoot2.4需要替换为)
+                   .allowCredentials(true)
+                   .allowedMethods("*")//"GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"
+                   .maxAge(3600);// 跨域允许时间
+       }
+   }
+   ```
+
+   注意：SpringBoot 2.4以后启动会报错，将`.allowedOrigins`替换成`.allowedOriginPatterns`即可
+
+   
+
+2. 使用过滤器
+
+   ```java
+   @Slf4j
+   @Component
+   public class CorsFilter implements Filter {
+       @Override
+       public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+           HttpServletResponse response = (HttpServletResponse)servletResponse;
+           response.setHeader("Access-Control-Allow-Origin", "*");
+           response.setHeader("Access-Control-Allow-Methods", "POST, PUT, GET, OPTIONS, DELETE");
+           response.setHeader("Access-Control-Max-Age", "3600");
+           response.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, client_id, uuid, Authorization");
+           response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+           response.setHeader("Pragma", "no-cache");
+           filterChain.doFilter(servletRequest,response);
+       }
+   }
+   ```
+
+
+
+### 测试页面
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>天地图</title>
+    <script type="text/javascript" src="http://api.tianditu.gov.cn/api?v=4.0&tk=b0a4ad38470e7982bb91404fa6c976a2"></script>
+    <script>
+        var map;
+        var zoom = 12;
+        function onLoad() {
+            map = new T.Map('mapDiv');
+            map.centerAndZoom(new T.LngLat(116.40769, 39.89945), zoom);
+        }
+    </script>
+</head>
+<body onLoad="onLoad()">
+<div id="mapDiv" style="position:absolute;width:100%; height:100%"></div>
+</body>
+</html>
+```
+
+
+
+>参考:
+>
+>[九、Spring Boot 优雅的实现CORS跨域 - SegmentFault 思否](https://segmentfault.com/a/1190000021189212)
+>
+>https://blog.csdn.net/jxysgzs/article/details/110818712
 

@@ -6,7 +6,7 @@
 
 ```shell
 location ~* ^(\/cache\/files.*)(\/.*) {
-  # 解決跨域
+  # 解決跨域http(s)
   add_header Access-Control-Allow-Origin *;
 }
 ```
