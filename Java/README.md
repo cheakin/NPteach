@@ -93,6 +93,41 @@ process.waitfor();
 
 
 
+## List对象中的属性以逗号分隔转字符串
+
+1. 我们使用String.join()函数，给函数传递一个分隔符合一个迭代器，一个StringJoiner对象会帮助我们完成所有的事情
+
+   ```java
+   List<String> list= Arrays.asList("aaa",  "bbb", "ccc", "ddd");
+   String str= String.join(",", list);
+   System.out.println(str);
+   // str = "aaa,bbb,ccc,ddd";
+   ```
+
+2. 我们使用String.join()函数，给函数传递一个分隔符合一个迭代器，一个StringJoiner对象会帮助我们完成所有的事情
+
+   ```java
+   List<String> list= Arrays.asList("aaa",  "bbb", "ccc", "ddd");
+   String str= list.stream().collect(Collectors.joining(","));
+   System.out.println(str);
+   // str = "aaa,bbb,ccc,ddd";
+   ```
+
+3. 但是如果list集合中是一个对象，可以用下面的方式来处理
+
+   ```java
+   //将集合中TestDemo 对象name值以逗号方式隔开转为字符串
+   String names = testDemos.stream().map(TestDemo::getName).collect(Collectors.joining(","));
+   System.out.println(names);
+   // names = "aaa,bbb,ccc,ddd";
+   ```
+
+> 参考:[Java8 List对象中的属性以逗号分隔转字符串__binlong的博客-CSDN博客_java list转string 逗号隔开](https://blog.csdn.net/zhangbinlong/article/details/86218758)
+
+## EeasyExcel使用
+
+> 参考:[真香！Java 导出 Excel 表格竟变得如此简单优雅_vincent-CSDN博客_java生成excel报表](https://blog.csdn.net/wuzhiwei549/article/details/105874226)
+
 
 
 ## 解决跨域

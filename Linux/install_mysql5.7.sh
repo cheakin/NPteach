@@ -11,7 +11,7 @@ wget http://repo.mysql.com/mysql57-community-release-el7.rpm
 rpm -ivh mysql57-community-release-el7.rpm
 
 #安装服务
-yum install -y mysql-server 
+yum localinstall -y mysql-server 
  
 #设置权限
 chown mysql:mysql -R /var/lib/mysql

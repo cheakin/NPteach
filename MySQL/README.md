@@ -300,3 +300,27 @@ GRANT ALL PRIVILEGES ON *.* TO ‘root’@’%’IDENTIFIED BY ‘sybase’ WITH
 FLUSH PRIVILEGES;	#刷新
 ```
 
+
+
+
+
+# 知识点
+
+## 索引失效
+
+模型数空运最快
+
+模糊匹配
+
+数据类型转换
+
+使用函数
+
+空->null
+
+运算
+
+最左原则
+
+全表扫描更快
+

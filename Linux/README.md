@@ -14,6 +14,16 @@ source /etc/profile
 
 
 
+### dirname $0
+
+````sh
+cd `dirname $0`
+````
+
+切换到所执行脚本文件所在目录
+
+
+
 ### yum相关命令
 
 1. 使用YUM查找软件包
@@ -77,7 +87,7 @@ source /etc/profile
 
 ## 脚本
 
-### 安装Java脚本
+### 安装JDK脚本
 
 ```bash
 echo "start install jdk"
@@ -109,16 +119,80 @@ echo "JDK is installed"
 
 
 
-### 安装JDK
+### 安装MySQL
 
 ```SHELL
 #!/bin/bash
+#日志路径 /var/bin/mysqld.log
+
+#安装wget
+#yum install wget -y
+
+#下载mysql rpm
+wget http://repo.mysql.com/mysql57-community-release-el7.rpm
+
+#安装mysql rpm
+rpm -ivh mysql57-community-release-el7.rpm
+
+#安装服务
+yum install -y mysql-server 
+ 
+#设置权限
+chown mysql:mysql -R /var/lib/mysql
+
+#初始化mysql(生成随机的初始密码),也可以使用 mysqld --initialize-insecure 将初始密码设置为空
+#再次初始化前需要删除/var/lib/mysql文件夹下的内容rm -rf /var/lib/mysql
+mysqld --initialize
+
+#启动 MySQL
+systemctl start mysqld
+
+#完成mysql 安装 查看 MySQL 运行状态
+systemctl status mysqld
+
+#查看安装的mysql密码
+grep 'temporary password' /var/log/mysqld.log
+
+#添加mysql端口3306和Tomcat端口8080
+firewall-cmd --zone=public --add-port=3306/tcp --permanent
+#firewall-cmd --zone=public --add-port=8080/tcp --permanent
+firewall-cmd --reload
+
+
+#登录mysql
+mysql 
+
+#修改密码策略
+set global validate_password_policy=0;
+set global validate_password_length=4;
+#修改密码 为123456
+SET PASSWORD = PASSWORD('123456');
+
+#设置远程登录 登录密码123456
+grant all privileges on *.* to 'root'@'%' identified by '123456' with grant option;
+flush privileges; 
+
+#退出mysql登录
+exit;
+```
+
+>  参考:
+>
+>  1. [CentOS 7 MySQL5.7 全自动l脚本 mysql安装只需要1分钟 - ypeuee - 博客园 (cnblogs.com)](https://www.cnblogs.com/ypeuee/p/13235307.html)
+>  2. [CentOS 安装Mysql的脚本 - 掘金 (juejin.cn)](https://juejin.cn/post/6976957164619317255)
+
+
+
+### 启动应用
+
+```sh
+#!/bin/bash
 #这里可替换为你自己的执行程序，其他代码无需更改
-APP_NAME=wopihost-0.0.1-SNAPSHOT.jar
+APP_NAME=mq_monitor-0.0.1-SNAPSHOT.jar
 cd `dirname $0`
 #使用说明，用来提示输入参数
-usage() {
-    echo "Usage: sh 脚本名.sh [start|stop|restart|status] [environment(default=prod)]"
+tips() {
+    echo "Usage: sh 执行脚本.sh [start|stop|restart|status]"
     exit 1
 }
 #检查程序是否在运行
@@ -126,7 +200,7 @@ is_exist(){
   pid=`ps -ef|grep $APP_NAME|grep -v grep|awk '{print $2}' `
   #如果不存在返回1，存在返回0
   if [ -z "${pid}" ]; then
-   return 1
+    return 1
   else
     return 0
   fi
@@ -135,19 +209,10 @@ is_exist(){
 #启动方法
 start(){
   is_exist
-  #判断环境
-  env=$1
-  if [ ! $env ] ;then
-    env="prod"
-  fi
-  # 创建log文件夹
   if [ $? -eq "0" ]; then
     echo "${APP_NAME} is already running. pid=${pid} ."
   else
-    if [ ! -d log ];then
-      mkdir log
-    fi
-    nohup java -jar $APP_NAME --spring.profiles.active=$env > log/$(date +%Y%m%d%H%M%S).log 2>&1 &
+    nohup java -jar $APP_NAME > /dev/null 2>&1 &
     echo "${APP_NAME} is start success"
     #tail -f fileserver-web.out
   fi
@@ -183,7 +248,7 @@ restart(){
 #根据输入参数，选择执行对应方法，不输入则执行使用说明
 case "$1" in
   "start")
-    start $2
+    start
     ;;
   "stop")
     stop
@@ -195,12 +260,19 @@ case "$1" in
     restart
     ;;
   *)
-    usage
+    tips
     ;;
 esac
 ```
 
->  参考:[安装Java脚本](#安装Java脚本)
+> 参考:
+>
+> 1. [Linux脚本启动jar包_pocher的博客-CSDN博客_linux启动jar包脚本](https://blog.csdn.net/bingxuesiyang/article/details/88531613)
+> 2. [linux脚本执行jar包运行 - 贾小仙 - 博客园 (cnblogs.com)](https://www.cnblogs.com/hackerxian/p/13722821.html)
+
+
+
+
 
 
 

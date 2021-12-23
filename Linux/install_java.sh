@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "start install jdk"
 
 mkdir /usr/local/java

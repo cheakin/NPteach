@@ -1,6 +1,7 @@
 #!/bin/bash
 #这里可替换为你自己的执行程序，其他代码无需更改
 APP_NAME=wopihost-0.0.1-SNAPSHOT.jar
+
 cd `dirname $0`
 #使用说明，用来提示输入参数
 usage() {
@@ -21,18 +22,19 @@ is_exist(){
 #启动方法
 start(){
   is_exist
-  #判断环境
-  env=$1
-  if [ ! $env ] ;then
-    env="prod"
-  fi
-  # 创建log文件夹
   if [ $? -eq "0" ]; then
     echo "${APP_NAME} is already running. pid=${pid} ."
   else
+    #判断环境
+    env=$1
+    if [ ! $env ] ;then
+      env="prod"
+    fi
+    # 创建log文件夹
     if [ ! -d log ];then
       mkdir log
     fi
+    nohup java -jar $APP_NAME  --spring.profiles.active=$env > /dev/null 2>&1 &
     nohup java -jar $APP_NAME --spring.profiles.active=$env > log/$(date +%Y%m%d%H%M%S).log 2>&1 &
     echo "${APP_NAME} is start success"
     #tail -f fileserver-web.out

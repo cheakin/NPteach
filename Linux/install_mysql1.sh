@@ -49,5 +49,6 @@ mysql -uroot -p${PWD}
 
 
 # 导入你自己的数据库脚本
+mysql -u root -p ${PWD}
 # use mysql;
 # source /your_own_path/you_own_sql.sql

@@ -8,7 +8,7 @@
 安装脚本命名为install.bat，然后复制下面代码到文件里面
 ```shell
 nssm install aHchgClient %cd%\jre\bin\java.exe 
-nssm set aHchgClient AppParameters -jar aHchgClient.jar 
+nssm set aHchgClient AppParameters -jar %cd%\aHchgClient.jar 
 nssm set aHchgClient AppStdout log.log 
 nssm set aHchgClient AppStderr err.log 
 nssm set aHchgClient AppStopMethodSkip 6 
@@ -18,8 +18,8 @@ nssm set aHchgClient DisplayName aHchgClient-test
 nssm set aHchgClient start SERVICE_AUTO_START
 ```
 
-> WARNING:  
-aHchgClient是服务的名字，aHchgClient-test是服务显示的名字，两个名字可以一样，我都用的aHchgClient
+> PS:  
+aHchgClient是服务的名字，aHchgClient-test是服务显示的名字，两个名字可以一样，我用的aHchgClient
 我的电脑没有安装jdk，用的是一个免安装的jre，所以%cd%\jre\bin\java.exe 就指定了java.exe路径，如果 安装了jdk并且有JAVA_HOME变量，可以写成JAVA_HOME\bin\java.exe
 AppParameters这个要指定jar包的路径，和其它参数（没有其它参数可以不写），我把aHchgClient.jar 放到 jre\bin的目录下了。
 SERVICE_AUTO_START是设置服务为自动启动， 如果要配置成延迟启动，可以用SERVICE_DELAYED_AUTO_START
