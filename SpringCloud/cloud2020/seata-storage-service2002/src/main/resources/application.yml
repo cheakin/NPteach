@@ -1,0 +1,58 @@
+server:
+  port: 3002
+
+spring:
+  application:
+    name: seata-storage-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+  datasource:
+    # 当前数据源操作类型
+    type: com.alibaba.druid.pool.DruidDataSource
+    # mysql驱动类
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/seata_storage?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=GMT%2B8
+    username: root
+    password: root
+feign:
+  hystrix:
+    enabled: false
+logging:
+  level:
+    io:
+      seata: info
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+
+# Seata 配置项，对应 SeataProperties 类
+seata:
+  application-id: seata-server # Seata 应用编号，默认为 ${spring.application.name}
+  tx-service-group: my_tx_group # Seata 事务组编号，用于 TC 集群名；同一事务同一分组
+  #  enable-auto-data-source-proxy: true
+  # Seata 服务配置项，对应 ServiceProperties 类
+  service:
+    # 虚拟组和分组的映射
+    vgroup-mapping:
+      my_tx_group: default  # 此处key需要与tx-service-group的value一致，否则会报 no available service 'null' found, please make sure registry config correct 异常
+  config:
+    type: nacos
+    nacos:
+      namespace:  ""
+      serverAddr: localhost:8848
+      group: SEATA_GROUP
+      userName: "nacos"
+      password: "nacos"
+  # Seata 注册中心配置项，对应 RegistryProperties 类
+  registry:
+    type: nacos # 注册中心类型，默认为 file
+    nacos:
+      application: seata-server
+      serverAddr: localhost:8848 # Nacos 服务地址
+      group: SEATA_GROUP
+      namespace: ""# Nacos 命名空间
+      cluster: default # 使用的 Seata 分组
+      userName: "nacos"
+      password: "nacos"

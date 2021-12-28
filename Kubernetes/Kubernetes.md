@@ -2009,6 +2009,8 @@ kubectl get pods -n ingress-nginx
 
 
 
+
+
 ## Kubernetes核心技术Helm
 
 Helm就是一个包管理工具【类似于npm】
@@ -2078,7 +2080,7 @@ V3版本
 
 首先我们需要去 [官网下载](https://helm.sh/docs/intro/quickstart/)
 
-- 第一步，[下载helm](https://github.com/helm/helm/releases)安装压缩文件，上传到linux系统中
+- 第一步，[下载helm](https://github.com/helm/helm/releases)安装压缩文件，上传到linux系统中(或`wget https://get.helm.sh/helm-v3.1.2-linux-amd64.tar.gz`)
 - 第二步，解压helm压缩文件，把解压后的helm目录复制到 usr/bin 目录中
 - 使用命令：helm
 
@@ -2284,6 +2286,1055 @@ helm install --dry-run web2 mychart
 
 
 
+## Kubernetes持久化存储
+
+### 前言
+
+之前我们有提到数据卷：`emptydir` ，是本地存储，pod重启，数据就不存在了，需要对数据持久化存储
+
+对于数据持久化存储【pod重启，数据还存在】，有两种方式
+
+- nfs：网络存储【通过一台服务器来存储】
+
+### 步骤
+
+#### 持久化服务器上操作
+
+- 找一台新的服务器nfs服务端，安装nfs
+- 设置挂载路径
+
+使用命令安装nfs
+
+```
+yum install -y nfs-utils
+```
+
+首先创建存放数据的目录
+
+```
+mkdir -p /data/nfs
+```
+
+设置挂载路径
+
+```bash
+# 打开文件
+vim /etc/exports
+# 添加如下内容
+/data/nfs *(rw,no_root_squash)
+```
+
+执行完成后，即部署完我们的持久化服务器
+
+#### Node节点上操作
+
+然后需要在k8s集群node节点上安装nfs，这里需要在 node1 和 node2节点上安装
+
+```
+yum install -y nfs-utils
+```
+
+执行完成后，会自动帮我们挂载上
+
+#### 启动nfs服务端
+
+下面我们回到nfs服务端，启动我们的nfs服务
+
+```
+service nfs-server start
+```
+
+![image-20201119082047766](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119082047766.png)
+
+#### K8s集群部署应用
+
+最后我们在k8s集群上部署应用，使用nfs持久化存储
+
+```
+# 创建一个pv文件
+mkdir pv
+# 进入
+cd pv
+```
+
+然后创建一个yaml文件 `nfs-nginx.yaml`
+
+![image-20201119082317625](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119082317625.png)
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: nginx-dep1
+spec:
+    replicas: 1
+    selector: .
+        matchLabels:
+            app: nginx
+    template:
+    metadata:
+        labels:
+            app: nginx
+    spec:
+        containers:
+        - name: nginx
+            image: nginx
+            volumeMounts: .
+            - name: wwwroot
+                mountPath: /usr/share/nginx/html
+            ports: .
+            - cont ainerPort: 80
+    volumes:
+        - name: wwwroot
+            nfs:
+                server: 192.168.42.133
+                path: /data/nfs
+```
+
+通过这个方式，就挂载到了刚刚我们的nfs数据节点下的 /data/nfs 目录
+
+最后就变成了： /usr/share/nginx/html -> 192.168.42.133/data/nfs 内容是对应的
+
+我们通过这个 yaml文件，创建一个pod
+
+```
+kubectl apply -f nfs-nginx.yaml
+```
+
+创建完成后，我们也可以查看日志
+
+```
+kubectl describe pod nginx-dep1
+```
+
+![image-20201119083444454](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119083444454.png)
+
+可以看到，我们的pod已经成功创建出来了，同时下图也是出于Running状态
+
+![image-20201119083514247](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119083514247.png)
+
+下面我们就可以进行测试了，比如现在nfs服务节点上添加数据，然后在看数据是否存在 pod中
+
+```
+# 进入pod中查看
+kubectl exec -it nginx-dep1 bash
+```
+
+![image-20201119095847548](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119095847548.png)
+
+### PV和PVC
+
+1
+
+![image-20201119082317625](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119082317625.png)
+
+所以这里就需要用到 pv 和 pvc的概念了，方便我们配置和管理我们的 ip 地址等元信息
+
+PV：持久化存储，对存储的资源进行抽象，对外提供可以调用的地方【生产者】
+
+PVC：用于调用，不需要关心内部实现细节【消费者】
+
+PV 和 PVC 使得 K8S 集群具备了存储的逻辑抽象能力。使得在配置Pod的逻辑里可以忽略对实际后台存储 技术的配置，而把这项配置的工作交给PV的配置者，即集群的管理者。存储的PV和PVC的这种关系，跟计算的Node和Pod的关系是非常类似的；PV和Node是资源的提供者，根据集群的基础设施变化而变 化，由K8s集群管理员配置；而PVC和Pod是资源的使用者，根据业务服务的需求变化而变化，由K8s集 群的使用者即服务的管理员来配置。
+
+#### 实现流程
+
+- PVC绑定PV
+- 定义PVC
+- 定义PV【数据卷定义，指定数据存储服务器的ip、路径、容量和匹配模式】
+
+#### 举例
+
+创建一个 pvc.yaml
+
+![image-20201119101753419](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119101753419.png)
+
+第一部分是定义一个 deployment，做一个部署
+
+- 副本数：3
+- 挂载路径
+- 调用：是通过pvc的模式
+
+然后定义pvc
+
+![image-20201119101843498](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119101843498.png)
+
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+```
+
+然后在创建一个 `pv.yaml`
+
+![image-20201119101957777](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119101957777.png)
+
+```bash
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-pv
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    path: /data/nfs
+    server: 192.168.43.133
+```
+
+然后就可以创建pod了
+
+```
+kubectl apply -f pv.yaml
+```
+
+然后我们就可以通过下面命令，查看我们的 pv 和 pvc之间的绑定关系
+
+```
+kubectl get pv, pvc
+```
+
+![image-20201119102332786](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119102332786.png)
+
+到这里为止，我们就完成了我们 pv 和 pvc的绑定操作，通过之前的方式，进入pod中查看内容
+
+```
+kubect exec -it nginx-dep1 bash
+```
+
+然后查看 /usr/share/nginx.html
+
+![image-20201119102448226](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/16_Kubernetes%E6%8C%81%E4%B9%85%E5%8C%96%E5%AD%98%E5%82%A8/images/image-20201119102448226.png)
+
+也同样能看到刚刚的内容，其实这种操作和之前我们的nfs是一样的，只是多了一层pvc绑定pv的操作
+
+
+
+
+
+## Kubernetes集群资源监控
+
+### 概述
+
+#### 监控指标
+
+一个好的系统，主要监控以下内容
+
+- 集群监控
+  - 节点资源利用率
+  - 节点数
+  - 运行Pods
+- Pod监控
+  - 容器指标
+  - 应用程序【程序占用多少CPU、内存】
+
+#### 监控平台
+
+使用普罗米修斯【prometheus】 + Grafana 搭建监控平台
+
+- prometheus【定时搜索被监控服务的状态】
+  - 开源的
+  - 监控、报警、数据库
+  - 以HTTP协议周期性抓取被监控组件状态
+  - 不需要复杂的集成过程，使用http接口接入即可
+- Grafana
+  - 开源的数据分析和可视化工具
+  - 支持多种数据源
+
+![image-20201120082257441](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120082257441.png)
+
+### 部署prometheus
+
+首先需要部署一个守护进程
+
+![image-20201120083606298](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120083606298.png)
+
+```
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: kube-system
+  labels:
+    k8s-app: node-exporter
+spec:
+  selector:
+    matchLabels:
+      k8s-app: node-exporter
+  template:
+    metadata:
+      labels:
+        k8s-app: node-exporter
+    spec:
+      containers:
+      - image: prom/node-exporter
+        name: node-exporter
+        ports:
+        - containerPort: 9100
+          protocol: TCP
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: node-exporter
+  name: node-exporter
+  namespace: kube-system
+spec:
+  ports:
+  - name: http
+    port: 9100
+    nodePort: 31672
+    protocol: TCP
+  type: NodePort
+  selector:
+    k8s-app: node-exporter
+```
+
+然后执行下面命令
+
+```
+kubectl create -f node-exporter.yaml
+```
+
+执行完，发现会报错
+
+![image-20201120084034160](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120084034160.png)
+
+这是因为版本不一致的问题，因为发布的正式版本，而这个属于测试版本
+
+所以我们找到第一行，然后把内容修改为如下所示
+
+```
+# 修改前
+apiVersion: extensions/v1beta1
+# 修改后 【正式版本发布后，测试版本不能使用】
+apiVersion: apps/v1
+```
+
+创建完成后的效果
+
+![image-20201120085721454](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120085721454.png)
+
+然后通过yaml的方式部署prometheus
+
+![image-20201120083107594](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120083107594.png)
+
+- configmap：定义一个configmap：存储一些配置文件【不加密】
+- prometheus.deploy.yaml：部署一个deployment【包括端口号，资源限制】
+- prometheus.svc.yaml：对外暴露的端口
+- rbac-setup.yaml：分配一些角色的权限
+
+下面我们进入目录下，首先部署 rbac-setup.yaml
+
+```
+kubectl create -f rbac-setup.yaml
+```
+
+![image-20201120090002150](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120090002150.png)
+
+然后分别部署
+
+```
+# 部署configmap
+kubectl create -f configmap.yaml
+# 部署deployment
+kubectl create -f prometheus.deploy.yml
+# 部署svc
+kubectl create -f prometheus.svc.yml
+```
+
+部署完成后，我们使用下面命令查看
+
+```
+kubectl get pods -n kube-system
+```
+
+![image-20201120093213576](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120093213576.png)
+
+在我们部署完成后，即可看到 prometheus 的 pod了，然后通过下面命令，能够看到对应的端口
+
+```
+kubectl get svc -n kube-system
+```
+
+![image-20201121091348752](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121091348752.png)
+
+通过这个，我们可以看到 `prometheus` 对外暴露的端口为 30003，访问页面即可对应的图形化界面
+
+```
+http://192.168.177.130:30003
+```
+
+![image-20201121091508851](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121091508851.png)
+
+在上面我们部署完prometheus后，我们还需要来部署grafana
+
+```
+kubectl create -f grafana-deploy.yaml
+```
+
+然后执行完后，发现下面的问题
+
+```
+error: unable to recognize "grafana-deploy.yaml": no matches for kind "Deployment" in version "extensions/v1beta1"
+```
+
+我们需要修改如下内容
+
+```
+# 修改
+apiVersion: apps/v1
+
+# 添加selector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+      component: core
+```
+
+修改完成后，我们继续执行上述代码
+
+```
+# 创建deployment
+kubectl create -f grafana-deploy.yaml
+# 创建svc
+kubectl create -f grafana-svc.yaml
+# 创建 ing
+kubectl create -f grafana-ing.yaml
+```
+
+我们能看到，我们的grafana正在
+
+![image-20201120110426534](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120110426534.png)
+
+#### 配置数据源
+
+下面我们需要开始打开 Grafana，然后配置数据源，导入数据显示模板
+
+```
+kubectl get svc -n kube-system
+```
+
+![image-20201120111949197](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120111949197.png)
+
+我们可以通过 ip + 30431 访问我们的 grafana 图形化页面
+
+![image-20201120112048887](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201120112048887.png)
+
+然后输入账号和密码：admin admin
+
+进入后，我们就需要配置 prometheus 的数据源
+
+![image-20201121092012018](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121092012018.png)
+
+和 对应的IP【这里IP是我们的ClusterIP】
+
+![image-20201121092053215](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121092053215.png)
+
+#### 设置显示数据的模板
+
+选择Dashboard，导入我们的模板
+
+![image-20201121092312118](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121092312118.png)
+
+然后输入 315 号模板
+
+![image-20201121092418180](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121092418180.png)
+
+然后选择 prometheus数据源 mydb，导入即可
+
+![image-20201121092443266](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121092443266.png)
+
+导入后的效果如下所示
+
+![image-20201121092610154](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/17_Kubernetes%E9%9B%86%E7%BE%A4%E8%B5%84%E6%BA%90%E7%9B%91%E6%8E%A7/images/image-20201121092610154.png)
+
+
+
+
+
+## Kubernetes搭建高可用集群
+
+### 前言
+
+之前我们搭建的集群，只有一个master节点，当master节点宕机的时候，通过node将无法继续访问，而master主要是管理作用，所以整个集群将无法提供服务
+
+![image-20201121164522945](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/18_Kubernetes%E6%90%AD%E5%BB%BA%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/images/image-20201121164522945.png)
+
+### 高可用集群
+
+下面我们就需要搭建一个多master节点的高可用集群，不会存在单点故障问题
+
+但是在node 和 master节点之间，需要存在一个 LoadBalancer组件，作用如下：
+
+- 负载
+- 检查master节点的状态
+
+![image-20201121164931760](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/18_Kubernetes%E6%90%AD%E5%BB%BA%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/images/image-20201121164931760.png)
+
+对外有一个统一的VIP：虚拟ip来对外进行访问
+
+### 高可用集群技术细节
+
+高可用集群技术细节如下所示：
+
+![image-20201121165325194](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/18_Kubernetes%E6%90%AD%E5%BB%BA%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/images/image-20201121165325194.png)
+
+- keepalived：配置虚拟ip，检查节点的状态
+- haproxy：负载均衡服务【类似于nginx】
+- apiserver：...
+- controller：...
+- manager：...
+- scheduler：...
+
+### 高可用集群步骤
+
+我们采用2个master节点，一个node节点来搭建高可用集群，下面给出了每个节点需要做的事情
+
+![image-20201121170351461](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/18_Kubernetes%E6%90%AD%E5%BB%BA%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/images/image-20201121170351461.png)
+
+### 初始化操作
+
+我们需要在这三个节点上进行操作
+
+```
+# 关闭防火墙
+systemctl stop firewalld
+systemctl disable firewalld
+
+# 关闭selinux
+# 永久关闭
+sed -i 's/enforcing/disabled/' /etc/selinux/config  
+# 临时关闭
+setenforce 0  
+
+# 关闭swap
+# 临时
+swapoff -a 
+# 永久关闭
+sed -ri 's/.*swap.*/#&/' /etc/fstab
+
+# 根据规划设置主机名【master1节点上操作】
+hostnamectl set-hostname master1
+# 根据规划设置主机名【master2节点上操作】
+hostnamectl set-hostname master1
+# 根据规划设置主机名【node1节点操作】
+hostnamectl set-hostname node1
+
+# 在master添加hosts
+cat >> /etc/hosts << EOF
+192.168.42.143  k8smaster
+192.168.42.140 master01.k8s.io master1
+192.168.42.141 master02.k8s.io master2
+192.168.42.142 node01.k8s.io node1
+EOF
+
+
+# 将桥接的IPv4流量传递到iptables的链【3个节点上都执行】
+cat > /etc/sysctl.d/k8s.conf << EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+
+# 生效
+sysctl --system  
+
+# 时间同步
+yum install ntpdate -y
+ntpdate time.windows.com
+```
+
+### 部署keepAlived
+
+下面我们需要在所有的master节点【master1和master2】上部署keepAlive
+
+#### 安装相关包
+
+```
+# 安装相关工具
+yum install -y conntrack-tools libseccomp libtool-ltdl
+# 安装keepalived
+yum install -y keepalived
+```
+
+#### 配置master节点
+
+添加master1的配置
+
+```
+cat > /etc/keepalived/keepalived.conf <<EOF 
+! Configuration File for keepalived
+
+global_defs {
+   router_id k8s
+}
+
+vrrp_script check_haproxy {
+    script "killall -0 haproxy"
+    interval 3
+    weight -2
+    fall 10
+    rise 2
+}
+
+vrrp_instance VI_1 {
+    state MASTER 
+    interface ens33 
+    virtual_router_id 51
+    priority 250
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass ceb1b3ec013d66163d6ab
+    }
+    virtual_ipaddress {
+        192.168.42.143
+    }
+    track_script {
+        check_haproxy
+    }
+
+}
+EOF
+```
+
+添加master2的配置
+
+```
+cat > /etc/keepalived/keepalived.conf <<EOF 
+! Configuration File for keepalived
+
+global_defs {
+   router_id k8s
+}
+
+vrrp_script check_haproxy {
+    script "killall -0 haproxy"
+    interval 3
+    weight -2
+    fall 10
+    rise 2
+}
+
+vrrp_instance VI_1 {
+    state BACKUP 
+    interface ens33 
+    virtual_router_id 51
+    priority 200
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass ceb1b3ec013d66163d6ab
+    }
+    virtual_ipaddress {
+        192.168.42.143
+    }
+    track_script {
+        check_haproxy
+    }
+
+}
+EOF
+```
+
+#### 启动和检查
+
+在两台master节点都执行
+
+```
+# 启动keepalived
+systemctl start keepalived.service
+# 设置开机启动
+systemctl enable keepalived.service
+# 查看启动状态
+systemctl status keepalived.service
+```
+
+启动后查看master的网卡信息
+
+```
+ip a s ens33
+```
+
+![image-20201121171619497](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/18_Kubernetes%E6%90%AD%E5%BB%BA%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/images/image-20201121171619497.png)
+
+### 部署haproxy
+
+haproxy主要做负载的作用，将我们的请求分担到不同的node节点上
+
+#### 安装
+
+在两个master节点安装 haproxy
+
+```
+# 安装haproxy
+yum install -y haproxy
+# 启动 haproxy
+systemctl start haproxy
+# 开启自启
+systemctl enable haproxy
+```
+
+启动后，我们查看对应的端口是否包含 16443
+
+```
+netstat -tunlp | grep haproxy
+```
+
+![image-20201121181803128](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/18_Kubernetes%E6%90%AD%E5%BB%BA%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/images/image-20201121181803128.png)
+
+#### 配置
+
+两台master节点的配置均相同，配置中声明了后端代理的两个master节点服务器，指定了haproxy运行的端口为16443等，因此16443端口为集群的入口
+
+```
+cat > /etc/haproxy/haproxy.cfg << EOF
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+    # to have these messages end up in /var/log/haproxy.log you will
+    # need to:
+    # 1) configure syslog to accept network log events.  This is done
+    #    by adding the '-r' option to the SYSLOGD_OPTIONS in
+    #    /etc/sysconfig/syslog
+    # 2) configure local2 events to go to the /var/log/haproxy.log
+    #   file. A line like the following can be added to
+    #   /etc/sysconfig/syslog
+    #
+    #    local2.*                       /var/log/haproxy.log
+    #
+    log         127.0.0.1 local2
+    
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon 
+       
+    # turn on stats unix socket
+    stats socket /var/lib/haproxy/stats
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------  
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+#---------------------------------------------------------------------
+# kubernetes apiserver frontend which proxys to the backends
+#--------------------------------------------------------------------- 
+frontend kubernetes-apiserver
+    mode                 tcp
+    bind                 *:16443
+    option               tcplog
+    default_backend      kubernetes-apiserver    
+#---------------------------------------------------------------------
+# round robin balancing between the various backends
+#---------------------------------------------------------------------
+backend kubernetes-apiserver
+    mode        tcp
+    balance     roundrobin
+    server      master01.k8s.io   192.168.44.155:6443 check
+    server      master02.k8s.io   192.168.44.156:6443 check
+#---------------------------------------------------------------------
+# collection haproxy statistics message
+#---------------------------------------------------------------------
+listen stats
+    bind                 *:1080
+    stats auth           admin:awesomePassword
+    stats refresh        5s
+    stats realm          HAProxy\ Statistics
+    stats uri            /admin?stats
+EOF
+```
+
+### 安装Docker、Kubeadm、kubectl
+
+所有节点安装Docker/kubeadm/kubelet ，Kubernetes默认CRI（容器运行时）为Docker，因此先安装Docker
+
+#### 安装Docker
+
+首先配置一下Docker的阿里yum源
+
+```
+cat >/etc/yum.repos.d/docker.repo<<EOF
+[docker-ce-edge]
+name=Docker CE Edge - \$basearch
+baseurl=https://mirrors.aliyun.com/docker-ce/linux/centos/7/\$basearch/edge
+enabled=1
+gpgcheck=1
+gpgkey=https://mirrors.aliyun.com/docker-ce/linux/centos/gpg
+EOF
+```
+
+然后yum方式安装docker
+
+```
+# yum安装
+yum -y install docker-ce
+
+# 查看docker版本
+docker --version  
+
+# 启动docker
+systemctl enable docker
+systemctl start docker
+```
+
+配置docker的镜像源
+
+```
+cat >> /etc/docker/daemon.json << EOF
+{
+  "registry-mirrors": ["https://b9pmyelo.mirror.aliyuncs.com"]
+}
+EOF
+```
+
+然后重启docker
+
+```
+systemctl restart docker
+```
+
+#### 添加kubernetes软件源
+
+然后我们还需要配置一下yum的k8s软件源
+
+```
+cat > /etc/yum.repos.d/kubernetes.repo << EOF
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+EOF
+```
+
+#### 安装kubeadm，kubelet和kubectl
+
+由于版本更新频繁，这里指定版本号部署：
+
+```
+# 安装kubelet、kubeadm、kubectl，同时指定版本
+yum install -y kubelet-1.18.0 kubeadm-1.18.0 kubectl-1.18.0
+# 设置开机启动
+systemctl enable kubelet
+```
+
+### 部署Kubernetes Master【master节点】
+
+#### 创建kubeadm配置文件
+
+在具有vip的master上进行初始化操作，这里为master1
+
+```
+# 创建文件夹
+mkdir /usr/local/kubernetes/manifests -p
+# 到manifests目录
+cd /usr/local/kubernetes/manifests/
+# 新建yaml文件
+vi kubeadm-config.yaml
+```
+
+yaml内容如下所示：
+
+```
+apiServer:
+  certSANs:
+    - master1
+    - master2
+    - master.k8s.io
+    - 192.168.42.143
+    - 192.168.42.140
+    - 192.168.42.141
+    - 127.0.0.1
+  extraArgs:
+    authorization-mode: Node,RBAC
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta2
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controlPlaneEndpoint: "master.k8s.io:16443"
+controllerManager: {}
+dns: 
+  type: CoreDNS
+etcd:
+  local:    
+    dataDir: /var/lib/etcd
+imageRepository: registry.aliyuncs.com/google_containers
+kind: ClusterConfiguration
+kubernetesVersion: v1.16.3
+networking: 
+  dnsDomain: cluster.local  
+  podSubnet: 10.244.0.0/16
+  serviceSubnet: 10.1.0.0/16
+scheduler: {}
+```
+
+然后我们在 master1 节点执行
+
+```
+kubeadm init --config kubeadm-config.yaml
+```
+
+执行完成后，就会在拉取我们的进行了【需要等待...】
+
+![image-20201121194928988](https://gitee.com/moxi159753/LearningNotes/raw/master/K8S/18_Kubernetes%E6%90%AD%E5%BB%BA%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/images/image-20201121194928988.png)
+
+按照提示配置环境变量，使用kubectl工具
+
+```
+# 执行下方命令
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+# 查看节点
+kubectl get nodes
+# 查看pod
+kubectl get pods -n kube-system
+```
+
+**按照提示保存以下内容，一会要使用：**
+
+```
+kubeadm join master.k8s.io:16443 --token jv5z7n.3y1zi95p952y9p65 \
+    --discovery-token-ca-cert-hash sha256:403bca185c2f3a4791685013499e7ce58f9848e2213e27194b75a2e3293d8812 \
+    --control-plane 
+```
+
+> --control-plane ： 只有在添加master节点的时候才有
+
+查看集群状态
+
+```
+# 查看集群状态
+kubectl get cs
+# 查看pod
+kubectl get pods -n kube-system
+```
+
+### 安装集群网络
+
+从官方地址获取到flannel的yaml，在master1上执行
+
+```
+# 创建文件夹
+mkdir flannel
+cd flannel
+# 下载yaml文件
+wget -c https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+```
+
+安装flannel网络
+
+```
+kubectl apply -f kube-flannel.yml 
+```
+
+检查
+
+```
+kubectl get pods -n kube-system
+```
+
+### master2节点加入集群
+
+#### 复制密钥及相关文件
+
+从master1复制密钥及相关文件到master2
+
+```
+# ssh root@192.168.44.156 mkdir -p /etc/kubernetes/pki/etcd
+
+# scp /etc/kubernetes/admin.conf root@192.168.44.156:/etc/kubernetes
+   
+# scp /etc/kubernetes/pki/{ca.*,sa.*,front-proxy-ca.*} root@192.168.44.156:/etc/kubernetes/pki
+   
+# scp /etc/kubernetes/pki/etcd/ca.* root@192.168.44.156:/etc/kubernetes/pki/etcd
+```
+
+#### master2加入集群
+
+执行在master1上init后输出的join命令,需要带上参数`--control-plane`表示把master控制节点加入集群
+
+```
+kubeadm join master.k8s.io:16443 --token ckf7bs.30576l0okocepg8b     --discovery-token-ca-cert-hash sha256:19afac8b11182f61073e254fb57b9f19ab4d798b70501036fc69ebef46094aba --control-plane
+```
+
+检查状态
+
+```
+kubectl get node
+
+kubectl get pods --all-namespaces
+```
+
+### 加入Kubernetes Node
+
+在node1上执行
+
+向集群添加新节点，执行在kubeadm init输出的kubeadm join命令：
+
+```
+kubeadm join master.k8s.io:16443 --token ckf7bs.30576l0okocepg8b     --discovery-token-ca-cert-hash sha256:19afac8b11182f61073e254fb57b9f19ab4d798b70501036fc69ebef46094aba
+```
+
+**集群网络重新安装，因为添加了新的node节点**
+
+检查状态
+
+```
+kubectl get node
+kubectl get pods --all-namespaces
+```
+
+### 测试kubernetes集群
+
+在Kubernetes集群中创建一个pod，验证是否正常运行：
+
+```
+# 创建nginx deployment
+kubectl create deployment nginx --image=nginx
+# 暴露端口
+kubectl expose deployment nginx --port=80 --type=NodePort
+# 查看状态
+kubectl get pod,svc
+```
+
+然后我们通过任何一个节点，都能够访问我们的nginx页面
+
 
 
 
@@ -2306,11 +3357,17 @@ docker images -qa|xargs docker rmi -f	# 删除容器及镜像
 
 
 
-
-
-
-
 ## 其他
 
 `journalctl -u kubelet -n 1000`	#查看节点日志
+
+
+
+
+
+## 参考
+
+> [k8s教程由浅入深-尚硅谷](https://www.bilibili.com/video/BV1GT4y1A756)
+>
+> [k8s教程由浅入深-尚硅谷(笔记)](https://gitee.com/moxi159753/LearningNotes/tree/master/K8S#/moxi159753/LearningNotes/blob/master/K8S/8_Kubernetes%E6%A0%B8%E5%BF%83%E6%8A%80%E6%9C%AFPod/README.md)
 
