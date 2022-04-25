@@ -11,6 +11,30 @@
 3.@NotBlank：
 这玩意只能作用在接收的String类型上，注意是只能，不能为null，而且调用trim()后，长度必须大于0
 
+```java
+@Null  被注释的元素必须为null
+@NotNull  被注释的元素不能为null
+@AssertTrue  被注释的元素必须为true
+@AssertFalse  被注释的元素必须为false
+@Min(value)  被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+@Max(value)  被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+@DecimalMin(value)  被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+@DecimalMax(value)  被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+@Size(max,min)  被注释的元素的大小必须在指定的范围内。
+@Digits(integer,fraction)  被注释的元素必须是一个数字，其值必须在可接受的范围内
+@Past  被注释的元素必须是一个过去的日期
+@Future  被注释的元素必须是一个将来的日期
+@Pattern(value) 被注释的元素必须符合指定的正则表达式。
+@Email 被注释的元素必须是电子邮件地址
+@Length 被注释的字符串的大小必须在指定的范围内
+@NotEmpty  被注释的字符串必须非空
+@Range  被注释的元素必须在合适的范围内
+```
+
+> 参考: [Spring 中@NotNull, @NotEmpty和@NotBlank之间的区别是什么？ - HappyDeveloper - 博客园 (cnblogs.com)](https://www.cnblogs.com/Terry-Wu/p/8134732.html)
+>
+> [Spring 提供的参数效验注解_dora_310的博客-CSDN博客](https://blog.csdn.net/dora_310/article/details/115128090)
+
 
 
 ## @RequestParam接收application/json
@@ -19,6 +43,24 @@
 @RequestBody --->  application/json
 
 > https://blog.csdn.net/qq_40470612/article/details/104225419
+
+
+
+
+
+## 遍历json的所有键值
+
+```java
+//fastjson解析方法
+for (Map.Entry<String, Object> entry : jsonObject.entrySet()) {
+  System.out.println("key值="+entry.getKey());
+  System.out.println("对应key值的value="+entry.getValue());
+}
+```
+
+> 参考: [java中遍历json的key和value_MTone1的博客-CSDN博客_java遍历json的key和value](https://blog.csdn.net/MTone1/article/details/87862485)
+
+
 
 
 
@@ -207,4 +249,83 @@ process.waitfor();
 >[九、Spring Boot 优雅的实现CORS跨域 - SegmentFault 思否](https://segmentfault.com/a/1190000021189212)
 >
 >https://blog.csdn.net/jxysgzs/article/details/110818712
+
+
+
+
+
+## Hutool
+
+*此模块记录`Hutool`中一些遇到的工具类
+
+### 压缩
+
+压缩可以使用`ZipUtil.zip`方法
+
+- 打包到当前目录（可以打包文件，也可以打包文件夹，根据路径自动判断）
+
+```java
+//将aaa目录下的所有文件目录打包到d:/aaa.zip
+ZipUtil.zip("d:/aaa");Copy to clipboardErrorCopied
+```
+
+- 指定打包后保存的目的地，自动判断目标是文件还是文件夹
+
+```java
+//将aaa目录下的所有文件目录打包到d:/bbb/目录下的aaa.zip文件中
+// 此处第二个参数必须为文件，不能为目录
+ZipUtil.zip("d:/aaa", "d:/bbb/aaa.zip");
+
+//将aaa目录下的所有文件目录打包到d:/bbb/目录下的ccc.zip文件中
+ZipUtil.zip("d:/aaa", "d:/bbb/ccc.zip");Copy to clipboardErrorCopied
+```
+
+- 可选是否包含被打包的目录。比如我们打包一个照片的目录，打开这个压缩包有可能是带目录的，也有可能是打开压缩包直接看到的是文件。zip方法增加一个boolean参数可选这两种模式，以应对众多需求。
+
+```java
+//将aaa目录以及其目录下的所有文件目录打包到d:/bbb/目录下的ccc.zip文件中
+ZipUtil.zip("d:/aaa", "d:/bbb/ccc.zip", true);Copy to clipboardErrorCopied
+```
+
+- 多文件或目录压缩。可以选择多个文件或目录一起打成zip包。
+
+```java
+ZipUtil.zip(FileUtil.file("d:/bbb/ccc.zip"), false, 
+    FileUtil.file("d:/test1/file1.txt"),
+    FileUtil.file("d:/test1/file2.txt"),
+    FileUtil.file("d:/test2/file1.txt"),
+    FileUtil.file("d:/test2/file2.txt")
+);Copy to clipboardErrorCopied
+```
+
+1. 解压
+
+`ZipUtil.unzip` 解压。同样提供几个重载，满足不同需求。
+
+```java
+//将test.zip解压到e:\\aaa目录下，返回解压到的目录
+File unzip = ZipUtil.unzip("E:\\aaa\\test.zip", "e:\\aaa");
+```
+
+**压缩并添加密码**
+
+Hutool或JDK的Zip工具并不支持添加密码，可以考虑使用[Zip4j](https://github.com/srikanth-lingala/zip4j)完成，以下代码来自Zip4j官网。
+
+```java
+ZipParameters zipParameters = new ZipParameters();
+zipParameters.setEncryptFiles(true);
+zipParameters.setEncryptionMethod(EncryptionMethod.AES);
+// Below line is optional. AES 256 is used by default. You can override it to use AES 128. AES 192 is supported only for extracting.
+zipParameters.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256); 
+
+List<File> filesToAdd = Arrays.asList(
+    new File("somefile"), 
+    new File("someotherfile")
+);
+
+ZipFile zipFile = new ZipFile("filename.zip", "password".toCharArray());
+zipFile.addFiles(filesToAdd, zipParameters);
+```
+
+> [压缩工具-ZipUtil (hutool.cn)](https://www.hutool.cn/docs/#/core/工具类/压缩工具-ZipUtil?id=压缩工具-ziputil)
 

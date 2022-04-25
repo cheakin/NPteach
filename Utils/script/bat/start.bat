@@ -1,0 +1,1 @@
+java -jar platform-boot-dev-x.x.x.jar --spring.profiles.active=prod
