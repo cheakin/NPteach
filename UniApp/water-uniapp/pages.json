@@ -24,13 +24,5 @@
 		"custom": {
 			"^-(.*)": "@/components/uni-$1.vue" // 匹配components目录内的vue文件
 		}
-	},
-	"condition": {
-		"current": 0,
-		"list": [{
-			"name": "订单页",
-			"path": "pages/order/order"
-
-		}]
 	}
 }

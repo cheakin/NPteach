@@ -1,6 +1,5 @@
 const getters = {
-	tabBarList: state => state.tabBar.list,
-	midBtn: state => state.tabBar.midBtn
+	tabBarList: state => state.tabBar.list
 }
 
 export default getters
