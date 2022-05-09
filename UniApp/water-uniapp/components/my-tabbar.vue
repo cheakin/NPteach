@@ -1,8 +1,7 @@
 <template>
 	<u-tabbar value="value" @change="changeTab" @ :fixed="true" :placeholder="true" :safeAreaInsetBottom="true">
 		<u-tabbar-item v-for="(item, index) in tabBarList" :text="item.text"
-			:icon="value === index? item.selectedIconPath: item.iconPath"
-			@click="click">
+			:icon="value == index ? item.selectedIconPath: item.iconPath" @click="click">
 		</u-tabbar-item>
 	</u-tabbar>
 </template>
@@ -17,8 +16,11 @@
 				'tabBarList',
 			])
 		},
+		onShow() {
+			console.log('onShow');
+		},
 		created() {
-			console.log('created',this.value);
+			console.log('created', this.value);
 		},
 		/* onLaunch() {
 			console.log('onLaunch',this.value);
@@ -51,17 +53,15 @@
 			click(index) {
 				this.value = index
 				console.log(this.tabBarList[index].pagePath);
-				uni.switchTab({
+				uni.navigateTo({
 					url: this.tabBarList[index].pagePath,
-					success: res => {
-						console.log('success', res);
-					},
+					success: res => {},
 					fail: err => {
-						console.log('err', err);
+						console.log('err', err.errMsg);
 					}
 				})
 				console.log('click, index:', index, ', value:', this.value);
-				
+
 				// this.value = 
 			}
 		}
