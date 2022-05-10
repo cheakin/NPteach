@@ -53,13 +53,13 @@
 			click(index) {
 				this.value = index
 				console.log(this.tabBarList[index].pagePath);
-				uni.navigateTo({
+				/* uni.navigateTo({
 					url: this.tabBarList[index].pagePath,
 					success: res => {},
 					fail: err => {
 						console.log('err', err.errMsg);
 					}
-				})
+				}) */
 				console.log('click, index:', index, ', value:', this.value);
 
 				// this.value = 
