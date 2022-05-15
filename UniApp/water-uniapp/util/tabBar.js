@@ -41,6 +41,29 @@ const order = {
 	// 点击某一个item时，跳转的路径，此路径必须是pagees.json中tabBar字段中定义的路径
 	pagePath: '/pages/order/order' // 1.5.6新增，路径需要以"/"开头
 }
+// 商品
+const good = {
+	key: good,
+	iconPath: 'grid',
+	selectedIconPath: 'grid-fill',
+	text: '分类',
+	count: 0,
+	isDot: true,
+	customIcon: false,
+	midButton: false,
+	pagePath: '/pages/good/good',
+}
+const cart = {
+	key: cart,
+	iconPath: 'shopping-cart',
+	selectedIconPath: 'shopping-cart-fill',
+	text: '购物车',
+	count: 0,
+	isDot: true,
+	customIcon: false,
+	midButton: false,
+	pagePath: '/pages/cart/cat',
+}
 // 设置
 const setting = {
 	key: setting,
@@ -55,7 +78,7 @@ const setting = {
 }
 
 // 用户
-const userList = [home, order]
+const userList = [home, cart, order]
 // 职工
 const staffList = [home, order]
 // 管理员

@@ -28,6 +28,13 @@
 				"enablePullDownRefresh": false
 			}
 
+		}, {
+			"path": "pages/basics/cart/cart",
+			"style": {
+				"navigationBarTitleText": "",
+				"enablePullDownRefresh": false
+			}
+
 		}
 	],
 	"globalStyle": {
