@@ -36,7 +36,16 @@
 			}
 
 		}
-	],
+	    ,{
+            "path" : "pages/basics/goods/goods",
+            "style" :                                                                                    
+            {
+                "navigationBarTitleText": "",
+                "enablePullDownRefresh": false
+            }
+            
+        }
+    ],
 	"globalStyle": {
 		"navigationStyle": "custom",
 		"navigationBarTextStyle": "black",
