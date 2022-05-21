@@ -13,7 +13,7 @@
 					<text>￥{{good.sell_price}}</text>
 					<text>￥{{good.market_price}}</text>
 				</view>
-				<u-tag text="+" size="mini" />
+				<u-button type="primary" size="mini" text="+"/>
 			</view>
 		</view>
 	</view>
@@ -57,7 +57,7 @@
 			}
 	
 			.good_name {
-				font-size: 36rpx;
+				font-size: 33rpx;
 				line-height: 50rpx;
 				margin-top: 5rpx;
 				font-weight: bold;
@@ -72,7 +72,7 @@
 				display: flex;
 				justify-content: space-between;
 				align-items: center;
-				margin-top: -1rpx;
+				margin-top: -8rpx;
 			}
 	
 			.good_spec {

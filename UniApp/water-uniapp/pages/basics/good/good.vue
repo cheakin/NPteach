@@ -1,19 +1,13 @@
 <template>
 	<view>
-		<u-sticky bgColor="#fff">
-			<u-tabs :list="list1" lineWidth="30" lineColor="#f56c6c" 
-			:activeStyle="{
-				color: '#303133',
-				fontWeight: 'bold',
-				transform: 'scale(1.05)'
-			}" 
-			:inactiveStyle="{
-				color: '#606266',
-				transform: 'scale(1)'
-			}" 
-			itemStyle="padding-left: 15px; padding-right: 15px; height: 34px;" />
+		<u-sticky offsetTop="0" customNavHeight="0" bgColor="#fff">
+			<u-tabs :list="list1" lineWidth="30" lineColor="#f56c6c"
+			:activeStyle="{color: '#303133',fontWeight: 'bold',transform: 'scale(1.05)'}" 
+			:inactiveStyle="{color: '#606266',transform: 'scale(1)'}" 
+			itemStyle="padding-right: 15px; height: 34px;" />
 		</u-sticky>
-		<view style="margin-top: 200;">
+		
+		<view >
 			<good-list :goods="goods" />
 		</view>
 		
@@ -64,20 +58,38 @@
 						img_url: 'https://picsum.photos/id/16/200/200',
 						sell_price: 200,
 						market_price: 300,
-						title: '测试'
+						title: '测试',
+						spec: '200ml X 6'
 					}, {
 						id: '3',
 						img_url: 'https://picsum.photos/id/16/200/200',
 						sell_price: 200,
 						market_price: 300,
-						title: '测试'
+						title: '测试',
+						spec: '500ml X 1'
 					}, {
 						id: '4',
 						img_url: 'https://picsum.photos/id/16/200/200',
 						sell_price: 200,
 						market_price: 300,
-						title: '测试'
+						title: '测试',
+						spec: '100ml X 1'
+					}, {
+						id: '5',
+						img_url: 'https://picsum.photos/id/16/200/200',
+						sell_price: 200,
+						market_price: 300,
+						title: '测试',
+						spec: '100ml X 1'
+					}, {
+						id: '6',
+						img_url: 'https://picsum.photos/id/16/200/200',
+						sell_price: 200,
+						market_price: 300,
+						title: '测试',
+						spec: '100ml X 1'
 					}
+					
 				]
 			}
 		},
@@ -88,6 +100,11 @@
 			click(item) {
 				console.log('item', item);
 			}
+		},
+		onReachBottom() {
+			console.log('触底了');
+			let goodList = this.goods;
+			this.goods.push(...goodList)
 		}
 	}
 </script>

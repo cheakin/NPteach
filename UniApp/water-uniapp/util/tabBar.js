@@ -19,7 +19,7 @@ const home = {
 	// 如果是凸起按钮项，需配置此值为true
 	midButton: false,
 	// 点击某一个item时，跳转的路径，此路径必须是pagees.json中tabBar字段中定义的路径
-	pagePath: '/pages/index/index' // 1.5.6新增，路径需要以"/"开头
+	pagePath: '/pages/basics/index/index' // 1.5.6新增，路径需要以"/"开头
 }
 // 订单
 const order = {
@@ -39,9 +39,9 @@ const order = {
 	// 如果是凸起按钮项，需配置此值为true
 	midButton: false,
 	// 点击某一个item时，跳转的路径，此路径必须是pagees.json中tabBar字段中定义的路径
-	pagePath: '/pages/order/order' // 1.5.6新增，路径需要以"/"开头
+	pagePath: '/pages/basics/order/order' // 1.5.6新增，路径需要以"/"开头
 }
-// 商品
+// 商品(分类)
 const good = {
 	key: good,
 	iconPath: 'grid',
@@ -51,7 +51,7 @@ const good = {
 	isDot: true,
 	customIcon: false,
 	midButton: false,
-	pagePath: '/pages/good/good',
+	pagePath: '/pages/basics/good/good',
 }
 const cart = {
 	key: cart,
@@ -62,7 +62,7 @@ const cart = {
 	isDot: true,
 	customIcon: false,
 	midButton: false,
-	pagePath: '/pages/cart/cat',
+	pagePath: '/pages/basics/cart/cart',
 }
 // 设置
 const setting = {
@@ -74,15 +74,15 @@ const setting = {
 	isDot: true,
 	customIcon: false,
 	midButton: false,
-	pagePath: '/pages/setting/setting'
+	pagePath: '/pages/basics/setting/setting'
 }
 
 // 用户
-const userList = [home, cart, order]
+const userList = [good, cart, order]
 // 职工
-const staffList = [home, order]
+const staffList = [good, order]
 // 管理员
-const adminList = [home, order, setting]
+const adminList = [good, order, setting]
 
 export default {
 	userList,

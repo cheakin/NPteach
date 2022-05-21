@@ -1,16 +1,17 @@
 <template>
 	<view>
 		<!-- 轮播 -->
-		<u-swiper height="180" keyName="image" :list="swipers" bgColor="#ffffff" />
+		<u-swiper height="400rpx" keyName="image" :list="swipers" bgColor="#ffffff" />
 
 		<!-- 通知 -->
 		<u-notice-bar v-if="text1" :text="text1" />
 
 		<!-- 导航区域 -->
-		<u-grid :border="false" @click="">
-			<u-grid-item v-for="nav in navs">
-				<u-icon :customStyle="{paddingTop:20+'rpx'}" :name="nav.icon" :size="30" />
-				<text class="grid-text">{{nav.title}}</text>
+		
+		<u-grid :border="false" @click="jump">
+			<u-grid-item v-for="nav in tabBarList">
+				<u-icon :customStyle="{paddingTop:20+'rpx'}" :name="nav.iconPath" :size="30" />
+				<text class="grid-text">{{nav.text}}</text>
 			</u-grid-item>
 		</u-grid>
 		<!-- <view class="navs">
@@ -28,10 +29,16 @@
 </template>
 
 <script>
+	import { mapGetters } from 'vuex'
 	import goodList from '@/components/good-list.vue'
 	export default {
 		components: {
 			"good-list": goodList
+		},
+		computed: {
+			...mapGetters([
+				'tabBarList',
+			])
 		},
 		data() {
 			return {
@@ -41,7 +48,8 @@
 					'https://cdn.uviewui.com/uview/swiper/swiper3.png',
 				],
 				text1: 'uView UI众多组件覆盖开发过程的各个需求，组件功能丰富，多端兼容。让您快速集成，开箱即用',
-				navs: [{
+				/* navs: [{
+						path: '/pages/good/good',
 						icon: 'grid',
 						title: '分类'
 					},
@@ -53,7 +61,7 @@
 						icon: 'file-text',
 						title: '订单'
 					}
-				],
+				], */
 				goods: [
 					{
 					id: '1',
@@ -83,9 +91,21 @@
 				}]
 			}
 		},
-		methods: {},
+		methods: {
+			jump(index) {
+				uni.navigateTo({
+					url:this.tabBarList[index].pagePath,
+					fail: err => {
+						console.log(err);
+					}
+				})
+			}
+			
+		},
 		onReachBottom() {
 			console.log('触底了');
+			let goodList = this.goods;
+			this.goods.push(...goodList)
 		}
 		
 	}
