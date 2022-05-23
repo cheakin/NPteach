@@ -7,7 +7,6 @@
 		<u-notice-bar v-if="text1" :text="text1" />
 
 		<!-- 导航区域 -->
-		
 		<u-grid :border="false" @click="jump">
 			<u-grid-item v-for="nav in tabBarList">
 				<u-icon :customStyle="{paddingTop:20+'rpx'}" :name="nav.iconPath" :size="30" />
@@ -20,7 +19,6 @@
 				<text>{{nav.title}}</text>
 			</view>
 		</view> -->
-
 		<u-divider text="最新上架" textSize="35rpx " textColor="#b50e03" />
 		<good-list :goods="goods" />
 		

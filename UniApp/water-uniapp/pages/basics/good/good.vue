@@ -1,5 +1,5 @@
 <template>
-	<view>
+	<view style="background-color: #f4f4f5;">
 		<u-sticky offsetTop="0" customNavHeight="0" bgColor="#fff">
 			<u-tabs :list="list1" lineWidth="30" lineColor="#f56c6c"
 			:activeStyle="{color: '#303133',fontWeight: 'bold',transform: 'scale(1.05)'}" 
@@ -40,10 +40,6 @@
 					name: '美食'
 				}, {
 					name: '文化'
-				}, {
-					name: '财经'
-				}, {
-					name: '手工'
 				}],
 				goods: [{
 						id: '1',
