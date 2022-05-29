@@ -315,6 +315,7 @@
 			&__nav {
 				@include flex;
 				position: relative;
+				overflow-y: auto;
 
 				&__item {
 					padding: 0 11px;

@@ -1,10 +1,10 @@
 <template>
 	<view style="background-color: #f4f4f5;">
-		<u-sticky offsetTop="0" customNavHeight="0" bgColor="#fff">
+		<u-sticky offsetTop="0" customNavHeight="0" bgColor="#fff" style="overflow-x: hidden;">
 			<u-tabs :list="list1" lineWidth="30" lineColor="#f56c6c"
 			:activeStyle="{color: '#303133',fontWeight: 'bold',transform: 'scale(1.05)'}" 
 			:inactiveStyle="{color: '#606266',transform: 'scale(1)'}" 
-			itemStyle="padding-right: 15px; height: 34px;" />
+			itemStyle="padding-right: 15px; height: 34px;" style="overflow-y: hidden;"/>
 		</u-sticky>
 		
 		<view >
