@@ -1,7 +1,7 @@
 <template>
 	<view class="goods">
 		<view class="good_item" v-for="good in goods" :key="good.id">
-			<image :src="good.img_url" />
+			<image :src="good.img_url" class="good_img"/>
 			<view class="good_name">{{good.title}}</view>
 			<view class="good_desc"v style="margin-top: -10rpx;">
 				<u-tag text="酒水" size="mini" color="#909399" borderColor="#fff" plain shape="circle" />
@@ -48,7 +48,7 @@
 			padding: 15rpx;
 			box-sizing: border-box;
 	
-			image {
+			.good_img {
 				width: 335rpx;
 				height: 300rpx;
 				// height: 250rpx;

@@ -3,6 +3,7 @@
 		{
 			"path": "pages/index/index",
 			"style": {
+				"backgroundColor": "#ddd",
 				"navigationBarTitleText": "",
 				"enablePullDownRefresh": false
 			}
@@ -17,6 +18,7 @@
 		}, {
 			"path": "pages/basics/order/order",
 			"style": {
+				"backgroundColor": "#f4f4f5",
 				"navigationBarTitleText": "",
 				"enablePullDownRefresh": false
 			}
