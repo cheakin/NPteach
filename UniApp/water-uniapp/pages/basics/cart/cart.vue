@@ -8,7 +8,7 @@
 			<u-checkbox activeColor="green" label="绿色"></u-checkbox>
 		</u-checkbox-group>
 		
-		<view class="balance"><u-button type="info" text="结算"></u-button></view>
+		<u-button type="info" text="结算" color="#c8c9cc" :disabled="true" class="balance"></u-button>
 	</view>
 </template>
 
