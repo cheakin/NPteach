@@ -1,5 +1,10 @@
 <template>
 	<view style="background-color: #f4f4f5;">
+		<view class="head">
+			<u-search placeholder="搜索历史订单" inputAlign="center" v-model="keyword" :showAction="false" />
+			<u-icon name="shopping-cart" color="#2979ff" size="30" style="padding: 0 8 rpx;"></u-icon>
+		</view>
+		
 		<u-sticky offsetTop="0" customNavHeight="0" bgColor="#fff" style="overflow-x: hidden;">
 			<u-tabs :list="list1" lineWidth="30" lineColor="#f56c6c"
 			:activeStyle="{color: '#303133',fontWeight: 'bold',transform: 'scale(1.05)'}" 
@@ -26,6 +31,7 @@
 					pageIndex: 1,
 					pageSize: 10
 				},
+				keyword: '',
 				list1: [{
 					name: '关注',
 				}, {
@@ -106,5 +112,7 @@
 </script>
 
 <style>
-
+.head {
+	display: flex;
+}
 </style>

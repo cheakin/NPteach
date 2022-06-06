@@ -1,5 +1,6 @@
 <template>
 	<view>
+		<u-search placeholder="搜索历史订单" inputAlign="center" v-model="keyword" :showAction="false" />
 		<view class="card" v-for="good in goods">
 			<!-- <u-skeleton rows="3" :loading="loading" avatar :title="false">
 				<u--text>loading为false时，将会展示此处插槽内容</u--text>
@@ -29,6 +30,7 @@
 		data() {
 			return {
 				loading: true,
+				keyword: '',
 				goods: [{
 						id: '1',
 						img_url: 'https://picsum.photos/id/16/100/100',
