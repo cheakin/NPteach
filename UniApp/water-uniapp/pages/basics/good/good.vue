@@ -2,7 +2,7 @@
 	<view style="background-color: #f4f4f5;">
 		<view class="head">
 			<u-search placeholder="搜索历史订单" inputAlign="center" v-model="keyword" :showAction="false" />
-			<u-icon name="shopping-cart" color="#2979ff" size="30" style="padding: 0 8 rpx;"></u-icon>
+			<u-icon name="shopping-cart" color="#2979ff" size="30" style="padding: 0 8rpx;"></u-icon>
 		</view>
 		
 		<u-sticky offsetTop="0" customNavHeight="0" bgColor="#fff" style="overflow-x: hidden;">
