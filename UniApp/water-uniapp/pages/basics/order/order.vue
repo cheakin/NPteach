@@ -1,6 +1,6 @@
 <template>
 	<view style="background-color: #ccc;">
-		<u-search placeholder="搜索历史订单" inputAlign="center" v-model="keyword" :showAction="false" />
+		<u-search placeholder="搜索历史订单" inputAlign="center" v-model="keyword" shape="square" :showAction="false" />
 		<view class="order">
 			<!-- <u-skeleton rows="3" :loading="loading" avatar :title="false">
 				<u--text>loading为false时，将会展示此处插槽内容</u--text>
@@ -91,7 +91,7 @@
 	.order {
 		// border: red 1rpx solid;
 		
-		padding: 3rpx 5rpx;
+		padding: 5rpx 5rpx;
 		width: 720rpx;
 		margin: 20rpx auto;
 		// padding: 15rpx 0 10rpx;
@@ -121,7 +121,7 @@
 		.good{
 			// border: red 1rpx solid;
 			display: flex;
-			margin: 15rpx 15rpx;
+			margin: 17rpx 15rpx;
 			// padding: 15rpx 10rpx;
 			width: 700rpx;
 			// bgood-radius: 0.4em;
