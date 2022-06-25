@@ -1,15 +1,15 @@
 <template>
-	<view style="background-color: #ccc;">
+	<view style="background-color: #c8c9cc;">
 		<u-search placeholder="搜索历史订单" inputAlign="center" v-model="keyword" shape="square" :showAction="false" />
-		<view class="order">
+		<view class="order" v-for="order in orders">
 			<!-- <u-skeleton rows="3" :loading="loading" avatar :title="false">
 				<u--text>loading为false时，将会展示此处插槽内容</u--text>
 			</u-skeleton> -->
 			<view class="order_desc">
-				<view class="order_time">下单时间：2022-05-09 23:59:59</view>
-				<view class="order_price">￥1234</view>
+				<view class="order_time">下单时间：{{order.order_time}}</view>
+				<view class="order_price">￥{{order.order_price}}</view>
 			</view>
-			<view class="good" v-for="good in goods">
+			<view class="good" v-for="good in order.goods">
 				<!-- <image :src="good.img_url"  class="good_img"/> -->
 				<u--image :src="good.img_url" width="200rpx" height="200rpx" radius="5"></u--image>
 				<view class="good_info">
@@ -33,52 +33,79 @@
 			return {
 				loading: true,
 				keyword: '',
-				goods: [{
-						id: '1',
-						img_url: 'https://picsum.photos/id/16/100/100',
-						sell_price: 200,
-						market_price: 300,
-						title: '测试测试测试测试测试测试测试测试测试测试测试测试测试',
-						spec: '200ml X 1'
+				orders: [
+					{
+						goods: [{
+								id: '1',
+								img_url: 'https://picsum.photos/id/16/100/100',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试测试测试测试测试测试测试测试测试测试测试测试测试',
+								spec: '200ml X 1'
+							},
+							{
+								id: '2',
+								img_url: 'https://picsum.photos/id/16/200/200',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试',
+								spec: '200ml X 6'
+							}, {
+								id: '3',
+								img_url: 'https://picsum.photos/id/16/200/200',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试',
+								spec: '500ml X 1'
+							}, {
+								id: '4',
+								img_url: 'https://picsum.photos/id/16/200/200',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试',
+								spec: '100ml X 1'
+							}
+						],
+						order_time: '20220509 23:59:59',
+						order_price: 123.50
 					},
 					{
-						id: '2',
-						img_url: 'https://picsum.photos/id/16/200/200',
-						sell_price: 200,
-						market_price: 300,
-						title: '测试',
-						spec: '200ml X 6'
-					}, {
-						id: '3',
-						img_url: 'https://picsum.photos/id/16/200/200',
-						sell_price: 200,
-						market_price: 300,
-						title: '测试',
-						spec: '500ml X 1'
-					}, {
-						id: '4',
-						img_url: 'https://picsum.photos/id/16/200/200',
-						sell_price: 200,
-						market_price: 300,
-						title: '测试',
-						spec: '100ml X 1'
-					}, {
-						id: '5',
-						img_url: 'https://picsum.photos/id/16/200/200',
-						sell_price: 200,
-						market_price: 300,
-						title: '测试',
-						spec: '100ml X 1'
-					}, {
-						id: '6',
-						img_url: 'https://picsum.photos/id/16/200/200',
-						sell_price: 200,
-						market_price: 300,
-						title: '测试',
-						spec: '100ml X 1'
+						goods: [{
+								id: '1',
+								img_url: 'https://picsum.photos/id/16/100/100',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试测试测试测试测试测试测试测试测试测试测试测试测试',
+								spec: '200ml X 1'
+							},
+							{
+								id: '2',
+								img_url: 'https://picsum.photos/id/16/200/200',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试',
+								spec: '200ml X 6'
+							}, {
+								id: '3',
+								img_url: 'https://picsum.photos/id/16/200/200',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试',
+								spec: '500ml X 1'
+							}, {
+								id: '4',
+								img_url: 'https://picsum.photos/id/16/200/200',
+								sell_price: 200,
+								market_price: 300,
+								title: '测试',
+								spec: '100ml X 1'
+							}
+						],
+						order_time: '20220509 23:59:59',
+						order_price: 124.50
 					}
-
 				]
+				
 			}
 		},
 		methods: {

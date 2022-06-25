@@ -18,7 +18,7 @@
 		}, {
 			"path": "pages/basics/order/order",
 			"style": {
-				"backgroundColor": "#f4f4f5",
+				"backgroundColor": "#c8c9cc",
 				"navigationBarTitleText": "",
 				"enablePullDownRefresh": false
 			}
