@@ -1,7 +1,0 @@
-version: "3.9"
-services:
-  platform-boot-admin:
-    build: .
-    container_name: platform-boot-admin
-    ports:
-      - "8001:8000"
