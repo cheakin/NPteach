@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hello world!</title>
+</head>
+
+<body>
+  hello world!
+  <!-- readFile -->
+  <div>------------1.readFile-------------</div>
+  <button id="btn1">开发语言</button>
+  <div id="lang"></div>
+
+  <div>-------------2.remote------------</div>
+  <button id="btn2">打开新窗口</button>
+
+  <div>--------------3.新页面--------------</div>
+  <div>
+    <a id="aHref" href="http://ww.baidu.com">百度一下</a>
+  </div>
+
+  <div>----------4.新窗口1--------------</div>
+  <button id="btn3">打开新窗口(页面)</button>
+
+
+  <div>----------5.新窗口2：子窗口消息--------------</div>
+  <button id="btn4">打开子窗口</button>
+  <div id="pop_message"></div>
+
+  <div>--------6.file(open,save)----------</div>
+  <button id="btn5">打开图片</button>
+  <button id="btn6">保存文件</button>
+  <img id="images" style="width:100%" />
+
+  <div>----------7.消息对话框(message)-----------</div>
+  <button id="btn7">弹出对话框</button>
+
+  <div>---------8.断网提示----------</div>
+  <div id="network"></div>
+
+  <div>---------9.系统消息通知----------</div>
+  <button id="btn8">消息通知</button>
+
+  <div>-----------10.剪切板------------</div>
+  <div>
+    激活码：<span id="code">abbcddeff</span>
+    <button id="btn9">复制激活码</button>
+  </div>
+
+</body>
+
+<!-- 1.readFile -->
+<script>
+  var fs = require('fs')
+  window.onload = () => {
+    const btn1 = this.document.querySelector('#btn1')
+    const lang = this.document.querySelector('#lang')
+    btn1.onclick = function () {
+      fs.readFile('lang.txt', (err, data) => {
+        console.log(data);
+        lang.innerHTML = data
+      })
+    }
+  }
+</script>
+
+<!-- 2.remote -->
+<script>  
+  const btn2 = this.document.querySelector('#btn2')
+  const remote = require('@electron/remote')
+  const BrowserWindow = remote.BrowserWindow
+
+  window.onload = function () {
+    btn2.onclick = () => {
+      newWin = new BrowserWindow({
+        with: 500,
+        height: 500,
+        webPreferences: {
+          nodeIntegration: true,  //设置开启nodejs环境
+          contextIsolation: false,  //解决require问题
+        }
+      })
+      newWin.loadFile('child.html')
+      newWin.openDevTools() //打开控制台
+      newWin.on('close', () => {
+        newWin = null
+      })
+    }
+  }
+
+  // 右键菜单
+  var rightTemplate = [
+    { label: '复制', accelerator: 'ctrl+c' },
+    { label: '粘贴', accelerator: 'ctrl+v' }
+  ]
+
+  var rightMenu = remote.Menu.buildFromTemplate(rightTemplate)
+
+
+  // 绑定阻止右键默认，并绑定新的
+  window.addEventListener('contextmenu', e => {
+    e.preventDefault()
+    rightMenu.popup({
+      window: remote.getCurrentWindow()
+    })
+  })
+</script>
+
+<!-- 3.新页面 -->
+<script>
+  const { shell } = require('electron')
+  var aHref = this.document.querySelector('#aHref')
+
+  aHref.onclick = function (e) {
+    e.preventDefault()
+    var href = this.getAttribute('href')
+    shell.openExternal(href)
+  }
+</script>
+
+<!-- 4.新窗口 -->
+<script>
+  var btn3 = document.querySelector('#btn3');
+  btn3.onclick = function (e) {
+    window.open('http://www.baidu.com')
+  }
+</script>
+
+<!-- 5.子窗口消息 -->
+<script>
+  var btn4 = document.querySelector('#btn4');
+  btn4.onclick = function (e) {
+    window.open('./popup.html')
+  }
+
+  window.addEventListener('message', msg => {
+    let pop_message = document.querySelector('#pop_message')
+    pop_message.innerHTML = JSON.stringify(msg.data)
+  })
+</script>
+
+<!-- 6.file(open,save) -->
+<script>
+  const { dialog } = require('@electron/remote')
+
+  // openFile
+  var btn5 = document.querySelector('#btn5')
+  btn5.onclick = function (e) {
+    dialog.showOpenDialog({
+      title: '请选择图片',
+      filters: [{name: 'images', extensions:['jpg']}],
+      buttonLabel: '打开'
+    }).then(result => {
+      var image = document.querySelector('#images')
+      console.log(result);
+      image.src = result.filePaths[0]
+    }).catch(err => {
+      console.log(err);
+    }) 
+  }
+
+  //saveFile
+  var btn6 = document.querySelector('#btn6')
+  btn6.onclick = function (e) {
+    dialog.showSaveDialog({
+      title: '保存文件'
+    }).then(result => {
+      fs.writeFileSync(result.filePath, 'this is test')
+    }).catch(err => {
+      console.log(err);
+    })
+  }
+
+
+</script>
+
+<!-- 7.消息对话框(message) -->
+<script>
+  var btn7 = document.querySelector('#btn7')
+  btn7.onclick = function (e) {
+    dialog.showMessageBox({
+      type: 'warning',
+      title: '摸鱼',
+      message: '确定开始摸鱼吗？',
+      buttons:['是','取消']
+    }).then(result => {
+      console.log(result);
+    })
+  }
+</script>
+
+<!-- 8.断网提示 -->
+<script>
+  var network = document.querySelector('#network')
+  window.addEventListener('online', function(){
+    console.log(00000);
+    network.innerHTML = '联网成功！'
+  })
+  window.addEventListener('offline', function(){
+    console.log(11111);
+    network.innerHTML = '已离线.....'
+  })
+</script>
+
+<!-- 9.系统消息通知 -->
+<script>
+  var btn8 = document.querySelector('#btn8')
+  var option = {
+    title: '您有新的订单',
+    body: '请及时查收'
+  }
+  btn8.onclick = function () {
+    new window.Notification(option.title, option)
+  }
+</script>
+
+<!-- 10.剪切板 -->
+<script>
+  const { clipboard } = require('electron')
+  const code = document.querySelector('#code')
+  const btn9 = document.querySelector('#btn9')
+  btn9.onclick = function () {
+    clipboard.writeText(code.innerHTML)
+    alert('复制成功')
+  }
+
+</script>
+</html>

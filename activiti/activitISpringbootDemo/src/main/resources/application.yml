@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/activiti?characterEncoding=UTF-8
+    username: root
+    password: root
+
+  activiti:
+    # true: 表不存在则新建
+    # false： 表存在则报错
+    # drop-create: 启动时先删除表再创建
+    # create_drop: 结束时删除表
+    database-schema-update: true
+    # activiti7默认不生成历史表
+    db-history-used: true
+    # 历史表的存储等级
+    history-level: full

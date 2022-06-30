@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <h1>this is popup page!</h1>
+  <button id="popbtn">向父窗口传递消息</button>
+</body>
+
+<script>
+  var popbtn = this.document.querySelector('#popbtn')
+  popbtn.onclick = function(e) {
+    window.opener.postMessage('我是子窗口传递的消息')
+  }
+</script>
+
+</html>
