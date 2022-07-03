@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/helloword/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-redis/redis-01-jedis/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-redis/redis-02-springboot/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-shiro/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-03-web/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-04-data/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-09-task/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-11-amqp/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-07-shrio/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-10-cache/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-12-dubbo/consumer/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-12-dubbo/provider/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-02-config/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-05-mybatis/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-08-swagger/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-06-security/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-01-helloword/pom.xml" />
+        <option value="$PROJECT_DIR$/springboot-elasticsearch/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="corretto-11" project-jdk-type="JavaSDK" />
+</project>

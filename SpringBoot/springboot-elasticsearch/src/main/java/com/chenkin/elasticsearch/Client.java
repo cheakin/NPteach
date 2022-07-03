@@ -1,9 +1,8 @@
-package com.chenkin;
+package com.chenkin.elasticsearch;
 
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.client.transport.TransportClient;
 
 import java.io.IOException;
 
@@ -11,8 +10,7 @@ import java.io.IOException;
  * ES 客户端
  * Create by botboy on 2022/07/02.
  **/
-public class esClient {
-
+public class Client {
     public static void main(String[] args) throws IOException {
 //        new TransportClient(); // 已经不推荐使用
 
@@ -23,6 +21,5 @@ public class esClient {
 
         // 关闭客户端
         esClient.close();
-
     }
 }

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="springboot-11-amqp" />
+        <module name="springboot-06-security" />
+        <module name="redis-02-springboot" />
+        <module name="springboot-03-web" />
+        <module name="springboot-shiro" />
+        <module name="springboot-09-task" />
+        <module name="springboot-10-cache" />
+        <module name="springboot-05-mybatis" />
+        <module name="provider" />
+        <module name="hello-shiro" />
+        <module name="springboot-elasticsearch" />
+        <module name="helloword" />
+        <module name="springboot-08-swagger" />
+        <module name="springboot-02-config" />
+        <module name="redis-01-jedis" />
+        <module name="springboot-01-helloword" />
+        <module name="springboot-04-data" />
+        <module name="consumer" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="consumer" options="-parameters" />
+      <module name="helloword" options="-parameters" />
+      <module name="provider" options="-parameters" />
+      <module name="redis-02-springboot" options="-parameters" />
+      <module name="springboot-01-helloword" options="-parameters" />
+      <module name="springboot-02-config" options="-parameters" />
+      <module name="springboot-03-web" options="-parameters" />
+      <module name="springboot-04-data" options="-parameters" />
+      <module name="springboot-05-mybatis" options="-parameters" />
+      <module name="springboot-06-security" options="-parameters" />
+      <module name="springboot-08-swagger" options="-parameters" />
+      <module name="springboot-09-task" options="-parameters" />
+      <module name="springboot-10-cache" options="-parameters" />
+      <module name="springboot-11-amqp" options="-parameters" />
+      <module name="springboot-shiro" options="-parameters" />
+    </option>
+  </component>
+</project>
