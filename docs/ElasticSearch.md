@@ -1493,7 +1493,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
     }
     ```
 
-2. 索引-创建
+2. 索引 - 创建
     ``` java
         public class IndexCreate {
 
@@ -1522,7 +1522,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
     索引操作： true
     ```
 
-3. 索引-查询 & 删除
+3. 索引 - 查询 & 删除
     查询
     ``` java
     public class IndexSearch {
@@ -1597,7 +1597,7 @@ public class User {
 }
 ```
 
-4. 文档-新增 & 修改
+4. 文档 - 新增 & 修改
     ``` java
     public class DocInsert {
         public static void main(String[] args) throws IOException {
@@ -1638,3 +1638,361 @@ public class User {
 
 
     
+5. 文档 - 查询 & 删除
+    * 查询
+        ``` java
+            public static void main(String[] args) throws IOException {
+                // 创建ES客户端
+                RestHighLevelClient client = new RestHighLevelClient(
+                        RestClient.builder(new HttpHost("localhost", 9200, "http"))
+                );
+
+                // 新增文档 - 请求对象
+                IndexRequest request = new IndexRequest();
+                // 设置索引及唯一性标识
+                request.index("user").id("1001");
+
+                // 创建数据对象
+                User user = new User();
+                user.setName("zhangsan");
+                user.setAge(30);
+                user.setSex("男");
+
+                // 添加文档数据, es8.0以后可以直接传对象 <= 报错, 但是操作成功
+                request.source(user, XContentType.JSON);
+                // 客户端发送请求，获取响应对象
+                IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+                // 3.打印结果信息
+                System.out.println("response.getResult() = " + response.getResult());
+
+                // 关闭客户端
+                client.close();
+            }
+        }
+        ```
+    * 删除
+        ``` java
+        public class DocDelete {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            DeleteRequest request = new DeleteRequest();
+            request.index("user").id("1001");
+            DeleteResponse response = client.delete(request, RequestOptions.DEFAULT);
+
+            System.out.println(response.toString());
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+        ```
+
+6. 文档 - 高级查询 - 全量查询
+    ``` java
+    public class DocSearch {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 新增文档 - 请求对象
+            IndexRequest request = new IndexRequest();
+            // 设置索引及唯一性标识
+            request.index("user").id("1001");
+
+            // 创建数据对象
+            User user = new User();
+            user.setName("zhangsan");
+            user.setAge(30);
+            user.setSex("男");
+
+            // 添加文档数据, es8.0以后可以直接传对象 <= 报错, 但是操作成功
+            request.source(user, XContentType.JSON);
+            // 客户端发送请求，获取响应对象
+            IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+            // 3.打印结果信息
+            System.out.println("response.getResult() = " + response.getResult());
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+    ```
+
+7. 文档-高级查询 - 分页查询 & 条件查询 & 查询排序 & 组合查询 & 范围查询 & 模糊查询 & 高亮查询 & 最大值查询 & 分组查询
+    ``` java
+    public class DocQuery {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 创建搜索请求对象
+            SearchRequest request = new SearchRequest();
+            request.indices("user");
+
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+
+            // 1.条件查询
+            /*sourceBuilder.query(QueryBuilders.termQuery("age", "30"));*/
+
+            // 2.分页查询
+            /*sourceBuilder.query(QueryBuilders.matchAllQuery());
+            // 分页查询
+            // 当前页其实索引(第一条数据的顺序号)， from
+            sourceBuilder.from(0);
+            // 每页显示多少条 size
+            sourceBuilder.size(2);*/
+
+            // 3.排序查询
+            /*sourceBuilder.query(QueryBuilders.matchAllQuery());
+            // 排序
+            sourceBuilder.sort("age", SortOrder.ASC);
+            // 需要的话可以加 排除
+            String[] include = {"name"};
+            String[] excludes = {};
+            sourceBuilder.fetchSource(include, excludes);*/
+
+            // 4.组合查询
+            /*BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            // 必须包含
+            boolQueryBuilder.must(QueryBuilders.matchQuery("age", "30"));
+            // 一定不含
+            boolQueryBuilder.mustNot(QueryBuilders.matchQuery("name", "zhangsan"));
+            // 可能包含
+            boolQueryBuilder.should(QueryBuilders.matchQuery("sex", "男"));
+            sourceBuilder.query(boolQueryBuilder);*/
+
+            // 5.范围查询
+            /*RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("age");
+            // 大于等于
+            //rangeQuery.gte("30");
+            // 小于等于
+            rangeQuery.lte("40");
+            sourceBuilder.query(rangeQuery);*/
+
+            // 6.模糊查询
+            /*sourceBuilder.query(QueryBuilders.fuzzyQuery("name","wangwu")
+                    .fuzziness(Fuzziness.ONE)); // 允许偏差值*/
+
+            // 7.高亮查询
+            /*TermsQueryBuilder termsQueryBuilder =
+                    QueryBuilders.termsQuery("name","lisi");
+            sourceBuilder.query(termsQueryBuilder);
+            // 构建高亮字段
+            HighlightBuilder highlightBuilder = new HighlightBuilder();
+            highlightBuilder.preTags("<font color='red'>"); // 设置标签前缀
+            highlightBuilder.postTags("</font>");   // 设置标签后缀
+            highlightBuilder.field("name"); // 设置高亮字段
+            // 设置高亮构建对象
+            sourceBuilder.highlighter(highlightBuilder);*/
+
+            // 8.最大值查询
+            /*sourceBuilder.aggregation(AggregationBuilders.max("maxAge").field("age"));*/
+
+            // 9.分组查询
+            sourceBuilder.aggregation(AggregationBuilders.terms("age_groupby").field("age"));
+
+            request.source(sourceBuilder);
+            SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+            System.out.println("response = " + response);
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+    ```
+
+## Elasticsearch环境
+### 简介
+* 单机 & 集群
+    单台 Elasticsearch 服务器提供服务，往往都有最大的负载能力，超过这个阈值，服务器
+    性能就会大大降低甚至不可用，所以生产环境中，一般都是运行在指定服务器集群中。
+    除了负载能力，单点服务器也存在其他问题：
+    * 单台机器存储容量有限
+    * 单服务器容易出现单点故障，无法实现高可用
+    * 单服务的并发处理能力有限
+    配置服务器集群时，集群中节点数量没有限制，大于等于 2 个节点就可以看做是集群了。一
+般出于高性能及高可用方面来考虑集群中节点数量都是 3 个以上
+
+总之，集群能提高性能，增加容错。
+
+* 集群 Cluster
+**一个集群就是由一个或多个服务器节点组织在一起，共同持有整个的数据，并一起提供索引和搜索功能。**一个 Elasticsearch 集群有一个唯一的名字标识，这个名字默认就是”elasticsearch”。这个名字是重要的，因为一个节点只能通过指定某个集群的名字，来加入这个集群。
+
+* 节点 Node
+集群中包含很多服务器， 一个节点就是其中的一个服务器。 作为集群的一部分，它存储数据，参与集群的索引和搜索功能。
+
+一个节点也是由一个名字来标识的，默认情况下，这个名字是一个随机的漫威漫画角色的名字，这个名字会在启动的时候赋予节点。这个名字对于管理工作来说挺重要的，因为在这个管理过程中，你会去确定网络中的哪些服务器对应于 Elasticsearch 集群中的哪些节点。
+
+一个节点可以通过配置集群名称的方式来加入一个指定的集群。默认情况下，每个节点都会被安排加入到一个叫做“elasticsearch”的集群中，这意味着，如果你在你的网络中启动了若干个节点，并假定它们能够相互发现彼此，它们将会自动地形成并加入到一个叫做“elasticsearch”的集群中。
+
+在一个集群里，只要你想，可以拥有任意多个节点。而且，如果当前你的网络中没有运
+行任何 Elasticsearch 节点，这时启动一个节点，会默认创建并加入一个叫做“elasticsearch”的
+集群。
+
+### Windows集群部署
+* 配置
+    使用新环境, 复制出三个服务, 分别为node1001, node1002, node1003
+    [](./README.assets/1656948629345.jpg)
+
+    若内存不够, 可再 config/jvm.options 中做出如下修改(默认是1g)
+    ``` yml
+    -Xms4g -> 修改为 -Xms256m
+    -Xmx4g -> 修改为 -Xmx256m
+    ```
+    * node-1001 节点
+        ``` yml
+        #集群名称，节点之间要保持一致
+        cluster.name: "my-application"
+
+        # 节点名称
+        node.name: node-1001
+        # 节点角色, ES8.0以后使用角色的方式赋值
+        node.roles: [ master, data ]
+
+        # 通信地址
+        network.host: localhost
+        # 通信端口
+        http.port: 1001
+        # 通信监听端口, 8.0不再是`transport.tcp.port`
+        transport.port: 9301
+
+        # 跨域配置
+        http.cors.enabled: true
+        http.cors.allow-origin: "*"
+
+        # 关闭认证模式
+        xpack.security.enabled: false
+        ```
+
+    * node-1002 节点
+        ``` yml
+        #集群名称，节点之间要保持一致
+        cluster.name: "my-application"
+
+        # 节点名称
+        node.name: node-1002
+        # 节点角色, ES8.0以后使用角色的方式赋值
+        node.roles: [ master, data ]
+
+        # 通信地址
+        network.host: localhost
+        # 通信端口
+        http.port: 1002
+        # 通信监听端口, 8.0不再是`transport.tcp.port`
+        transport.port: 9302
+
+        discovery.seed_hosts: ["localhost:9301"]
+
+        # 跨域配置
+        http.cors.enabled: true
+        http.cors.allow-origin: "*"
+
+        # 关闭认证模式
+        xpack.security.enabled: false
+        ```
+
+    * node-1003节点
+        ``` yml
+        #集群名称，节点之间要保持一致
+        cluster.name: "my-application"
+
+        # 节点名称
+        node.name: node-1002
+        # 节点角色, ES8.0以后使用角色的方式赋值
+        node.roles: [ master, data ]
+
+        # 通信地址
+        network.host: localhost
+        # 通信端口
+        http.port: 1003
+        # 通信监听端口, 8.0不再是`transport.tcp.port`
+        transport.port: 9303
+
+        discovery.seed_hosts: ["localhost:9301", "localhost:9302"]
+
+        # 跨域配置
+        http.cors.enabled: true
+        http.cors.allow-origin: "*"
+
+        # 关闭认证模式
+        xpack.security.enabled: false
+        ```
+
+* 启动集群
+    分别依次双击执行节点的bin/elasticsearch.bat, 启动节点服务器，启动后，会自动加入指定名称的集群。
+    
+* 测试集群
+    * 状态
+        向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:1001/_cluster/health`, 返回结果为: 
+        ``` json
+        {
+            "cluster_name": "my-application",
+            "status": "green",
+            "timed_out": false,
+            "number_of_nodes": 2,
+            "number_of_data_nodes": 2,
+            "active_primary_shards": 1,
+            "active_shards": 2,
+            "relocating_shards": 0,
+            "initializing_shards": 0,
+            "unassigned_shards": 0,
+            "delayed_unassigned_shards": 0,
+            "number_of_pending_tasks": 0,
+            "number_of_in_flight_fetch": 0,
+            "task_max_waiting_in_queue_millis": 0,
+            "active_shards_percent_as_number": 100
+        }
+        ```
+        **status字段**指示着当前集群在总体上是否工作正常。它的三种颜色含义如下：
+        green：所有的主分片和副本分片都正常运行。
+        yellow：所有的主分片都正常运行，但不是所有的副本分片都正常运行。
+        red：有主分片没能正常运行。
+    
+    * 索引
+        向集群中的node-1001节点增加索引：向 ES 服务器发 `PUT` 请求 ： `http://127.0.0.1:9200/shopping/_search`, 返回结果为:
+        ``` json
+        {
+            "acknowledged": true,
+            "shards_acknowledged": true,
+            "index": "user"
+        }
+        ```
+        此时向集群中的node-1003节点获取索引：向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:1003/user`, 返回结果为:
+        ``` json
+        {
+            "user": {
+                "aliases": {},
+                "mappings": {},
+                "settings": {
+                    "index": {
+                        "creation_date": "1617993035885",
+                        "number_of_shards": "1",
+                        "number_of_replicas": "1",
+                        "uuid": "XJKERwQlSJ6aUxZEN2EV0w",
+                        "version": {
+                            "created": "7080099"
+                        },
+                        "provided_name": "user"
+                    }
+                }
+            }
+        }
+        ```
+        即:在node1001节点创建的索引会自动同步到node1003
+### Linux单节点部署
+略
+
+## Elasticsearch进阶
+### 核心概念
+
+
+
+
