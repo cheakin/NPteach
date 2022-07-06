@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding" defaultCharsetForPropertiesFiles="UTF-8">
+    <file url="file://$PROJECT_DIR$/helloword/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-01-helloword/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-02-config/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-03-web/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-04-data/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-05-mybatis/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-06-security/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-08-swagger/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-09-task/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-10-cache/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-11-amqp/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-12-dubbo/consumer/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-12-dubbo/provider/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-redis/redis-02-springboot/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/springboot-shiro/src/main/java" charset="UTF-8" />
+    <file url="PROJECT" charset="UTF-8" />
+  </component>
+</project>

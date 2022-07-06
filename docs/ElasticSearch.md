@@ -161,7 +161,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
 这里的文档可以类比为关系型数据库中的表数据，添加的数据格式为 JSON 格式  
 
 4. 文档-创建
-    向 ES 服务器发`POST`请求 ： `http://127.0.0.1:9200/shopping/_doc`，请求体JSON内容为：
+    向 ES 服务器发 `POST` 请求 ： `http://127.0.0.1:9200/shopping/_doc`，请求体JSON内容为：
     ``` json
     {
         "title":"小米手机",
@@ -212,13 +212,13 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
         向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_doc/1`, 请求结果如下:
         ``` json
         {
-            "_index": "shopping",
-            "_id": "1",
+            "_index": "shopping",   // 索引
+            "_id": "1", // 唯一键
             "_version": 1,
-            "_seq_no": 2,
+            "_seq_no": 2, 
             "_primary_term": 1,
             "found": true,  // 存在, 不存在则为false
-            "_source": {
+            "_source": {    // 查询结果
                 "title": "小米手机",
                 "category": "小米",
                 "images": "http://www.gulixueyuan.com/xm.jpg",
@@ -230,7 +230,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
         向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`, 请求结果为:
         ``` json
         {
-            "took": 181,
+            "took": 181,    // 耗时
             "timed_out": false,
             "_shards": {
                 "total": 1,
@@ -238,7 +238,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
                 "skipped": 0,
                 "failed": 0
             },
-            "hits": {
+            "hits": {   // 命中结果
                 "total": {
                     "value": 3,
                     "relation": "eq"
@@ -286,7 +286,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
 6. 全量修改 & 局部修改 & 删除
     * 全量修改
         和新增文档一样，输入相同的 URL 地址请求，如果请求体变化，会将原有的数据内容覆盖
-        向 ES 服务器发 `POST` 请求 ： `http://127.0.0.1:9200/shopping/_doc/1`, 请求的json为
+        向 ES 服务器发 `PUT` 或 `POST` (都需要明确id) 请求 ： `http://127.0.0.1:9200/shopping/_doc/1`, 请求的json为
         ``` json
         {
             "title":"华为手机",
@@ -365,10 +365,10 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
             "_index": "shopping",
             "_id": "1",
             "_version": 4,
-            "result": "deleted",
+            "result": "deleted",    // 已删除
             "_shards": {
                 "total": 2,
-                "successful": 1,
+                "successful": 1,    // 成功
                 "failed": 0
             },
             "_seq_no": 5,
@@ -383,13 +383,6 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
             "found": false
         }
         ```
-
-
-
-
-
-
-
 
 
 7. 条件查询 & 分页查询 & 查询排序
@@ -509,233 +502,227 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
                 }
             }
             ```
-            * 带请求体方式的查找所有内容
-                查找所有文档内容, 向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
-                ``` json
-                {
-                    "query":{
-                        "match_all":{}
-                    }
+        * 带请求体方式的查找所有内容
+            查找所有文档内容, 向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
+            ``` json
+            {
+                "query":{
+                    "match_all":{}
                 }
-                ```
-                返回所有文档结果：
-                ``` json
-                {
-                    "took": 3,
-                    "timed_out": false,
-                    "_shards": {
-                        "total": 1,
-                        "successful": 1,
-                        "skipped": 0,
-                        "failed": 0
+            }
+            ```
+            返回所有文档结果：
+            ``` json
+            {
+                "took": 3,
+                "timed_out": false,
+                "_shards": {
+                    "total": 1,
+                    "successful": 1,
+                    "skipped": 0,
+                    "failed": 0
+                },
+                "hits": {
+                    "total": {
+                        "value": 2,
+                        "relation": "eq"
                     },
-                    "hits": {
-                        "total": {
-                            "value": 2,
-                            "relation": "eq"
-                        },
-                        "max_score": 1,
-                        "hits": [
-                            {
-                                "_index": "shopping",
-                                "_id": "6IUzs4EB5TX8OJxkDCeX",
-                                "_score": 1,
-                                "_source": {
-                                    "title": "小米手机",
-                                    "category": "小米",
-                                    "images": "http://www.gulixueyuan.com/xm.jpg",
-                                    "price": 3999
-                                }
-                            },
-                            {
-                                "_index": "shopping",
-                                "_id": "6YU0s4EB5TX8OJxkkici",
-                                "_score": 1,
-                                "_source": {
-                                    "title": "小米手机",
-                                    "category": "小米",
-                                    "images": "http://www.gulixueyuan.com/xm.jpg",
-                                    "price": 3999
-                                }
+                    "max_score": 1,
+                    "hits": [
+                        {
+                            "_index": "shopping",
+                            "_id": "6IUzs4EB5TX8OJxkDCeX",
+                            "_score": 1,
+                            "_source": {
+                                "title": "小米手机",
+                                "category": "小米",
+                                "images": "http://www.gulixueyuan.com/xm.jpg",
+                                "price": 3999
                             }
-                        ]
-                    }
-                }
-                ```
-            * 查询指定字段
-                查询指定字段，向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
-                ``` json
-                {
-                    "query":{
-                        "match_all":{}
-                    },
-                    "_source":["title"]
-                }
-                ```
-                返回结果如下：
-                ``` json
-                {
-                    "took": 47,
-                    "timed_out": false,
-                    "_shards": {
-                        "total": 1,
-                        "successful": 1,
-                        "skipped": 0,
-                        "failed": 0
-                    },
-                    "hits": {
-                        "total": {
-                            "value": 2,
-                            "relation": "eq"
                         },
-                        "max_score": 1,
-                        "hits": [
-                            {
-                                "_index": "shopping",
-                                "_id": "6IUzs4EB5TX8OJxkDCeX",
-                                "_score": 1,
-                                "_source": {
-                                    "title": "小米手机"
-                                }
-                            },
-                            {
-                                "_index": "shopping",
-                                "_id": "6YU0s4EB5TX8OJxkkici",
-                                "_score": 1,
-                                "_source": {
-                                    "title": "小米手机"
-                                }
+                        {
+                            "_index": "shopping",
+                            "_id": "6YU0s4EB5TX8OJxkkici",
+                            "_score": 1,
+                            "_source": {
+                                "title": "小米手机",
+                                "category": "小米",
+                                "images": "http://www.gulixueyuan.com/xm.jpg",
+                                "price": 3999
                             }
-                        ]
-                    }
+                        }
+                    ]
                 }
-                ```
-            * 分页查询
-                向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
-                ``` json
-                {
-                    "query":{
-                        "match_all":{}
+            }
+            ```
+        * 查询指定字段(不指定的字段不查)
+            查询指定字段，向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
+            ``` json
+            {
+                "query":{
+                    "match_all":{}
+                },
+                "_source":["title"]
+            }
+            ```
+            返回结果如下：
+            ``` json
+            {
+                "took": 47,
+                "timed_out": false,
+                "_shards": {
+                    "total": 1,
+                    "successful": 1,
+                    "skipped": 0,
+                    "failed": 0
+                },
+                "hits": {
+                    "total": {
+                        "value": 2,
+                        "relation": "eq"
                     },
-                    "from":0,
-                    "size":2
-                }
-                ```
-                返回结果:
-                ``` json
-                {
-                    "took": 1,
-                    "timed_out": false,
-                    "_shards": {
-                        "total": 1,
-                        "successful": 1,
-                        "skipped": 0,
-                        "failed": 0
-                    },
-                    "hits": {
-                        "total": {
-                            "value": 2,
-                            "relation": "eq"
+                    "max_score": 1,
+                    "hits": [
+                        {
+                            "_index": "shopping",
+                            "_id": "6IUzs4EB5TX8OJxkDCeX",
+                            "_score": 1,
+                            "_source": {
+                                "title": "小米手机"
+                            }
                         },
-                        "max_score": 1,
-                        "hits": [
-                            {
-                                "_index": "shopping",
-                                "_id": "6IUzs4EB5TX8OJxkDCeX",
-                                "_score": 1,
-                                "_source": {
-                                    "title": "小米手机",
-                                    "category": "小米",
-                                    "images": "http://www.gulixueyuan.com/xm.jpg",
-                                    "price": 3999
-                                }
-                            },
-                            {
-                                "_index": "shopping",
-                                "_id": "6YU0s4EB5TX8OJxkkici",
-                                "_score": 1,
-                                "_source": {
-                                    "title": "小米手机",
-                                    "category": "小米",
-                                    "images": "http://www.gulixueyuan.com/xm.jpg",
-                                    "price": 3999
-                                }
+                        {
+                            "_index": "shopping",
+                            "_id": "6YU0s4EB5TX8OJxkkici",
+                            "_score": 1,
+                            "_source": {
+                                "title": "小米手机"
                             }
-                        ]
-                    }
+                        }
+                    ]
                 }
-                ```
-            * 查询排序
-                如果你想通过排序查出价格最高的手机,向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
-                ``` json
-                {
-                    "query":{
-                        "match_all":{}
+            }
+            ```
+    * 分页查询
+        向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
+        ``` json
+        {
+            "query":{
+                "match_all":{}
+            },
+            "from":0,
+            "size":2
+        }
+        ```
+        返回结果:
+        ``` json
+        {
+            "took": 1,
+            "timed_out": false,
+            "_shards": {
+                "total": 1,
+                "successful": 1,
+                "skipped": 0,
+                "failed": 0
+            },
+            "hits": {
+                "total": {
+                    "value": 2,
+                    "relation": "eq"
+                },
+                "max_score": 1,
+                "hits": [
+                    {
+                        "_index": "shopping",
+                        "_id": "6IUzs4EB5TX8OJxkDCeX",
+                        "_score": 1,
+                        "_source": {
+                            "title": "小米手机",
+                            "category": "小米",
+                            "images": "http://www.gulixueyuan.com/xm.jpg",
+                            "price": 3999
+                        }
                     },
-                    "sort":{
-                        "price":{
-                            "order":"desc"
+                    {
+                        "_index": "shopping",
+                        "_id": "6YU0s4EB5TX8OJxkkici",
+                        "_score": 1,
+                        "_source": {
+                            "title": "小米手机",
+                            "category": "小米",
+                            "images": "http://www.gulixueyuan.com/xm.jpg",
+                            "price": 3999
                         }
                     }
-                }
-                ```
-                返回结果:
-                ``` json
-                {
-                    "took": 1,
-                    "timed_out": false,
-                    "_shards": {
-                        "total": 1,
-                        "successful": 1,
-                        "skipped": 0,
-                        "failed": 0
-                    },
-                    "hits": {
-                        "total": {
-                            "value": 2,
-                            "relation": "eq"
-                        },
-                        "max_score": null,
-                        "hits": [
-                            {
-                                "_index": "shopping",
-                                "_id": "6IUzs4EB5TX8OJxkDCeX",
-                                "_score": null,
-                                "_source": {
-                                    "title": "小米手机",
-                                    "category": "小米",
-                                    "images": "http://www.gulixueyuan.com/xm.jpg",
-                                    "price": 3999
-                                },
-                                "sort": [
-                                    3999
-                                ]
-                            },
-                            {
-                                "_index": "shopping",
-                                "_id": "6YU0s4EB5TX8OJxkkici",
-                                "_score": null,
-                                "_source": {
-                                    "title": "小米手机",
-                                    "category": "小米",
-                                    "images": "http://www.gulixueyuan.com/xm.jpg",
-                                    "price": 3999
-                                },
-                                "sort": [
-                                    3999
-                                ]
-                            }
-                        ]
+                ]
+            }
+        }
+        ```
+    * 查询排序
+            如果你想通过排序查出价格最高的手机,向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
+            ``` json
+            {
+                "query":{
+                    "match_all":{}
+                },
+                "sort":{
+                    "price":{
+                        "order":"desc"
                     }
                 }
-                ```
+            }
+            ```
+            返回结果:
+            ``` json
+            {
+                "took": 1,
+                "timed_out": false,
+                "_shards": {
+                    "total": 1,
+                    "successful": 1,
+                    "skipped": 0,
+                    "failed": 0
+                },
+                "hits": {
+                    "total": {
+                        "value": 2,
+                        "relation": "eq"
+                    },
+                    "max_score": null,
+                    "hits": [
+                        {
+                            "_index": "shopping",
+                            "_id": "6IUzs4EB5TX8OJxkDCeX",
+                            "_score": null,
+                            "_source": {
+                                "title": "小米手机",
+                                "category": "小米",
+                                "images": "http://www.gulixueyuan.com/xm.jpg",
+                                "price": 3999
+                            },
+                            "sort": [
+                                3999
+                            ]
+                        },
+                        {
+                            "_index": "shopping",
+                            "_id": "6YU0s4EB5TX8OJxkkici",
+                            "_score": null,
+                            "_source": {
+                                "title": "小米手机",
+                                "category": "小米",
+                                "images": "http://www.gulixueyuan.com/xm.jpg",
+                                "price": 3999
+                            },
+                            "sort": [
+                                3999
+                            ]
+                        }
+                    ]
+                }
+            }
+            ```
             
-
-
-
-
-
-
 
 8. 多条件查询 & 范围查询
     * 多条件查询
@@ -743,9 +730,9 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
         向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
         ``` json
         {
-            "query":{
-                "bool":{
-                    "must":[{
+            "query":{   // 查询
+                "bool":{    // 条件
+                    "must":[{   // &&
                         "match":{
                             "category":"小米"
                         }
@@ -848,7 +835,8 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
         }
         ```
     * 范围查询
-        假设想找出小米和华为的牌子，价格大于2000元的手机。向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
+        **假设想找出小米和华为的牌子，价格大于2000元的手机。**
+        向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
         ``` json
         {
             "query":{
@@ -862,10 +850,10 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
                             "category":"华为"
                         }
                     }],
-                    "filter":{
-                        "range":{
+                    "filter":{  // 过滤
+                        "range":{   // 范围
                             "price":{
-                                "gt":2000
+                                "gt":2000   // >2000
                             }
                         }
                     }
@@ -920,7 +908,8 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
 
 9. 全文检索 & 完全匹配 & 高亮查询
     * 全文检索
-        这功能像搜索引擎那样，如品牌输入“小华”，返回结果带回品牌有“小米”和华为的。向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
+        **这功能像搜索引擎那样，如品牌输入“小华”，返回结果带回品牌有“小米”和“华为”的。**
+        向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
         ``` json
         {
             "query":{
@@ -974,6 +963,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
         }
         ```
     * 完全匹配
+        只查询出完全匹配的参数
         向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
         ``` json
         {
@@ -1004,7 +994,8 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
             }
         }
     * 高亮查询
-        向 ES 服务器发 GET请求 ： http://127.0.0.1:9200/shopping/_search，附带JSON体如下：
+        会将返回结果当中的指定字段高亮显示
+        向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
         ``` json
         {
             "query":{
@@ -1046,10 +1037,10 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
     向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
     ``` json
     {
-        "aggs":{//聚合操作
-            "price_group":{//名称，随意起名
-                "terms":{//分组
-                    "field":"price"//分组字段
+        "aggs":{    // 聚合操作
+            "price_group":{ // 分组名称，随意起名
+                "terms":{   // 分组
+                    "field":"price" // 分组的字段
                 }
             }
         }
@@ -1121,7 +1112,7 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
                 }
             }
         },
-        "size":0
+        "size":0    // 不需要原始数据
     }
     ```
     返回结果如下：
@@ -1202,4 +1193,905 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
     创建数据库表需要设置字段名称，类型，长度，约束等；索引库也一样，需要知道这个类型下有哪些字段，每个字段有哪些约束信息，这就叫做映射(mapping)。
 
     先创建一个索引：
+    ``` json
+    PUT http://127.0.0.1:9200/user
     
+    // 返回结果
+    {
+        "acknowledged": true,
+        "shards_acknowledged": true,
+        "index": "user"
+    }
+    ```
+
+    创建映射
+    ``` json
+    PUT http://127.0.0.1:9200/user/_mapping
+    {
+        "properties": {
+            "name":{
+                "type": "text", // 可分词
+                "index": true   // 可索引查询
+            },
+            "sex":{
+                "type": "keyword",  // 不能分词, 需完整匹配
+                "index": true   // 可索引查询
+            },
+            "tel":{
+                "type": "keyword",  // 不能分词, 需完整匹配
+                "index": false  // 不可索引查询
+            }
+        }
+    }
+    
+    // 返回结果
+    {
+        "acknowledged": true
+    }
+    ```
+
+    查询映射
+    ``` json
+    GET http://127.0.0.1:9200/user/_mapping
+    
+    // 返回结果
+    {
+        "user": {
+            "mappings": {
+                "properties": {
+                    "name": {
+                        "type": "text"
+                    },
+                    "sex": {
+                        "type": "keyword"
+                    },
+                    "tel": {
+                        "type": "keyword",
+                        "index": false
+                    }
+                }
+            }
+        }
+    }
+    ```
+
+    增加数据
+    ``` json
+    PUT http://127.0.0.1:9200/user/_create/1001
+    {
+        "name":"小米",
+        "sex":"男的",
+        "tel":"1111"
+    }
+    
+    // 返回结果
+    {
+        "_index": "user",
+        "_id": "1001",
+        "_version": 1,
+        "result": "created",
+        "_shards": {
+            "total": 2,
+            "successful": 1,
+            "failed": 0
+        },
+        "_seq_no": 0,
+        "_primary_term": 1
+    }
+    ```
+
+    查找name含有"小"数据：
+    ``` json
+        GET http://127.0.0.1:9200/user/_search
+    {
+        "query":{
+            "match":{
+                "name":"小"
+            }
+        }
+    }
+
+    //返回结果如下：
+    {
+        "took": 1128,
+        "timed_out": false,
+        "_shards": {
+            "total": 1,
+            "successful": 1,
+            "skipped": 0,
+            "failed": 0
+        },
+        "hits": {
+            "total": {
+                "value": 1,
+                "relation": "eq"
+            },
+            "max_score": 0.2876821,
+            "hits": [
+                {
+                    "_index": "user",
+                    "_id": "1001",
+                    "_score": 0.2876821,
+                    "_source": {
+                        "name": "小米",
+                        "sex": "男的",
+                        "tel": "1111"
+                    }
+                }
+            ]
+        }
+    }
+    ```
+
+    查找sex含有"男"数据
+    ``` json
+    GET http://127.0.0.1:9200/user/_search
+    {
+        "query":{
+            "match":{
+                "sex":"男"
+            }
+        }
+    }
+
+    // 返回结果
+    {
+        "took": 2,
+        "timed_out": false,
+        "_shards": {
+            "total": 1,
+            "successful": 1,
+            "skipped": 0,
+            "failed": 0
+        },
+        "hits": {
+            "total": {
+                "value": 0,
+                "relation": "eq"
+            },
+            "max_score": null,
+            "hits": []
+        }
+    }
+    ```
+    找不想要的结果，只因创建映射时"sex"的类型为"keyword"。
+    "sex"只能完全为"男"的，才能得出原数据。
+    ``` json
+    GET http://127.0.0.1:9200/user/_search
+    {
+        "query":{
+            "match":{
+                "sex":"男的"
+            }
+        }
+    }
+
+    // 返回结果如下：
+    {
+        "took": 1,
+        "timed_out": false,
+        "_shards": {
+            "total": 1,
+            "successful": 1,
+            "skipped": 0,
+            "failed": 0
+        },
+        "hits": {
+            "total": {
+                "value": 1,
+                "relation": "eq"
+            },
+            "max_score": 0.2876821,
+            "hits": [
+                {
+                    "_index": "user",
+                    "_id": "1001",
+                    "_score": 0.2876821,
+                    "_source": {
+                        "name": "小米",
+                        "sex": "男的",
+                        "tel": "1111"
+                    }
+                }
+            ]
+        }
+    }
+    ```
+
+    查询电话
+    ``` json
+    GET http://127.0.0.1:9200/user/_search
+    {
+        "query":{
+            "match":{
+                "tel":"11"
+            }
+        }
+    }
+
+    // 返回结果如下：
+    {
+        "took": 6,
+        "timed_out": false,
+        "_shards": {
+            "total": 1,
+            "successful": 1,
+            "skipped": 0,
+            "failed": 0
+        },
+        "hits": {
+            "total": {
+                "value": 0,
+                "relation": "eq"
+            },
+            "max_score": null,
+            "hits": []
+        }
+    }
+    ```
+    查不到只因创建映射时"tel"的"index"为false。
+
+### Java API
+1. 环境准备
+    新建Maven工程, 添加依赖：
+    ``` maven
+        <dependencies>
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>7.8.0</version>
+        </dependency>
+        <!-- elasticsearch 的客户端 -->
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+            <version>7.8.0</version>
+        </dependency>
+        <!-- elasticsearch 依赖 2.x 的 log4j -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.8.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.8.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.9</version>
+        </dependency>
+        <!-- junit 单元测试 -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
+    </dependencies>
+    ```
+
+    测试连接
+    ``` java
+    public class Client {
+
+        public static void main(String[] args) throws IOException {
+    //        new TransportClient(); // 已经不推荐使用
+
+            // 创建ES客户端
+            RestHighLevelClient esClient = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 关闭客户端
+            esClient.close();
+
+        }
+    }
+    ```
+
+2. 索引 - 创建
+    ``` java
+        public class IndexCreate {
+
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient esClient = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 创建索引
+            CreateIndexRequest request = new CreateIndexRequest("user");
+            CreateIndexResponse response = esClient.indices().create(request, RequestOptions.DEFAULT);
+
+            // 响应状态
+            boolean result = response.isAcknowledged();
+            System.out.println("索引操作： " + result);
+
+            // 关闭客户端
+            esClient.close();
+
+        }
+
+    }
+
+    // 后台打印
+    索引操作： true
+    ```
+
+3. 索引 - 查询 & 删除
+    查询
+    ``` java
+    public class IndexSearch {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 查询索引 - 请求对象
+            GetIndexRequest request = new GetIndexRequest("user");
+            // 发送请求，获取响应
+            GetIndexResponse response = client.indices().get(request,
+                    RequestOptions.DEFAULT);
+
+            System.out.println("aliases:"+response.getAliases());
+            System.out.println("mappings:"+response.getMappings());
+            System.out.println("settings:"+response.getSettings());
+
+
+            // 关闭客户端
+            client.close();
+        }
+
+    }
+
+
+    // 控制台打印
+    aliases:{user=[]}
+    mappings:{user=org.elasticsearch.cluster.metadata.MappingMetadata@89e179ff}
+    settings:{user={"index.creation_date":"1656741519990","index.number_of_replicas":"1","index.number_of_shards":"1","index.provided_name":"user","index.routing.allocation.include._tier_preference":"data_content","index.uuid":"G_Ps7dPkTVWNvowjR1sQ5g","index.version.created":"8030099"}}
+    ```
+
+    删除
+    ``` java
+    public class IndexDelete {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 删除索引 - 请求对象
+            DeleteIndexRequest request = new DeleteIndexRequest("user2");
+            // 发送请求，获取响应
+            AcknowledgedResponse response = client.indices().delete(request,RequestOptions.DEFAULT);
+            // 操作结果
+            System.out.println("操作结果 ： " + response.isAcknowledged());
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+
+    // 打印结果
+    操作结果 ： true
+    ```
+
+接下来的文档操作会用到实体类, 这里先创建一下
+``` java
+@Data
+public class User {
+    // 姓名
+    private String name;
+
+    // 年龄
+    private Integer age;
+
+    // 性别
+    private String sex;
+
+}
+```
+
+4. 文档 - 新增 & 修改
+    ``` java
+    public class DocInsert {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 新增文档 - 请求对象
+            IndexRequest request = new IndexRequest();
+            // 设置索引及唯一性标识
+            request.index("user").id("1001");
+
+            // 创建数据对象
+            User user = new User();
+            user.setName("zhangsan");
+            user.setAge(30);
+            user.setSex("男");
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            String productJson = objectMapper.writeValueAsString(user);
+            // 添加文档数据，数据格式为 JSON 格式
+            request.source(productJson, XContentType.JSON);
+            // 客户端发送请求，获取响应对象
+            IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+            // 3.打印结果信息
+            System.out.println("response.getResult() = " + response.getResult());
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+
+    // 控制台打印
+    ```
+
+
+
+
+    
+5. 文档 - 查询 & 删除
+    * 查询
+        ``` java
+            public static void main(String[] args) throws IOException {
+                // 创建ES客户端
+                RestHighLevelClient client = new RestHighLevelClient(
+                        RestClient.builder(new HttpHost("localhost", 9200, "http"))
+                );
+
+                // 新增文档 - 请求对象
+                IndexRequest request = new IndexRequest();
+                // 设置索引及唯一性标识
+                request.index("user").id("1001");
+
+                // 创建数据对象
+                User user = new User();
+                user.setName("zhangsan");
+                user.setAge(30);
+                user.setSex("男");
+
+                // 添加文档数据, es8.0以后可以直接传对象 <= 报错, 但是操作成功
+                request.source(user, XContentType.JSON);
+                // 客户端发送请求，获取响应对象
+                IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+                // 3.打印结果信息
+                System.out.println("response.getResult() = " + response.getResult());
+
+                // 关闭客户端
+                client.close();
+            }
+        }
+        ```
+    * 删除
+        ``` java
+        public class DocDelete {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            DeleteRequest request = new DeleteRequest();
+            request.index("user").id("1001");
+            DeleteResponse response = client.delete(request, RequestOptions.DEFAULT);
+
+            System.out.println(response.toString());
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+        ```
+
+6. 文档 - 高级查询 - 全量查询
+    ``` java
+    public class DocSearch {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 新增文档 - 请求对象
+            IndexRequest request = new IndexRequest();
+            // 设置索引及唯一性标识
+            request.index("user").id("1001");
+
+            // 创建数据对象
+            User user = new User();
+            user.setName("zhangsan");
+            user.setAge(30);
+            user.setSex("男");
+
+            // 添加文档数据, es8.0以后可以直接传对象 <= 报错, 但是操作成功
+            request.source(user, XContentType.JSON);
+            // 客户端发送请求，获取响应对象
+            IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+            // 3.打印结果信息
+            System.out.println("response.getResult() = " + response.getResult());
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+    ```
+
+7. 文档-高级查询 - 分页查询 & 条件查询 & 查询排序 & 组合查询 & 范围查询 & 模糊查询 & 高亮查询 & 最大值查询 & 分组查询
+    ``` java
+    public class DocQuery {
+        public static void main(String[] args) throws IOException {
+            // 创建ES客户端
+            RestHighLevelClient client = new RestHighLevelClient(
+                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
+            );
+
+            // 创建搜索请求对象
+            SearchRequest request = new SearchRequest();
+            request.indices("user");
+
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+
+            // 1.条件查询
+            /*sourceBuilder.query(QueryBuilders.termQuery("age", "30"));*/
+
+            // 2.分页查询
+            /*sourceBuilder.query(QueryBuilders.matchAllQuery());
+            // 分页查询
+            // 当前页其实索引(第一条数据的顺序号)， from
+            sourceBuilder.from(0);
+            // 每页显示多少条 size
+            sourceBuilder.size(2);*/
+
+            // 3.排序查询
+            /*sourceBuilder.query(QueryBuilders.matchAllQuery());
+            // 排序
+            sourceBuilder.sort("age", SortOrder.ASC);
+            // 需要的话可以加 排除
+            String[] include = {"name"};
+            String[] excludes = {};
+            sourceBuilder.fetchSource(include, excludes);*/
+
+            // 4.组合查询
+            /*BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+            // 必须包含
+            boolQueryBuilder.must(QueryBuilders.matchQuery("age", "30"));
+            // 一定不含
+            boolQueryBuilder.mustNot(QueryBuilders.matchQuery("name", "zhangsan"));
+            // 可能包含
+            boolQueryBuilder.should(QueryBuilders.matchQuery("sex", "男"));
+            sourceBuilder.query(boolQueryBuilder);*/
+
+            // 5.范围查询
+            /*RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("age");
+            // 大于等于
+            //rangeQuery.gte("30");
+            // 小于等于
+            rangeQuery.lte("40");
+            sourceBuilder.query(rangeQuery);*/
+
+            // 6.模糊查询
+            /*sourceBuilder.query(QueryBuilders.fuzzyQuery("name","wangwu")
+                    .fuzziness(Fuzziness.ONE)); // 允许偏差值*/
+
+            // 7.高亮查询
+            /*TermsQueryBuilder termsQueryBuilder =
+                    QueryBuilders.termsQuery("name","lisi");
+            sourceBuilder.query(termsQueryBuilder);
+            // 构建高亮字段
+            HighlightBuilder highlightBuilder = new HighlightBuilder();
+            highlightBuilder.preTags("<font color='red'>"); // 设置标签前缀
+            highlightBuilder.postTags("</font>");   // 设置标签后缀
+            highlightBuilder.field("name"); // 设置高亮字段
+            // 设置高亮构建对象
+            sourceBuilder.highlighter(highlightBuilder);*/
+
+            // 8.最大值查询
+            /*sourceBuilder.aggregation(AggregationBuilders.max("maxAge").field("age"));*/
+
+            // 9.分组查询
+            sourceBuilder.aggregation(AggregationBuilders.terms("age_groupby").field("age"));
+
+            request.source(sourceBuilder);
+            SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+            System.out.println("response = " + response);
+
+            // 关闭客户端
+            client.close();
+        }
+    }
+    ```
+
+## Elasticsearch环境
+### 简介
+* 单机 & 集群
+    单台 Elasticsearch 服务器提供服务，往往都有最大的负载能力，超过这个阈值，服务器
+    性能就会大大降低甚至不可用，所以生产环境中，一般都是运行在指定服务器集群中。
+    除了负载能力，单点服务器也存在其他问题：
+    * 单台机器存储容量有限
+    * 单服务器容易出现单点故障，无法实现高可用
+    * 单服务的并发处理能力有限
+    配置服务器集群时，集群中节点数量没有限制，大于等于 2 个节点就可以看做是集群了。一
+般出于高性能及高可用方面来考虑集群中节点数量都是 3 个以上
+
+总之，集群能提高性能，增加容错。
+
+* 集群 Cluster
+**一个集群就是由一个或多个服务器节点组织在一起，共同持有整个的数据，并一起提供索引和搜索功能。**一个 Elasticsearch 集群有一个唯一的名字标识，这个名字默认就是”elasticsearch”。这个名字是重要的，因为一个节点只能通过指定某个集群的名字，来加入这个集群。
+
+* 节点 Node
+集群中包含很多服务器， 一个节点就是其中的一个服务器。 作为集群的一部分，它存储数据，参与集群的索引和搜索功能。
+
+一个节点也是由一个名字来标识的，默认情况下，这个名字是一个随机的漫威漫画角色的名字，这个名字会在启动的时候赋予节点。这个名字对于管理工作来说挺重要的，因为在这个管理过程中，你会去确定网络中的哪些服务器对应于 Elasticsearch 集群中的哪些节点。
+
+一个节点可以通过配置集群名称的方式来加入一个指定的集群。默认情况下，每个节点都会被安排加入到一个叫做“elasticsearch”的集群中，这意味着，如果你在你的网络中启动了若干个节点，并假定它们能够相互发现彼此，它们将会自动地形成并加入到一个叫做“elasticsearch”的集群中。
+
+在一个集群里，只要你想，可以拥有任意多个节点。而且，如果当前你的网络中没有运
+行任何 Elasticsearch 节点，这时启动一个节点，会默认创建并加入一个叫做“elasticsearch”的
+集群。
+
+### Windows集群部署
+* 配置
+    使用新环境, 复制出三个服务, 分别为node1001, node1002, node1003
+    [](./README.assets/1656948629345.jpg)
+
+    若内存不够, 可再 config/jvm.options 中做出如下修改(默认是1g)
+    ``` yml
+    -Xms4g -> 修改为 -Xms256m
+    -Xmx4g -> 修改为 -Xmx256m
+    ```
+    * node-1001 节点
+        ``` yml
+        #集群名称，节点之间要保持一致
+        cluster.name: "my-application"
+
+        # 节点名称
+        node.name: node-1001
+        # 节点角色, ES8.0以后使用角色的方式赋值
+        node.roles: [ master, data ]
+
+        # 通信地址
+        network.host: localhost
+        # 通信端口
+        http.port: 1001
+        # 通信监听端口, 8.0不再是`transport.tcp.port`
+        transport.port: 9301
+
+        # 跨域配置
+        http.cors.enabled: true
+        http.cors.allow-origin: "*"
+
+        # 关闭认证模式
+        xpack.security.enabled: false
+        ```
+
+    * node-1002 节点
+        ``` yml
+        #集群名称，节点之间要保持一致
+        cluster.name: "my-application"
+
+        # 节点名称
+        node.name: node-1002
+        # 节点角色, ES8.0以后使用角色的方式赋值
+        node.roles: [ master, data ]
+
+        # 通信地址
+        network.host: localhost
+        # 通信端口
+        http.port: 1002
+        # 通信监听端口, 8.0不再是`transport.tcp.port`
+        transport.port: 9302
+
+        discovery.seed_hosts: ["localhost:9301"]
+
+        # 跨域配置
+        http.cors.enabled: true
+        http.cors.allow-origin: "*"
+
+        # 关闭认证模式
+        xpack.security.enabled: false
+        ```
+
+    * node-1003节点
+        ``` yml
+        #集群名称，节点之间要保持一致
+        cluster.name: "my-application"
+
+        # 节点名称
+        node.name: node-1002
+        # 节点角色, ES8.0以后使用角色的方式赋值
+        node.roles: [ master, data ]
+
+        # 通信地址
+        network.host: localhost
+        # 通信端口
+        http.port: 1003
+        # 通信监听端口, 8.0不再是`transport.tcp.port`
+        transport.port: 9303
+
+        discovery.seed_hosts: ["localhost:9301", "localhost:9302"]
+
+        # 跨域配置
+        http.cors.enabled: true
+        http.cors.allow-origin: "*"
+
+        # 关闭认证模式
+        xpack.security.enabled: false
+        ```
+
+* 启动集群
+    分别依次双击执行节点的bin/elasticsearch.bat, 启动节点服务器，启动后，会自动加入指定名称的集群。
+    
+* 测试集群
+    * 状态
+        向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:1001/_cluster/health`, 返回结果为: 
+        ``` json
+        {
+            "cluster_name": "my-application",
+            "status": "green",
+            "timed_out": false,
+            "number_of_nodes": 2,
+            "number_of_data_nodes": 2,
+            "active_primary_shards": 1,
+            "active_shards": 2,
+            "relocating_shards": 0,
+            "initializing_shards": 0,
+            "unassigned_shards": 0,
+            "delayed_unassigned_shards": 0,
+            "number_of_pending_tasks": 0,
+            "number_of_in_flight_fetch": 0,
+            "task_max_waiting_in_queue_millis": 0,
+            "active_shards_percent_as_number": 100
+        }
+        ```
+        **status字段**指示着当前集群在总体上是否工作正常。它的三种颜色含义如下：
+        green：所有的主分片和副本分片都正常运行。
+        yellow：所有的主分片都正常运行，但不是所有的副本分片都正常运行。
+        red：有主分片没能正常运行。
+    
+    * 索引
+        向集群中的node-1001节点增加索引：向 ES 服务器发 `PUT` 请求 ： `http://127.0.0.1:9200/shopping/_search`, 返回结果为:
+        ``` json
+        {
+            "acknowledged": true,
+            "shards_acknowledged": true,
+            "index": "user"
+        }
+        ```
+        此时向集群中的node-1003节点获取索引：向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:1003/user`, 返回结果为:
+        ``` json
+        {
+            "user": {
+                "aliases": {},
+                "mappings": {},
+                "settings": {
+                    "index": {
+                        "creation_date": "1617993035885",
+                        "number_of_shards": "1",
+                        "number_of_replicas": "1",
+                        "uuid": "XJKERwQlSJ6aUxZEN2EV0w",
+                        "version": {
+                            "created": "7080099"
+                        },
+                        "provided_name": "user"
+                    }
+                }
+            }
+        }
+        ```
+        即:在node1001节点创建的索引会自动同步到node1003
+### Linux单节点部署
+略
+
+## Elasticsearch进阶
+### 核心概念
+#### 索引Index
+一个索引就是一个拥有几分相似特征的文档的集合。比如说，你可以有一个客户数据的索引，另一个产品目录的索引，还有一个订单数据的索引。一个索引由一个名字来标识（必须全部是小写字母），并且当我们要对这个索引中的文档进行索引、搜索、更新和删除（CRUD）的时候，都要使用到这个名字。在一个集群中，可以定义任意多的索引。
+
+能搜索的数据必须索引，这样的好处是可以提高查询速度，比如：新华字典前面的目录就是索引的意思，目录可以提高查询速度。
+
+**能搜索的数据必须索引，这样的好处是可以提高查询速度，比如：新华字典前面的目录就是索引的意思，目录可以提高查询速度。**
+
+#### 类型Type
+在一个索引中，你可以定义一种或多种类型。
+一个类型是你的索引的一个逻辑上的分类/分区，其语义完全由你来定。通常，会为具有一组共同字段的文档定义一个类型。不同的版本，类型发生了不同的变化。
+| 版本	| Type |
+| -- | -- |
+| 5.x |	支持多种 type |
+|6.x |	只能有一种 type |
+|7.x |	默认不再支持自定义索引类型（默认类型为： _doc） |
+
+#### 文档Document、
+一个文档是一个可被索引的基础信息单元，也就是一条数据。
+
+比如：你可以拥有某一个客户的文档，某一个产品的一个文档，当然，也可以拥有某个订单的一个文档。文档以 JSON（Javascript Object Notation）格式来表示，而 JSON 是一个到处存在的互联网数据交互格式。
+
+在一个 index/type 里面，你可以存储任意多的文档。
+
+#### 字段Field
+相当于是数据表的字段，对文档数据根据不同属性进行的分类标识。
+
+#### 映射Mapping
+mapping 是处理数据的方式和规则方面做一些限制，如：某个字段的数据类型、默认值、分析器、是否被索引等等。这些都是映射里面可以设置的，其它就是处理 ES 里面数据的一些使用规则设置也叫做映射，按着最优规则处理数据对性能提高很大，因此才需要建立映射，并且需要思考如何建立映射才能对性能更好。
+
+#### 分片Shards
+一个索引可以存储超出单个节点硬件限制的大量数据。比如，一个具有 10 亿文档数据
+的索引占据 1TB 的磁盘空间，而任一节点都可能没有这样大的磁盘空间。 或者单个节点处理搜索请求，响应太慢。为了解决这个问题，**Elasticsearch 提供了将索引划分成多份的能力，每一份就称之为分片。**当你创建一个索引的时候，你可以指定你想要的分片的数量。**每个分片本身也是一个功能完善并且独立的“索引”**，这个“索引”可以被放置到集群中的任何节点上。
+
+分片很重要，主要有两方面的原因：
+1. 允许你水平分割 / 扩展你的内容容量。
+2. 允许你在分片之上进行分布式的、并行的操作，进而提高性能/吞吐量。
+至于一个分片怎样分布，它的文档怎样聚合和搜索请求，是完全由 Elasticsearch 管理的，对于作为用户的你来说，这些都是透明的，无需过分关心。
+
+被混淆的概念是，一个 Lucene 索引 我们在 Elasticsearch 称作 分片 。 一个Elasticsearch 索引 是分片的集合。 当 Elasticsearch 在索引中搜索的时候， 他发送查询到每一个属于索引的分片（Lucene 索引），然后合并每个分片的结果到一个全局的结果集。
+
+Lucene 是 Apache 软件基金会 Jakarta 项目组的一个子项目，提供了一个简单却强大的应用程式接口，能够做全文索引和搜寻。在 Java 开发环境里 Lucene 是一个成熟的免费开源工具。就其本身而言， Lucene 是当前以及最近几年最受欢迎的免费 Java 信息检索程序库。但 Lucene 只是一个提供全文搜索功能类库的核心工具包，而真正使用它还需要一个完善的服务框架搭建起来进行应用。
+
+目前市面上流行的搜索引擎软件，主流的就两款： Elasticsearch 和 Solr,这两款都是基于 Lucene 搭建的，可以独立部署启动的搜索引擎服务软件。由于内核相同，所以两者除了服务器安装、部署、管理、集群以外，对于数据的操作 修改、添加、保存、查询等等都十分类似。
+
+#### 副本Replicas
+在一个网络 / 云的环境里，失败随时都可能发生，在某个分片/节点不知怎么的就处于
+离线状态，或者由于任何原因消失了，这种情况下，有一个故障转移机制是非常有用并且是强烈推荐的。为此目的， Elasticsearch 允许你创建分片的一份或多份拷贝，这些拷贝叫做复制分片(副本)。
+
+复制分片之所以重要，有两个主要原因：
+* 在分片/节点失败的情况下，**提供了高可用性**。因为这个原因，注意到复制分片从不与原/主要（original/primary）分片置于同一节点上是非常重要的。
+* 扩展你的搜索量/吞吐量，因为搜索可以在所有的副本上并行运行。
+
+总之，每个索引可以被分成多个分片。一个索引也可以被复制 0 次（意思是没有复制）或多次。一旦复制了，每个索引就有了主分片（作为复制源的原来的分片）和复制分片（主分片的拷贝）之别。
+
+分片和复制的数量可以在索引创建的时候指定。在索引创建之后，你可以在任何时候动态地改变复制的数量，但是你事后不能改变分片的数量。
+
+默认情况下，Elasticsearch 中的每个索引被分片 1 个主分片和 1 个复制，这意味着，如果你的集群中至少有两个节点，你的索引将会有 1 个主分片和另外 1 个复制分片（1 个完全拷贝），这样的话每个索引总共就有 2 个分片， 我们需要根据索引需要确定分片个数。
+
+#### 分配Allocation
+将分片分配给某个节点的过程，包括分配主分片或者副本。如果是副本，还包含从主分片复制数据的过程。这个过程是由 master 节点完成的。
+
+### 系统架构
+[](./README.assets/1657037866096.jpg)
+一个运行中的 Elasticsearch 实例称为一个节点，而集群是由一个或者多个拥有相同
+cluster.name 配置的节点组成， 它们共同承担数据和负载的压力。当有节点加入集群中或者从集群中移除节点时，集群将会重新平均分布所有的数据。
+
+当一个节点被选举成为主节点时， 它将负责管理集群范围内的所有变更，例如增加、
+删除索引，或者增加、删除节点等。 而主节点并不需要涉及到文档级别的变更和搜索等操作，所以当集群只拥有一个主节点的情况下，即使流量的增加它也不会成为瓶颈。 任何节点都可以成为主节点。我们的示例集群就只有一个节点，所以它同时也成为了主节点。
+
+作为用户，我们可以将请求发送到集群中的任何节点 ，包括主节点。 每个节点都知道
+任意文档所处的位置，并且能够将我们的请求直接转发到存储我们所需文档的节点。 无论我们将请求发送到哪个节点，它都能负责从各个包含我们所需文档的节点收集回数据，并将最终结果返回給客户端。 Elasticsearch 对这一切的管理都是透明的。
+
+### 单节点集群
+我们在包含一个空节点的集群内创建名为 users 的索引，为了演示目的，我们将分配 3个主分片和一份副本（每个主分片拥有一个副本分片）。
+``` json
+#PUT http://127.0.0.1:1001/users
+{
+    "settings" : {
+        "number_of_shards" : 3,
+        "number_of_replicas" : 1
+    }
+}
+
+//返回结果
+{
+    "acknowledged": true,
+    "shards_acknowledged": true,
+    "index": "users"
+}
+```
+集群现在是拥有一个索引的单节点集群。所有 3 个主分片都被分配在 node-1 。
+[](./README.assets/1657037978706.jpg)
+通过 elasticsearch-head 插件（一个Chrome插件）查看集群情况 。
+* 集群健康值:yellow( 3 of 6 )：表示当前集群的全部主分片都正常运行，但是副本分片没有全部处在正常状态。
+[](./README.assets/1657039351820.jpg)
+* 3 个主分片正常。
+* 3 个副本分片都是 Unassigned，它们都没有被分配到任何节点。 在同 一个节点上既保存原始数据又保存副本是没有意义的，因为一旦失去了那个节点，我们也将丢失该节点 上的所有副本数据。
+[](./README.assets/1657039527897.jpg)
+
+当前集群是正常运行的，但存在丢失数据的风险。
+
+### 故障转移
+当集群中只有一个节点在运行时，意味着会有一个单点故障问题——没有冗余。 幸运的是，我们只需再启动一个节点即可防止数据丢失。当你在同一台机器上启动了第二个节点时，只要它和第一个节点有同样的 cluster.name 配置，它就会自动发现集群并加入到其中。但是在不同机器上启动节点的时候，为了加入到同一集群，你需要配置一个可连接到的单播主机列表。之所以配置为使用单播发现，以防止节点无意中加入集群。只有在同一台机器上
+运行的节点才会自动组成集群。
+如果启动了第二个节点，集群将会拥有两个节点 : 所有主分片和副本分片都已被分配 。
