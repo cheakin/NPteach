@@ -64,7 +64,7 @@ public class HellowordApplication {
 
     核心文件，META-INF/spring.factories
 
-    ![image-20200502131503955](README.assets/image-20200502131503955-1606143883205.png)
+    ![image-20200502131503955](./assets/SpringBoot.md/image-20200502131503955-1606143883205.png)
 
     
 
@@ -922,7 +922,7 @@ public void configure(AuthenticationManagerBuilder auth) throws Exception {
 
 官网：https://shiro.apache.org
 
-![image-20201019223100598](README.assets/image-20201019223100598-1606143883205.png)
+![image-20201019223100598](./assets/SpringBoot.md/image-20201019223100598-1606143883205.png)
 
 1. 导入依赖，
 
@@ -1818,11 +1818,11 @@ cron表达式
 
 ## 整合Dubbo(Zookeeper)
 
-![Dubbo-RPC](README.assets/dubbo-architecture-roadmap.jpg)
+![Dubbo-RPC](./assets/SpringBoot.md/dubbo-architecture-roadmap.jpg)
 
 架构
 
-![Dubbo-架构](README.assets/20180610115731445)
+![Dubbo-架构](./assets/SpringBoot.md/20180610115731445)
 
 1. 注册中心(Register)。下载安装zookeeper并启动，即启动注册中心。可以是远程主机也可以是本地，默认使用2181端口。
 

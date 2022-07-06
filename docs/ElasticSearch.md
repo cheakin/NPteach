@@ -1838,7 +1838,7 @@ public class User {
 ### Windows集群部署
 * 配置
     使用新环境, 复制出三个服务, 分别为node1001, node1002, node1003
-    [](./README.assets/1656948629345.jpg)
+    [](./assets/ElasticSearch.md/1656948629345.jpg)
 
     若内存不够, 可再 config/jvm.options 中做出如下修改(默认是1g)
     ``` yml
@@ -2052,7 +2052,7 @@ Lucene 是 Apache 软件基金会 Jakarta 项目组的一个子项目，提供�
 将分片分配给某个节点的过程，包括分配主分片或者副本。如果是副本，还包含从主分片复制数据的过程。这个过程是由 master 节点完成的。
 
 ### 系统架构
-[](./README.assets/1657037866096.jpg)
+[](./assets/ElasticSearch.md/1657037866096.jpg)
 一个运行中的 Elasticsearch 实例称为一个节点，而集群是由一个或者多个拥有相同
 cluster.name 配置的节点组成， 它们共同承担数据和负载的压力。当有节点加入集群中或者从集群中移除节点时，集群将会重新平均分布所有的数据。
 
@@ -2081,13 +2081,13 @@ cluster.name 配置的节点组成， 它们共同承担数据和负载的压力
 }
 ```
 集群现在是拥有一个索引的单节点集群。所有 3 个主分片都被分配在 node-1 。
-[](./README.assets/1657037978706.jpg)
+[](./assets/ElasticSearch.md/1657037978706.jpg)
 通过 elasticsearch-head 插件（一个Chrome插件）查看集群情况 。
 * 集群健康值:yellow( 3 of 6 )：表示当前集群的全部主分片都正常运行，但是副本分片没有全部处在正常状态。
-[](./README.assets/1657039351820.jpg)
+[](./assets/ElasticSearch.md/1657039351820.jpg)
 * 3 个主分片正常。
 * 3 个副本分片都是 Unassigned，它们都没有被分配到任何节点。 在同 一个节点上既保存原始数据又保存副本是没有意义的，因为一旦失去了那个节点，我们也将丢失该节点 上的所有副本数据。
-[](./README.assets/1657039527897.jpg)
+[](./assets/ElasticSearch.md/1657039527897.jpg)
 
 当前集群是正常运行的，但存在丢失数据的风险。
 
