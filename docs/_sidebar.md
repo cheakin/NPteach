@@ -4,7 +4,7 @@
   - [SpringBoot](./SpringBoot)
   <!-- [SpringBoot](./SpringBoot) 包括多种中间件的整合，Druid、MyBatis、SpringSecurity、Shiro、Swagger、任务（多线程）、缓存（Cache）、RabbitMQ、Dubbo（Zookeeper）...... -->
   - [SpringCloud](./SpringCloud)(含SpringCloudAlibaba)
-  <!-- ![SpringCloud](README.assets/1609683765035_image.png) -->
+  <!-- ![SpringCloud](./assets/ReadMe.md/1609683765035_image.png) -->
   - SpringCloud整合内容包括：
   <!-- 服务注册与发现（Eureka、Zookeeper、Consul）服务调用（Ribbon、OpenFeign）服务降级（Hystrix）服务网关（gateway）服务配置（Config）服务总线（Spring Cloud Bus）消息驱动（SpringCloud Stream）链路追踪（SpringCloud Sleuth） -->
   <!-- - SpringCloudAlibaba内容包括 -->
