@@ -2241,9 +2241,9 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
   * The quick brown fox jumped over the lazy dog
   * Quick brown foxes leap over lazy dogs in summer
 
-为了创建倒排索引，我们首先将每个文档的content域拆分成单独的词（我们称它为词条或tokens )，创建一个包含所有不重复词条的排序列表，然后列出每个词条出现在哪个文档。结果如下所示：
+为了创建倒排索引，我们首先将每个文档的content域拆分成单独的词（我们称它为词条或tokens)，创建一个包含所有不重复词条的排序列表，然后列出每个词条出现在哪个文档。结果如下所示：
 [](assets/ElasticSearch.md/1657120146999.jpg)
-现在，如果我们想搜索 `quick brown` ，我们只需要查找包含每个词条的文档：
+现在，如果我们想搜索 `quick` `brown` ，我们只需要查找包含每个词条的文档：
 [](./assets/ElasticSearch.md/1657120185675.jpg)
 两个文档都匹配，但是第一个文档比第二个匹配度更高。如果我们使用仅计算匹配词条数量的简单相似性算法，那么我们可以说，对于我们查询的相关性来讲，第一个文档比第二个文档更佳。
 
@@ -2254,7 +2254,7 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 
 使用前面的索引搜索`+Quick`, `+fox`不会得到任何匹配文档。(记住，＋前缀表明这个词必须存在）。
 
-只有同时出现Quick和fox 的文档才满足这个查询条件，但是第一个文档包含quick fox ，第二个文档包含Quick foxes 。
+只有同时出现`Quick`和`fox`的文档才满足这个查询条件，但是第一个文档包含`quick fox`，第二个文档包含`Quick` `foxes` 。
 
 我们的用户可以合理的期望两个文档与查询匹配。我们可以做的更好。
 如果我们将词条规范为标准模式，那么我们可以找到与用户搜索的词条不完全一致，但具有足够相关性的文档。例如：
@@ -2404,33 +2404,34 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 
 分析器执行上面的工作。分析器实际上是将三个功能封装到了一个包里：
   * 字符过滤器：首先，字符串按顺序通过每个 字符过滤器 。他们的任务是在分词前整理字符串。一个字符过滤器可以用来去掉 HTML，或者将 & 转化成 and。
-  * 
   * 分词器：其次，字符串被分词器分为单个的词条。一个简单的分词器遇到空格和标点的时候，可能会将文本拆分成词条。
   * Token 过滤器：最后，词条按顺序通过每个 token 过滤器 。这个过程可能会改变词条（例如，小写化Quick ），删除词条（例如， 像 a， and， the 等无用词），或者增加词条（例如，像jump和leap这种同义词）
 
 * 内置分析器
-Elasticsearch还附带了可以直接使用的预包装的分析器。接下来我们会列出最重要的分析器。为了证明它们的差异，我们看看每个分析器会从下面的字符串得到哪些词条：
-``` json
-"Set the shape to semi-transparent by calling set_trans(5)"
-```
-  * 标准分析器
-    标准分析器是Elasticsearch 默认使用的分析器。它是分析各种语言文本最常用的选择。它根据Unicode 联盟定义的单词边界划分文本。删除绝大部分标点。最后，将词条小写。它会产生：
-    ``` json
-    set, the, shape, to, semi, transparent, by, calling, set_trans, 5
-    ```
-  * 简单分析器
-    简单分析器在任何不是字母的地方分隔文本，将词条小写。它会产生：
-    ``` json
-    set, the, shape, to, semi, transparent, by, calling, set, trans
-    ```
+	Elasticsearch还附带了可以直接使用的预包装的分析器。接下来我们会列出最重要的分析器。为了证明它们的差异，我们看看每个分析器会从下面的字符串得到哪些词条：
+	``` json
+	"Set the shape to semi-transparent by calling set_trans(5)"
+	```
 
-  * 空格分析器
-    空格分析器在空格的地方划分文本。它会产生:
-    ``` json
-    Set, the, shape, to, semi-transparent, by, calling, set_trans(5)
-    ```
-  
-  * 语言分析器
+* 标准分析器
+  标准分析器是Elasticsearch 默认使用的分析器。它是分析各种语言文本最常用的选择。它根据Unicode 联盟定义的单词边界划分文本。删除绝大部分标点。最后，将词条小写。它会产生：
+  ``` json
+  set, the, shape, to, semi, transparent, by, calling, set_trans, 5
+  ```
+
+* 简单分析器
+  简单分析器在任何不是字母的地方分隔文本，将词条小写。它会产生：
+  ``` json
+  set, the, shape, to, semi, transparent, by, calling, set, trans
+  ```
+
+* 空格分析器
+  空格分析器在空格的地方划分文本。它会产生:
+  ``` json
+  Set, the, shape, to, semi-transparent, by, calling, set_trans(5)
+  ```
+
+* 语言分析器
     特定语言分析器可用于很多语言。它们可以考虑指定语言的特点。例如，英语分析器附带了一组英语无用词（常用单词，例如and或者the ,它们对相关性没有多少影响），它们会被删除。由于理解英语语法的规则，这个分词器可以提取英语单词的词干。
 
     英语分词器会产生下面的词条：
@@ -2770,3 +2771,462 @@ Elasticsearch还附带了可以直接使用的预包装的分析器。接下来�
 
 ### 文档控制
 * 文档冲突
+    当我们使用index API更新文档，可以一次性读取原始文档，做我们的修改，然后重新索引整个文档。最近的索引请求将获胜：无论最后哪一个文档被索引，都将被唯一存储在 Elasticsearch 中。如果其他人同时更改这个文档，他们的更改将丢失。
+
+    很多时候这是没有问题的。也许我们的主数据存储是一个关系型数据库，我们只是将数据复制到Elasticsearch中并使其可被搜索。也许两个人同时更改相同的文档的几率很小。或者对于我们的业务来说偶尔丢失更改并不是很严重的问题。
+
+    但有时丢失了一个变更就是非常严重的。试想我们使用Elasticsearch 存储我们网上商城商品库存的数量，每次我们卖一个商品的时候，我们在 Elasticsearch 中将库存数量减少。有一天，管理层决定做一次促销。突然地，我们一秒要卖好几个商品。假设有两个web程序并行运行，每一个都同时处理所有商品的销售。
+    [](./assets/ElasticSearch.md/1657253439898.jpg)
+
+    web_1 对stock_count所做的更改已经丢失，因为 web_2不知道它的 stock_count的拷贝已经过期。结果我们会认为有超过商品的实际数量的库存，因为卖给顾客的库存商品并不存在，我们将让他们非常失望。
+
+    变更越频繁，读数据和更新数据的间隙越长，也就越可能丢失变更。在数据库领域中，有两种方法通常被用来确保并发更新时变更不会丢失：
+    * 悲观并发控制：这种方法被关系型数据库广泛使用，它假定有变更冲突可能发生，因此阻塞访问资源以防止冲突。一个典型的例子是读取一行数据之前先将其锁住，确保只有放置锁的线程能够对这行数据进行修改。
+    * 乐观并发控制：Elasticsearch 中使用的这种方法假定冲突是不可能发生的，并且不会阻塞正在尝试的操作。然而，如果源数据在读写当中被修改，更新将会失败。应用程序接下来将决定该如何解决冲突。例如，可以重试更新、使用新的数据、或者将相关情况报告给用户。
+
+* 乐观并发控制
+    Elasticsearch是分布式的。当文档创建、更新或删除时，新版本的文档必须复制到集群中的其他节点。Elasticsearch也是异步和并发的，这意味着这些复制请求被并行发送，并且到达目的地时也许顺序是乱的。Elasticsearch需要一种方法确保文档的旧版本不会覆盖新的版本。
+
+    当我们之前讨论index , GET和DELETE请求时，我们指出每个文档都有一个_version（版本号），当文档被修改时版本号递增。Elasticsearch使用这个version号来确保变更以正确顺序得到执行。如果旧版本的文档在新版本之后到达，它可以被简单的忽略。
+
+    我们可以利用version号来确保应用中相互冲突的变更不会导致数据丢失。我们通过指定想要修改文档的 version号来达到这个目的。如果该版本不是当前版本号，我们的请求将会失败。
+
+    老的版本es使用version，但是新版本不支持了，会报下面的错误，提示我们用if_seq _no和if _primary_term
+
+    创建索引
+    ``` json
+    #PUT http://127.0.0.1:9200/shopping/_create/1001
+
+    // 返回结果
+    {
+        "_index": "shopping",
+        "_type": "_doc",
+        "_id": "1001",
+        "_version": 1,
+        "result": "created",
+        "_shards": {
+            "total": 2,
+            "successful": 1,
+            "failed": 0
+        },
+        "_seq_no": 10,
+        "_primary_term": 15
+    }
+    ```
+
+    更新数据
+    ``` json
+    #POST http://127.0.0.1:9200/shopping/_update/1001
+    {
+        "doc":{
+            "title":"华为手机"
+        }
+    }
+
+    // 返回结果：
+    {
+        "_index": "shopping",
+        "_type": "_doc",
+        "_id": "1001",
+        "_version": 2,
+        "result": "updated",
+        "_shards": {
+            "total": 2,
+            "successful": 1,
+            "failed": 0
+        },
+        "_seq_no": 11,
+        "_primary_term": 15
+    }
+    ```
+    旧版本使用的防止冲突更新方法：
+    ``` json
+    #POST http://127.0.0.1:9200/shopping/_update/1001?version=1
+    {
+        "doc":{
+            "title":"华为手机2"
+        }
+    }
+
+    // 返回结果：
+    {
+        "error": {
+            "root_cause": [
+                {
+                    "type": "action_request_validation_exception",
+                    "reason": "Validation Failed: 1: internal versioning can not be used for optimistic concurrency control. Please use `if_seq_no` and `if_primary_term` instead;"
+                }
+            ],
+            "type": "action_request_validation_exception",
+            "reason": "Validation Failed: 1: internal versioning can not be used for optimistic concurrency control. Please use `if_seq_no` and `if_primary_term` instead;"
+        },
+        "status": 400
+    }
+    ```
+
+    新版本使用的防止冲突更新方法：
+    ``` json
+    #POST http://127.0.0.1:9200/shopping/_update/1001?if_seq_no=11&if_primary_term=15
+    {
+        "doc":{
+            "title":"华为手机2"
+        }
+    }
+
+    // 返回结果
+    {
+        "_index": "shopping",
+        "_type": "_doc",
+        "_id": "1001",
+        "_version": 3,
+        "result": "updated",
+        "_shards": {
+            "total": 2,
+            "successful": 1,
+            "failed": 0
+        },
+        "_seq_no": 12,
+        "_primary_term": 16
+    }
+    ```
+* 外部系统版本控制
+    一个常见的设置是使用其它数据库作为主要的数据存储，使用Elasticsearch做数据检索，这意味着主数据库的所有更改发生时都需要被复制到Elasticsearch，如果多个进程负责这一数据同步，你可能遇到类似于之前描述的并发问题。
+
+    如果你的主数据库已经有了版本号，或一个能作为版本号的字段值比如timestamp，那么你就可以在 Elasticsearch 中通过增加 version_type=extermal到查询字符串的方式重用这些相同的版本号，版本号必须是大于零的整数，且小于9.2E+18，一个Java中 long类型的正值。
+
+    外部版本号的处理方式和我们之前讨论的内部版本号的处理方式有些不同，Elasticsearch不是检查当前_version和请求中指定的版本号是否相同，而是检查当前_version是否小于指定的版本号。如果请求成功，外部的版本号作为文档的新_version进行存储。
+    ``` json
+    #POST http://127.0.0.1:9200/shopping/_doc/1001?version=300&version_type=external
+    {
+        "title":"华为手机2"
+    }
+
+    // 返回结果
+    {
+        "_index": "shopping",
+        "_type": "_doc",
+        "_id": "1001",
+        "_version": 300,
+        "result": "updated",
+        "_shards": {
+            "total": 2,
+            "successful": 1,
+            "failed": 0
+        },
+        "_seq_no": 13,
+        "_primary_term": 16
+    }
+    ```
+
+### 文档展示-Kibana
+Kibana是一个免费且开放的用户界面，能够让你对Elasticsearch 数据进行可视化，并让你在Elastic Stack 中进行导航。你可以进行各种操作，从跟踪查询负载，到理解请求如何流经你的整个应用，都能轻松完成。
+[Kibana下载网址](https://artifacts.elastic.co/downloads/kibana/kibana-7.8.0-windows-x86_64.zip)
+1. 解压缩下载的 zip 文件。
+2. 修改 config/kibana.yml 文件。
+    ``` yaml
+    # 默认端口
+    server.port: 5601
+    # ES 服务器的地址
+    elasticsearch.hosts: ["http://localhost:9200"]
+    # 索引名
+    kibana.index: ".kibana"
+    # 支持中文
+    i18n.locale: "zh-CN"
+    ```
+3. Windows 环境下执行 bin/kibana.bat 文件。
+4. 通过浏览器访问：http://localhost:5601。
+
+
+## Elasticsearch集成
+### SpringData-整体介绍
+Spring Data是一个用于简化数据库、非关系型数据库、索引库访问，并支持云服务的开源框架。其主要目标是使得对数据的访问变得方便快捷，并支持 map-reduce框架和云计算数据服务。Spring Data可以极大的简化JPA(Elasticsearch…)的写法，可以在几乎不用写实现的情况下，实现对数据的访问和操作。除了CRUD 外，还包括如分页、排序等一些常用的功能。
+[Spring Data 的官网](https://spring.io/projects/spring-data)
+
+Spring Data 常用的功能模块如下：
+   * Spring Data JDBC
+   * Spring Data JPA
+   * Spring Data LDAP
+   * Spring Data MongoDB
+   * Spring Data Redis
+   * Spring Data R2DBC
+   * Spring Data REST
+   * Spring Data for Apache Cassandra
+   * Spring Data for Apache Geode
+   * Spring Data for Apache Solr
+   * Spring Data for Pivotal GemFire
+   * Spring Data Couchbase
+   * Spring Data Elasticsearch
+   * Spring Data Envers
+   * Spring Data Neo4j
+   * Spring Data JDBC Extensions
+   * Spring for Apache Hadoop
+
+* Spring Data Elasticsearch 介绍
+    Spring Data Elasticsearch基于Spring Data API简化 Elasticsearch 操作，将原始操作Elasticsearch 的客户端API进行封装。Spring Data为Elasticsearch 项目提供集成搜索引擎。Spring Data Elasticsearch POJO的关键功能区域为中心的模型与Elastichsearch交互文档和轻松地编写一个存储索引库数据访问层。
+    [Spring Data Elasticsearch 官网](https://spring.io/projects/spring-data-elasticsearch)
+
+#### SpringData-代码功能集成
+1. 创建Maven项目。
+2. 修改pom文件，增加依赖关系。
+3. 增加配置文件。
+4. Spring Boot 主程序。
+5. 数据实体类。
+6. 配置类
+7. DAO 数据访问对象
+
+#### SpringData-集成测试-索引操作
+
+检测有没有创建和删除:
+``` json
+#GET http://localhost:9200/_cat/indices?v 
+```
+
+
+#### SpringData-集成测试-文档操作
+
+#### SpringData-集成测试-文档搜索
+
+### SparkStreaming-集成
+Spark Streaming 是Spark core API的扩展，支持实时数据流的处理，并且具有可扩展，高吞吐量，容错的特点。数据可以从许多来源获取,如Kafka， Flume，Kinesis或TCP sockets，并且可以使用复杂的算法进行处理，这些算法使用诸如 map，reduce，join和 window等高级函数表示。最后，处理后的数据可以推送到文件系统，数据库等。实际上，您可以将Spark的机器学习和图形处理算法应用于数据流。
+1. 创建Maven项目。
+2. 修改 pom 文件，增加依赖关系。
+3. 功能实现
+
+
+### Flink-集成
+Apache Spark是一-种基于内存的快速、通用、可扩展的大数据分析计算引擎。Apache Spark掀开了内存计算的先河，以内存作为赌注，贏得了内存计算的飞速发展。但是在其火热的同时，开发人员发现，在Spark中，计算框架普遍存在的缺点和不足依然没有完全解决，而这些问题随着5G时代的来临以及决策者对实时数据分析结果的迫切需要而凸显的更加明显：
+* 乱序数据，迟到数据
+* 低延迟，高吞吐，准确性
+* 容错性
+* 数据精准一次性处理（Exactly-Once）
+
+Apache Flink是一个框架和分布式处理引擎，用于对无界和有界数据流进行有状态计算。在Spark火热的同时，也默默地发展自己，并尝试着解决其他计算框架的问题。慢慢地，随着这些问题的解决，Flink 慢慢被绝大数程序员所熟知并进行大力推广，阿里公司在2015年改进Flink，并创建了内部分支Blink，目前服务于阿里集团内部搜索、推荐、广告和蚂蚁等大量核心实时业务。
+1. 创建Maven项目。
+2. 修改 pom 文件，增加相关依赖类库。
+3. 功能实现
+
+
+## Elasticsearch优化
+### 硬件选择
+Elasticsearch 的基础是 Lucene，所有的索引和文档数据是存储在本地的磁盘中，具体的路径可在 ES 的配置文件…/config/elasticsearch.yml中配置，如下：
+``` yml
+#
+# Path to directory where to store the data (separate multiple locations by comma):
+#
+path.data: /path/to/data
+#
+# Path to log files:
+#
+path.logs: /path/to/logs
+```
+
+磁盘在现代服务器上通常都是瓶颈。Elasticsearch重度使用磁盘，你的磁盘能处理的吞吐量越大，你的节点就越稳定。这里有一些优化磁盘I/O的技巧：
+* 使用SSD就像其他地方提过的，他们比机械磁盘优秀多了。
+* 使用RAID0。条带化RAID会提高磁盘IO，代价显然就是当一块硬盘故障时整个就故障了。不要使用镜像或者奇偶校验RAID，因为副本已经提供了这个功能。
+* 另外，使用多块硬盘，并允许Elasticsearch 通过多个path data目录配置把数据条带化分配到它们上面。
+* 不要使用远程挂载的存储，比如NFS或者SMB/CIFS。这个引入的延迟对性能来说完全是背道而驰的。
+
+### 分片策略
+* 合理设置分片数
+	分片和副本的设计为 ES 提供了支持分布式和故障转移的特性，但并不意味着分片和副本是可以无限分配的。而且索引的分片完成分配后由于索引的路由机制，我们是不能重新修改分片数的。
+
+	可能有人会说，我不知道这个索引将来会变得多大，并且过后我也不能更改索引的大小，所以为了保险起见，还是给它设为 1000 个分片吧。但是需要知道的是，一个分片并不是没有代价的。需要了解：
+	* 一个分片的底层即为一个 Lucene 索引，会消耗一定文件句柄、内存、以及 CPU运转。
+	* 每一个搜索请求都需要命中索引中的每一个分片，如果每一个分片都处于不同的节点还好， 但如果多个分片都需要在同一个节点上竞争使用相同的资源就有些糟糕了。
+	* 用于计算相关度的词项统计信息是基于分片的。如果有许多分片，每一个都只有很少的数据会导致很低的相关度。
+
+	一个业务索引具体需要分配多少分片可能需要架构师和技术人员对业务的增长有个预先的判断，横向扩展应当分阶段进行。为下一阶段准备好足够的资源。 只有当你进入到下一个阶段，你才有时间思考需要作出哪些改变来达到这个阶段。一般来说，我们遵循一些原则：
+	* 控制每个分片占用的硬盘容量不超过 ES 的最大 JVM 的堆空间设置（一般设置不超过 32G，参考下文的 JVM 设置原则），因此，如果索引的总容量在 500G 左右，那分片大小在 16 个左右即可；当然，最好同时考虑原则 2。
+	* 考虑一下 node 数量，一般一个节点有时候就是一台物理机，如果分片数过多，大大超过了节点数，很可能会导致一个节点上存在多个分片，一旦该节点故障，即使保持了 1 个以上的副本，同样有可能会导致数据丢失，集群无法恢复。所以， 一般都设置分片数不超过节点数的 3 倍。
+	* 主分片，副本和节点最大数之间数量，我们分配的时候可以参考以下关系：`节点数<=主分片数 *（副本数+1）`
+
+### 推迟分片分配
+对于节点瞬时中断的问题，默认情况，集群会等待一分钟来查看节点是否会重新加入，如果这个节点在此期间重新加入，重新加入的节点会保持其现有的分片数据，不会触发新的分片分配。这样就可以减少 ES 在自动再平衡可用分片时所带来的极大开销。
+
+通过修改参数 delayed_timeout ，可以延长再均衡的时间，可以全局设置也可以在索引级别进行修改：
+``` json
+#PUT /_all/_settings
+{
+	"settings": {
+		"index.unassigned.node_left.delayed_timeout": "5m"
+	}
+}
+```
+
+### 路由选择
+当我们查询文档的时候， Elasticsearch 如何知道一个文档应该存放到哪个分片中呢？它其实是通过下面这个公式来计算出来：
+`shard = hash(routing) % number_of_primary_shards`
+routing 默认值是文档的 id，也可以采用自定义值，比如用户 id。
+
+* 不带routing查询
+	在查询的时候因为不知道要查询的数据具体在哪个分片上，所以整个过程分为2个步骤
+	* 分发：请求到达协调节点后，协调节点将查询请求分发到每个分片上。
+	* 聚合：协调节点搜集到每个分片上查询结果，在将查询的结果进行排序，之后给用户返回结果。
+* 带routing查询
+	查询的时候，可以直接根据routing 信息定位到某个分配查询，不需要查询所有的分配，经过协调节点排序。向上面自定义的用户查询，如果routing 设置为userid 的话，就可以直接查询出数据来，效率提升很多。
+
+### 写入速度优化
+ES 的默认配置，是综合了数据可靠性、写入速度、搜索实时性等因素。实际使用时，我们需要根据公司要求，进行偏向性的优化。
+
+针对于搜索性能要求不高，但是对写入要求较高的场景，我们需要尽可能的选择恰当写优化策略。综合来说，可以考虑以下几个方面来提升写索引的性能：
+* 加大Translog Flush，目的是降低Iops、Writeblock。
+* 增加Index Refesh间隔，目的是减少Segment Merge的次数。
+* 调整Bulk 线程池和队列。
+* 优化节点间的任务分布。
+* 优化Lucene层的索引建立，目的是降低CPU及IO。
+
+### 优化存储设备
+ES 是一种密集使用磁盘的应用，在段合并的时候会频繁操作磁盘，所以对磁盘要求较高，当磁盘速度提升之后，集群的整体性能会大幅度提高。
+
+### 合理使用合并
+Lucene 以段的形式存储数据。当有新的数据写入索引时， Lucene 就会自动创建一个新的段。
+随着数据量的变化，段的数量会越来越多，消耗的多文件句柄数及 CPU 就越多，查询效率就会下降。
+由于 Lucene 段合并的计算量庞大，会消耗大量的 I/O，所以 ES 默认采用较保守的策略，让后台定期进行段合并。
+
+### 减少 Refresh 的次数
+Lucene 在新增数据时，采用了延迟写入的策略，默认情况下索引的refresh_interval 为1 秒。
+Lucene 将待写入的数据先写到内存中，超过 1 秒（默认）时就会触发一次 Refresh，然后 Refresh 会把内存中的的数据刷新到操作系统的文件缓存系统中。
+如果我们对搜索的实效性要求不高，可以将 Refresh 周期延长，例如 30 秒。
+这样还可以有效地减少段刷新次数，但这同时意味着需要消耗更多的 Heap 内存。
+
+### 加大 Flush 设置
+Flush 的主要目的是把文件缓存系统中的段持久化到硬盘，当 Translog 的数据量达到 512MB 或者 30 分钟时，会触发一次 Flush。
+index.translog.flush_threshold_size 参数的默认值是 512MB，我们进行修改。
+增加参数值意味着文件缓存系统中可能需要存储更多的数据，所以我们需要为操作系统的文件缓存系统留下足够的空间。
+
+### 减少副本的数量
+ES 为了保证集群的可用性，提供了 Replicas（副本）支持，然而每个副本也会执行分析、索引及可能的合并过程，所以 Replicas 的数量会严重影响写索引的效率。
+当写索引时，需要把写入的数据都同步到副本节点，副本节点越多，写索引的效率就越慢。
+如果我们需要大批量进行写入操作，可以先禁止Replica复制，设置
+index.number_of_replicas: 0 关闭副本。在写入完成后， Replica 修改回正常的状态。
+
+### 内存设置
+ES 默认安装后设置的内存是 1GB，对于任何一个现实业务来说，这个设置都太小了。如果是通过解压安装的 ES，则在 ES 安装文件中包含一个 jvm.option 文件，添加如下命令来设置 ES 的堆大小， Xms 表示堆的初始大小， Xmx 表示可分配的最大内存，都是 1GB。
+
+确保 Xmx 和 Xms 的大小是相同的，其目的是为了能够在 Java 垃圾回收机制清理完堆区后不需要重新分隔计算堆区的大小而浪费资源，可以减轻伸缩堆大小带来的压力。
+
+假设你有一个 64G 内存的机器，按照正常思维思考，你可能会认为把 64G 内存都给ES 比较好，但现实是这样吗， 越大越好？虽然内存对 ES 来说是非常重要的，但是答案是否定的！
+
+因为 ES 堆内存的分配需要满足以下两个原则：
+* 不要超过物理内存的 50%： Lucene 的设计目的是把底层 OS 里的数据缓存到内存中。Lucene 的段是分别存储到单个文件中的，这些文件都是不会变化的，所以很利于缓存，同时操作系统也会把这些段文件缓存起来，以便更快的访问。如果我们设置的堆内存过大， Lucene 可用的内存将会减少，就会严重影响降低 Lucene 的全文本查询性能。
+* 堆内存的大小最好不要超过 32GB：在 Java 中，所有对象都分配在堆上，然后有一个 Klass Pointer 指针指向它的类元数据。这个指针在 64 位的操作系统上为 64 位， 64 位的操作系统可以使用更多的内存（2^64）。在 32 位的系统上为 32 位， 32 位的操作系统的最大寻址空间为 4GB（2^32）。但是 64 位的指针意味着更大的浪费，因为你的指针本身大了。浪费内存不算，更糟糕的是，更大的指针在主内存和缓存器（例如 LLC, L1 等）之间移动数据的时候，会占用更多的带宽。
+
+最终我们都会采用 31 G 设置
+* -Xms 31g
+* -Xmx 31g
+假设你有个机器有 128 GB 的内存，你可以创建两个节点，每个节点内存分配不超过 32 GB。也就是说不超过 64 GB 内存给 ES 的堆内存，剩下的超过 64 GB 的内存给 Lucene。
+
+### 重要配置
+| 参数名 |	参数值 |	说明 |
+| --- | --- | --- | --- |
+|cluster.name |	elasticsearch |	配置 ES 的集群名称，默认值是 ES，建议改成与所存数据相关的名称， ES 会自动发现在同一网段下的 集群名称相同的节点。 |
+|node.name | node-1 |	集群中的节点名，在同一个集群中不能重复。节点 的名称一旦设置，就不能再改变了。当然，也可以 设 置 成 服 务 器 的 主 机 名 称 ， 例 如 node.name:${HOSTNAME}。 |
+|node.master |	true |	指定该节点是否有资格被选举成为 Master 节点，默 认是 True，如果被设置为 True，则只是有资格成为 Master 节点，具体能否成为 Master 节点，需要通 过选举产生。 |
+|node.data |	true |	指定该节点是否存储索引数据，默认为 True。数据 的增、删、改、查都是在 Data 节点完成的。 |
+|index.number_of_shards |	1 |	设置都索引分片个数，默认是 1 片。也可以在创建 索引时设置该值，具体设置为多大都值要根据数据 量的大小来定。如果数据量不大，则设置成 1 时效 率最高 |
+|index.number_of_replicas |	1 |	设置默认的索引副本个数，默认为 1 个。副本数越 多，集群的可用性越好，但是写索引时需要同步的 数据越多。 |
+|transport.tcp.compress |	true |	设置在节点间传输数据时是否压缩，默认为 False， 不压缩 |
+|discovery.zen.minimum_master_nodes |	1 |	设置在选举 Master 节点时需要参与的最少的候选 主节点数，默认为 1。如果使用默认值，则当网络 不稳定时有可能会出现脑裂。 合 理 的 数 值 为 `(master_eligible_nodes/2)+1` ， 其 中 master_eligible_nodes 表示集群中的候选主节点数 |
+|discovery.zen.ping.timeout |	3s |	设置在集群中自动发现其他节点时 Ping 连接的超 时时间，默认为 3 秒。 在较差的网络环境下需要设置得大一点，防止因误 判该节点的存活状态而导致分片的转移 |
+
+
+## Elasticsearch面试题
+### 为什么要使用 Elasticsearch？
+系统中的数据， 随着业务的发展，时间的推移， 将会非常多， 而业务中往往采用模糊查询进行数据的搜索， 而模糊查询会导致查询引擎放弃索引，导致系统查询数据时都是全表扫描，在百万级别的数据库中，查询效率是非常低下的，而我们使用 ES 做一个全文索引，将经常查询的系统功能的某些字段，比如说电商系统的商品表中商品名，描述、价格还有 id 这些字段我们放入 ES 索引库里，可以提高查询速度。
+
+### Elasticsearch 的 master 选举流程？
+* Elasticsearch的选主是ZenDiscovery模块负责的，主要包含Ping（节点之间通过这个RPC来发现彼此）和Unicast（单播模块包含-一个主机列表以控制哪些节点需要ping通）这两部分。
+* 对所有可以成为master的节点（node master: true）根据nodeId字典排序，每次选举每个节点都把自己所知道节点排一次序，然后选出第一个（第0位）节点，暂且认为它是master节点。
+* 如果对某个节点的投票数达到一定的值（可以成为master节点数n/2+1）并且该节点自己也选举自己，那这个节点就是master。否则重新选举一直到满足上述条件。
+* master节点的职责主要包括集群、节点和索引的管理，不负责文档级别的管理；data节点可以关闭http功能。
+
+### Elasticsearch 集群脑裂问题？
+“脑裂”问题可能的成因：
+* 网络问题：集群间的网络延迟导致一些节点访问不到master, 认为master 挂掉了从而选举出新的master,并对master上的分片和副本标红，分配新的主分片。
+* 节点负载：主节点的角色既为master又为data,访问量较大时可能会导致ES停止响应造成大面积延迟，此时其他节点得不到主节点的响应认为主节点挂掉了，会重新选取主节点。
+* 内存回收：data 节点上的ES进程占用的内存较大，引发JVM的大规模内存回收，造成ES进程失去响应。
+
+脑裂问题解决方案：
+* 减少误判：discovery.zen ping_ timeout 节点状态的响应时间，默认为3s，可以适当调大，如果master在该响应时间的范围内没有做出响应应答，判断该节点已经挂掉了。调大参数（如6s，discovery.zen.ping_timeout:6），可适当减少误判。
+* 选举触发：discovery.zen.minimum. _master_ nodes:1，该参數是用于控制选举行为发生的最小集群主节点数量。当备选主节点的个數大于等于该参数的值，且备选主节点中有该参数个节点认为主节点挂了，进行选举。官方建议为(n / 2) +1, n为主节点个数（即有资格成为主节点的节点个数）。
+* 角色分离：即master节点与data节点分离，限制角色
+  * 主节点配置为：node master: true，node data: false
+  * 从节点配置为：node master: false，node data: true
+
+### Elasticsearch 索引文档的流程？
+[](./assets/ElasticSearch.md/1657259556324.jpg)
+* 协调节点默认使用文档 ID 参与计算（也支持通过 routing），以便为路由提供合适的分片：shard = hash(document_id) % (num_of_primary_shards)
+* 当分片所在的节点接收到来自协调节点的请求后，会将请求写入到 Memory Buffer，然后定时（默认是每隔 1 秒）写入到 Filesystem Cache，这个从 Memory Buffer 到 Filesystem Cache 的过程就叫做 refresh；
+* 当然在某些情况下，存在 Momery Buffer 和 Filesystem Cache 的数据可能会丢失， ES 是通过 translog的机制来保证数据的可靠性的。其实现机制是接收到请求后，同时也会写入到 translog 中，当 Filesystemcache 中的数据写入到磁盘中时，才会清除掉，这个过程叫做 flush；
+* 在 flush 过程中，内存中的缓冲将被清除，内容被写入一个新段，段的 fsync 将创建一个新的提交点，并将内容刷新到磁盘，旧的 translog 将被删除并开始一个新的 translog。
+* flush 触发的时机是定时触发（默认 30 分钟）或者 translog 变得太大（默认为 512M）时；
+
+### Elasticsearch 更新和删除文档的流程？
+* 删除和更新也都是写操作，但是 Elasticsearch 中的文档是不可变的，因此不能被删除或者改动以展示其变更；
+* 磁盘上的每个段都有一个相应的.del 文件。当删除请求发送后，文档并没有真的被删除，而是在.del文件中被标记为删除。该文档依然能匹配查询，但是会在结果中被过滤掉。当段合并时，在.del 文件中被标记为删除的文档将不会被写入新段。
+* 在新的文档被创建时， Elasticsearch 会为该文档指定一个版本号，当执行更新时，旧版本的文档在.del文件中被标记为删除，新版本的文档被索引到一个新段。旧版本的文档依然能匹配查询，但是会在结果中被过滤掉。
+
+### Elasticsearch 搜索的流程？
+[](./assets/ElasticSearch.md/1657259671129.jpg)
+* 搜索被执行成一个两阶段过程，我们称之为 Query Then Fetch；
+* 在初始查询阶段时，查询会广播到索引中每一个分片拷贝（主分片或者副本分片）。 每个分片在本地执行搜索并构建一个匹配文档的大小为 from + size 的优先队列。 PS：在搜索的时候是会查
+Filesystem Cache 的，但是有部分数据还在 Memory Buffer，所以搜索是近实时的。
+* 每个分片返回各自优先队列中 所有文档的 ID 和排序值 给协调节点，它合并这些值到自己的优先队列中来产生一个全局排序后的结果列表。
+* 接下来就是取回阶段， 协调节点辨别出哪些文档需要被取回并向相关的分片提交多个 GET 请求。每个分片加载并丰富文档，如果有需要的话，接着返回文档给协调节点。一旦所有的文档都被取回了，协调节点返回结果给客户端。
+* Query Then Fetch 的搜索类型在文档相关性打分的时候参考的是本分片的数据，这样在文档数量较少的时候可能不够准确， DFS Query Then Fetch 增加了一个预查询的处理，询问 Term 和 Document frequency，这个评分更准确，但是性能会变差。
+
+### Elasticsearch 在部署时，对 Linux 的设置有哪些优化方法？
+* 64 GB 内存的机器是非常理想的， 但是 32 GB 和 16 GB 机器也是很常见的。少于 8 GB 会适得其反。
+* 如果你要在更快的 CPUs 和更多的核心之间选择，选择更多的核心更好。多个内核提供的额外并发远胜过稍微快一点点的时钟频率。
+* 如果你负担得起 SSD，它将远远超出任何旋转介质。 基于 SSD 的节点，查询和索引性能都有提升。如果你负担得起， SSD 是一个好的选择。
+* 即使数据中心们近在咫尺，也要避免集群跨越多个数据中心。绝对要避免集群跨越大的地理距离。
+* 请确保运行你应用程序的 JVM 和服务器的 JVM 是完全一样的。 在 Elasticsearch 的几个地方，使用 Java 的本地序列化。
+* 通过设置 gateway.recover_after_nodes、 gateway.expected_nodes、 gateway.recover_after_time 可以在集群重启的时候避免过多的分片交换，这可能会让数据恢复从数个小时缩短为几秒钟。
+* Elasticsearch 默认被配置为使用单播发现，以防止节点无意中加入集群。只有在同一台机器上运行的节点才会自动组成集群。最好使用单播代替组播。
+* 不要随意修改垃圾回收器（CMS）和各个线程池的大小。
+* 把你的内存的（少于）一半给 Lucene（但不要超过 32 GB！），通过 ES_HEAP_SIZE 环境变量设置。
+* 内存交换到磁盘对服务器性能来说是致命的。如果内存交换到磁盘上，一个 100 微秒的操作可能变成 10 毫秒。 再想想那么多 10 微秒的操作时延累加起来。 不难看出 swapping 对于性能是多么可怕。
+* Lucene 使用了大量的文件。同时， Elasticsearch 在节点和 HTTP 客户端之间进行通信也使用了大量的套接字。 所有这一切都需要足够的文件描述符。你应该增加你的文件描述符，设置一个很大的值，如 64,000。
+
+### GC 方面，在使用 Elasticsearch 时要注意什么？
+倒排词典的索引需要常驻内存，无法 GC，需要监控 data node 上 segment memory 增长趋势。
+
+各类缓存， field cache, filter cache, indexing cache, bulk queue 等等，要设置合理的大小，并且要应该根据最坏的情况来看 heap 是否够用，也就是各类缓存全部占满的时候，还有 heap 空间可以分配给其他任务吗？避免采用 clear cache 等“自欺欺人”的方式来释放内存。
+
+避免返回大量结果集的搜索与聚合。确实需要大量拉取数据的场景，可以采用 scan & scroll api 来实现。
+
+cluster stats 驻留内存并无法水平扩展，超大规模集群可以考虑分拆成多个集群通过 tribe node 连接。
+
+想知道 heap 够不够，必须结合实际应用场景，并对集群的 heap 使用情况做持续的监控。
+
+
+### Elasticsearch 对于大数据量（上亿量级）的聚合如何实现？
+Elasticsearch 提供的首个近似聚合是 cardinality 度量。它提供一个字段的基数，即该字段的 distinct或者 unique 值的数目。它是基于 HLL 算法的。 HLL 会先对我们的输入作哈希运算，然后根据哈希运算的结果中的 bits 做概率估算从而得到基数。其特点是：可配置的精度，用来控制内存的使用（更精确 ＝ 更多内存）；小的数据集精度是非常高的；我们可以通过配置参数，来设置去重需要的固定内存使用量。无论数千还是数十亿的唯一值，内存使用量只与你配置的精确度相关。
+
+### 在并发情况下， Elasticsearch 如果保证读写一致？
+* 可以通过版本号使用乐观并发控制，以确保新版本不会被旧版本覆盖，由应用层来处理具体的冲突；
+* 另外对于写操作，一致性级别支持 quorum/one/all，默认为 quorum，即只有当大多数分片可用时才允许写操作。但即使大多数可用，也可能存在因为网络等原因导致写入副本失败，这样该副本被认为故障，分片将会在一个不同的节点上重建。
+* 对于读操作，可以设置 replication 为 sync(默认)，这使得操作在主分片和副本分片都完成后才会返回；如果设置 replication 为 async 时，也可以通过设置搜索请求参数_preference 为 primary 来查询主分片，确保文档是最新版本。
+
+### 如何监控 Elasticsearch 集群状态？
+* elasticsearch-head 插件。
+* 通过 Kibana 监控 Elasticsearch。你可以实时查看你的集群健康状态和性能，也可以分析过去的集群、索引和节点指标
+
+### 是否了解字典树？
+字典树又称单词查找树， Trie 树，是一种树形结构，是一种哈希树的变种。典型应用是用于统计，排序和保存大量的字符串（但不仅限于字符串），所以经常被搜索引擎系统用于文本词频统计。它的优点是：利用字符串的公共前缀来减少查询时间，最大限度地减少无谓的字符串比较，查询效率比哈希树高。
+
+Trie 的核心思想是空间换时间，利用字符串的公共前缀来降低查询时间的开销以达到提高效率的目的。它有 3 个基本性质：
+* 根节点不包含字符，除根节点外每一个节点都只包含一个字符。
+* 从根节点到某一节点，路径上经过的字符连接起来，为该节点对应的字符串。
+* 每个节点的所有子节点包含的字符都不相同。
+对于中文的字典树，每个节点的子节点用一个哈希表存储，这样就不用浪费太大的空间，而且查询速度上可以保留哈希的复杂度 O(1)。
+
+### Elasticsearch 中的集群、节点、索引、文档、类型是什么？
+* 集群是一个或多个节点（服务器）的集合，它们共同保存您的整个数据，并提供跨所有节点的联合索引和搜索功能。群集由唯一名 称标识，默认情况下为"elasticsearch"。此名称很重要，因为如果节点设置为按名称加入群集，则该节点只能是群集的一部分。
+* 节点是属于集群一部分的单个服务器。它存储数据并参与群集索引和搜索功能。
+* 索引就像关系数据库中的“数据库”。它有一个定义多种类型的映射。索引是逻辑名称空间，映射到一个或多个主分片，并且可以有零个或多个副本分片。MySQL =>数据库，Elasticsearch=>索引。
+* 文档类似于关系数据库中的一行。不同之处在于索引中的每个文档可以具有不同的结构(字段)，但是对于通用字段应该具有相同的数据类型。MySQL => Databases => Tables => Columns / Rows，Elasticsearch=> Indices => Types =>具有属性的文档Doc。
+* 类型是索引的逻辑类别/分区，其语义完全取决于用户。
+
+### Elasticsearch 中的倒排索引是什么？
+倒排索引是搜索引擎的核心。搜索引擎的主要目标是在查找发生搜索条件的文档时提供快速搜索。ES中的倒排索引其实就是 lucene 的倒排索引，区别于传统的正向索引， 倒排索引会再存储数据时将关键词和数据进行关联，保存到倒排表中，然后查询时，将查询内容进行分词后在倒排表中进行查询，最后匹配数据即可。
