@@ -21,6 +21,8 @@ SpringCloud Alibaba简介
 ### [Work](./Work.md)
 [Work](./Work.md)在日常工作中遇到到一些其他笔记
 ## 运维相关
+### [Linux](./Linux.md)
+[Linux](./Linux.md) 平时使用服务器是遇到的一些
 ### [Redis](./Redis.md)
 [Redis](./Redis.md) 有基础知识到Redis的应用、持久化操作、集群搭建......
 ### [Docker](./Docker.md)
