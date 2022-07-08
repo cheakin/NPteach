@@ -2285,6 +2285,488 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     [](./assets/ElasticSearch.md/1657121243009.jpg)
 
     按段搜索会以如下流程执行：
-    一. 新文档被收集到内存索引缓存。
+    1. 新文档被收集到内存索引缓存。
+        [](./assets/ElasticSearch.md/1657206432888.jpg)
+    2. 不是地， 缓存被提交
+       1. 一个新的段，一个追加的倒排索引，被写入磁盘。
+       2. 一个新的包含新段名字的提交点被写入磁盘。
+       3. 磁盘进行同步，所有在文件系统缓存中等待的写入都刷新到磁盘，以确保它们被写入物理文件
+    3. 新的段被开启，让它包含的文档可见以被搜索。
+    4. 内存缓存被清空，等待接收新的文档。
+        [](./assets/ElasticSearch.md/1657206543473.jpg)
+    
+当一个查询被触发，所有已知的段按顺序被查询。词项统计会对所有段的结果进行聚合，以保证每个词和每个文档的关联都被准确计算。这种方式可以用相对较低的成本将新文档添加到索引。
+
+段是不可改变的，所以既不能从把文档从旧的段中移除，也不能修改旧的段来进行反映文档的更新。取而代之的是，每个提交点会包含一个.del 文件，文件中会列出这些被删除文档的段信息。
+
+当一个**文档被“删除”**时，它实际上只是在 .del 文件中被标记删除。一个被标记删除的文档仍然可以被查询匹配到，但它会在最终结果被返回前从结果集中移除。
+
+文档更新也是类似的操作方式:当一个文档被更新时，旧版本文档被标记删除，文档的新版本被索引到一个新的段中。可能两个版本的文档都会被一个查询匹配到，但被删除的那个旧版本文档在结果集返回前就已经被移除。
+
+### 文档刷新 & 文档刷写 & 文档合并
+[](./assets/ElasticSearch.md/1657206606536.jpg)
+[](./assets/ElasticSearch.md/1657206635607.jpg)
+
+* 近实时搜索
+    随着按段（per-segment）搜索的发展，一个新的文档从索引到可被搜索的延迟显著降低了。新文档在几分钟之内即可被检索，但这样还是不够快。磁盘在这里成为了瓶颈。**提交（Commiting）一个新的段到磁盘需要一个fsync来确保段被物理性地写入磁盘**，这样在断电的时候就不会丢失数据。但是fsync操作代价很大；如果每次索引一个文档都去执行一次的话会造成很大的性能问题。
+
+    我们需要的是一个更轻量的方式来使一个文档可被搜索，这意味着fsync要从整个过程中被移除。在Elasticsearch和磁盘之间是**文件系统缓存**。像之前描述的一样，在内存索引缓冲区中的文档会被写入到一个新的段中。但是这里新段会被先写入到文件系统缓存—这一步代价会比较低，稍后再被刷新到磁盘—这一步代价比较高。不过只要文件已经在缓存中，就可以像其它文件一样被打开和读取了。
+    [](./assets/ElasticSearch.md/1657206754246.jpg)
+
+    Lucene允许新段被写入和打开，使其包含的文档在未进行一次完整提交时便对搜索可见。这种方式比进行一次提交代价要小得多，并且在不影响性能的前提下可以被频繁地执行。
+    [](./assets/ElasticSearch.md/1657206787896.jpg)
+
+    在 Elasticsearch 中，写入和打开一个新段的轻量的过程叫做refresh。默认情况下每个分片会每秒自动刷新一次。这就是为什么我们说 Elasticsearch是近实时搜索：文档的变化并不是立即对搜索可见，但会在一秒之内变为可见。
+
+    这些行为可能会对新用户造成困惑：他们索引了一个文档然后尝试搜索它，但却没有搜到。这个问题的解决办法是用refresh API执行一次手动刷新：/usersl_refresh
+
+    尽管刷新是比提交轻量很多的操作，它还是会有性能开销。当写测试的时候，手动刷新很有用，但是不要在生产环境下每次索引一个文档都去手动刷新。相反，你的应用需要意识到Elasticsearch 的近实时的性质，并接受它的不足。
+
+    并不是所有的情况都需要每秒刷新。可能你正在使用Elasticsearch索引大量的日志文件，你可能想优化索引速度而不是近实时搜索，可以通过设置refresh_interval ，降低每个索引的刷新频率
+    ``` json
+    {
+        "settings": {
+            "refresh_interval": "30s"
+        }
+    }
+    ```
+    refresh_interval可以在既存索引上进行动态更新。在生产环境中，当你正在建立一个大的新索引时，可以先关闭自动刷新，待开始使用该索引时，再把它们调回来。
+    ``` json
+    # 关闭自动刷新
+    PUT /users/_settings
+    { "refresh_interval": -1 }
+
+    # 每一秒刷新
+    PUT /users/_settings
+    { "refresh_interval": "1s" }
+    ```
+
+* 持久化变更
+    如果没有用fsync把数据从文件系统缓存刷（flush）到硬盘，我们不能保证数据在断电甚至是程序正常退出之后依然存在。为了保证Elasticsearch 的可靠性，需要确保数据变化被持久化到磁盘。在动态更新索引，我们说一次完整的提交会将段刷到磁盘，并写入一个包含所有段列表的提交点。Elasticsearch 在启动或重新打开一个索引的过程中使用这个提交点来判断哪些段隶属于当前分片。
+
+    即使通过每秒刷新(refresh）实现了近实时搜索，我们仍然需要经常进行完整提交来确保能从失败中恢复。但在两次提交之间发生变化的文档怎么办?我们也不希望丢失掉这些数据。Elasticsearch 增加了一个translog ，或者叫事务日志，在每一次对Elasticsearch进行操作时均进行了日志记录。
+
+    整个流程如下:
+    1. 一个文档被索引之后，就会被添加到内存缓冲区，并且追加到了 translog
+        [](assets/ElasticSearch.md/1657206912189.jpg)
+    2. 刷新（refresh）使分片每秒被刷新（refresh）一次：
+        * 这些在内存缓冲区的文档被写入到一个新的段中，且没有进行fsync操作。
+        * 这个段被打开，使其可被搜索。
+        * 内存缓冲区被清空。
+        [](./assets/ElasticSearch.md/1657206953686.jpg)
+    3. 这个进程继续工作，更多的文档被添加到内存缓冲区和追加到事务日志。
+        [](./assets/ElasticSearch.md/1657206990474.jpg)
+    4. 每隔一段时间—例如translog变得越来越大，索引被刷新（flush）；一个新的translog被创建，并且一个全量提交被执行。
+        * 所有在内存缓冲区的文档都被写入一个新的段。
+        * 缓冲区被清空。
+        * 一个提交点被写入硬盘。
+        * 文件系统缓存通过fsync被刷新（flush） 。
+        * 老的translog被删除。
+    translog 提供所有还没有被刷到磁盘的操作的一个持久化纪录。当Elasticsearch启动的时候，它会从磁盘中使用最后一个提交点去恢复己知的段，并且会重放translog 中所有在最后一次提交后发生的变更操作。
+
+    translog 也被用来提供实时CRUD。当你试着通过ID查询、更新、删除一个文档，它会在尝试从相应的段中检索之前，首先检查 translog任何最近的变更。这意味着它总是能够实时地获取到文档的最新版本。
+    [](./assets/ElasticSearch.md/1657207067292.jpg)
+
+    执行一个提交并且截断translog 的行为在 Elasticsearch被称作一次flush。分片每30分钟被自动刷新（flush)，或者在 translog 太大的时候也会刷新。
+
+    你很少需要自己手动执行flush操作，通常情况下，自动刷新就足够了。这就是说，在重启节点或关闭索引之前执行 flush有益于你的索引。当Elasticsearch尝试恢复或重新打开一个索引，它需要重放translog中所有的操作，所以如果日志越短，恢复越快。
+
+    translog 的目的是保证操作不会丢失，在文件被fsync到磁盘前，被写入的文件在重启之后就会丢失。默认translog是每5秒被fsync刷新到硬盘，或者在每次写请求完成之后执行（e.g. index, delete, update, bulk）。这个过程在主分片和复制分片都会发生。最终，基本上，这意味着在整个请求被fsync到主分片和复制分片的translog之前，你的客户端不会得到一个200 OK响应。
+
+    在每次请求后都执行一个fsync会带来一些性能损失，尽管实践表明这种损失相对较小（特别是 bulk 导入，它在一次请求中平摊了大量文档的开销）。
+
+    但是对于一些大容量的偶尔丢失几秒数据问题也并不严重的集群，使用异步的 fsync还是比较有益的。比如，写入的数据被缓存到内存中，再每5秒执行一次 fsync 。如果你决定使用异步translog 的话，你需要保证在发生 crash 时，丢失掉 sync_interval时间段的数据也无所谓。请在决定前知晓这个特性。如果你不确定这个行为的后果，最好是使用默认的参数{“index.translog.durability”: “request”}来避免数据丢失。
 
 
+* 段合并
+    由于自动刷新流程每秒会创建一个新的段，这样会导致短时间内的段数量暴增。而段数目太多会带来较大的麻烦。每一个段都会消耗文件句柄、内存和 cpu运行周期。更重要的是，每个搜索请求都必须轮流检查每个段；所以段越多，搜索也就越慢。
+
+    Elasticsearch通过在后台进行段合并来解决这个问题。小的段被合并到大的段，然后这些大的段再被合并到更大的段。
+
+    段合并的时候会将那些旧的已删除文档从文件系统中清除。被删除的文档（或被更新文档的旧版本）不会被拷贝到新的大段中。
+
+    启动段合并不需要你做任何事。进行索引和搜索时会自动进行。
+
+    1. 当索引的时候，刷新（refresh）操作会创建新的段并将段打开以供搜索使用。
+    2. 合并进程选择一小部分大小相似的段，并且在后台将它们合并到更大的段中。这并不会中断索引和搜索。
+        [](./assets/ElasticSearch.md/1657207172310.jpg)
+    3. 一旦合并结束，老的段被删除
+        * 新的段被刷新(flush)到了磁盘。
+        * 写入一个包含新段且排除旧的和较小的段的新提交点。
+        * 新的段被打开用来搜索。老的段被删除。
+        [](./assets/ElasticSearch.md/1657207359427.jpg)
+    4. 合并大的段需要消耗大量的 I/O 和 CPU 资源，如果任其发展会影响搜索性能。 Elasticsearch在默认情况下会对合并流程进行资源限制，所以搜索仍然有足够的资源很好地执行。
+
+### 文档分析
+分析包含下面的过程：
+  * 将一块文本分成适合于倒排索引的独立的词条。
+  * 将这些词条统一化为标准格式以提高它们的“可搜索性”，或者recall。
+
+分析器执行上面的工作。分析器实际上是将三个功能封装到了一个包里：
+  * 字符过滤器：首先，字符串按顺序通过每个 字符过滤器 。他们的任务是在分词前整理字符串。一个字符过滤器可以用来去掉 HTML，或者将 & 转化成 and。
+  * 
+  * 分词器：其次，字符串被分词器分为单个的词条。一个简单的分词器遇到空格和标点的时候，可能会将文本拆分成词条。
+  * Token 过滤器：最后，词条按顺序通过每个 token 过滤器 。这个过程可能会改变词条（例如，小写化Quick ），删除词条（例如， 像 a， and， the 等无用词），或者增加词条（例如，像jump和leap这种同义词）
+
+* 内置分析器
+Elasticsearch还附带了可以直接使用的预包装的分析器。接下来我们会列出最重要的分析器。为了证明它们的差异，我们看看每个分析器会从下面的字符串得到哪些词条：
+``` json
+"Set the shape to semi-transparent by calling set_trans(5)"
+```
+  * 标准分析器
+    标准分析器是Elasticsearch 默认使用的分析器。它是分析各种语言文本最常用的选择。它根据Unicode 联盟定义的单词边界划分文本。删除绝大部分标点。最后，将词条小写。它会产生：
+    ``` json
+    set, the, shape, to, semi, transparent, by, calling, set_trans, 5
+    ```
+  * 简单分析器
+    简单分析器在任何不是字母的地方分隔文本，将词条小写。它会产生：
+    ``` json
+    set, the, shape, to, semi, transparent, by, calling, set, trans
+    ```
+
+  * 空格分析器
+    空格分析器在空格的地方划分文本。它会产生:
+    ``` json
+    Set, the, shape, to, semi-transparent, by, calling, set_trans(5)
+    ```
+  
+  * 语言分析器
+    特定语言分析器可用于很多语言。它们可以考虑指定语言的特点。例如，英语分析器附带了一组英语无用词（常用单词，例如and或者the ,它们对相关性没有多少影响），它们会被删除。由于理解英语语法的规则，这个分词器可以提取英语单词的词干。
+
+    英语分词器会产生下面的词条：
+    ``` json
+    set, shape, semi, transpar, call, set_tran, 5
+    ```
+    注意看transparent、calling和 set_trans已经变为词根格式。
+
+* 分析器使用场景
+    当我们索引一个文档，它的全文域被分析成词条以用来创建倒排索引。但是，当我们在全文域搜索的时候，我们需要将查询字符串通过相同的分析过程，以保证我们搜索的词条格式与索引中的词条格式一致。
+
+    全文查询，理解每个域是如何定义的，因此它们可以做正确的事：
+      * 当你查询一个全文域时，会对查询字符串应用相同的分析器，以产生正确的搜索词条列表。
+      * 当你查询一个精确值域时，不会分析查询字符串，而是搜索你指定的精确值。
+
+* 测试分析器
+    有些时候很难理解分词的过程和实际被存储到索引中的词条，特别是你刚接触Elasticsearch。为了理解发生了什么，你可以使用analyze API来看文本是如何被分析的。在消息体里，指定分析器和要分析的文本。
+    ``` json
+    #GET http://localhost:9200/_analyze
+    {
+        "analyzer": "standard",
+        "text": "Text to analyze"
+    }
+    ```
+    结果中每个元素代表一个单独的词条：
+    ``` json
+    {
+        "tokens": [
+            {
+                "token": "text", 
+                "start_offset": 0, 
+                "end_offset": 4, 
+                "type": "<ALPHANUM>", 
+                "position": 1
+            }, 
+            {
+                "token": "to", 
+                "start_offset": 5, 
+                "end_offset": 7, 
+                "type": "<ALPHANUM>", 
+                "position": 2
+            }, 
+            {
+                "token": "analyze", 
+                "start_offset": 8, 
+                "end_offset": 15, 
+                "type": "<ALPHANUM>", 
+                "position": 3
+            }
+        ]
+    }
+    ```
+    * token是实际存储到索引中的词条。
+    * start_ offset 和end_ offset指明字符在原始字符串中的位置。
+    * position指明词条在原始文本中出现的位置。
+
+* 指定分析器
+    当Elasticsearch在你的文档中检测到一个新的字符串域，它会自动设置其为一个全文字符串域，使用 标准 分析器对它进行分析。你不希望总是这样。可能你想使用一个不同的分析器，适用于你的数据使用的语言。有时候你想要一个字符串域就是一个字符串域，不使用分析，直接索引你传入的精确值，例如用户 ID 或者一个内部的状态域或标签。要做到这一点，我们必须手动指定这些域的映射。
+
+    （细粒度指定分析器）
+
+* IK分词器
+    首先通过 Postman 发送 GET 请求查询分词效果
+    ``` json
+    # GET http://localhost:9200/_analyze
+    {
+        "text":"测试单词"
+    }
+    ```
+    ES 的默认分词器无法识别中文中测试、 单词这样的词汇，而是简单的将每个字拆完分为一个词。
+    ``` json
+    {
+        "tokens": [
+            {
+                "token": "测", 
+                "start_offset": 0, 
+                "end_offset": 1, 
+                "type": "<IDEOGRAPHIC>", 
+                "position": 0
+            }, 
+            {
+                "token": "试", 
+                "start_offset": 1, 
+                "end_offset": 2, 
+                "type": "<IDEOGRAPHIC>", 
+                "position": 1
+            }, 
+            {
+                "token": "单", 
+                "start_offset": 2, 
+                "end_offset": 3, 
+                "type": "<IDEOGRAPHIC>", 
+                "position": 2
+            }, 
+            {
+                "token": "词", 
+                "start_offset": 3, 
+                "end_offset": 4, 
+                "type": "<IDEOGRAPHIC>", 
+                "position": 3
+            }
+        ]
+    }
+    ```
+    这样的结果显然不符合我们的使用要求，所以我们需要下载 ES 对应版本的中文分词器。
+    IK 中文分词器下载网址
+    将解压后的后的文件夹放入 ES 根目录下的 plugins 目录下，重启 ES 即可使用。
+    我们这次加入新的查询参数"analyzer":“ik_max_word”。
+    ``` json
+    # GET http://localhost:9200/_analyze
+    {
+        "text":"测试单词",
+        "analyzer":"ik_max_word"
+    }
+    ```
+    * ik_max_word：会将文本做最细粒度的拆分。
+    * ik_smart：会将文本做最粗粒度的拆分。
+    
+    使用中文分词后的结果为：
+    ``` json
+    {
+        "tokens": [
+            {
+                "token": "测试", 
+                "start_offset": 0, 
+                "end_offset": 2, 
+                "type": "CN_WORD", 
+                "position": 0
+            }, 
+            {
+                "token": "单词", 
+                "start_offset": 2, 
+                "end_offset": 4, 
+                "type": "CN_WORD", 
+                "position": 1
+            }
+        ]
+    }
+    ```
+    
+    ES 中也可以进行扩展词汇，首先查询
+    ``` json
+    #GET http://localhost:9200/_analyze
+    {
+        "text":"弗雷尔卓德",
+        "analyzer":"ik_max_word"
+    }
+    ```
+    仅仅可以得到每个字的分词结果，我们需要做的就是使分词器识别到弗雷尔卓德也是一个词语。
+    ``` json
+    {
+        "tokens": [
+            {
+                "token": "弗",
+                "start_offset": 0,
+                "end_offset": 1,
+                "type": "CN_CHAR",
+                "position": 0
+            },
+            {
+                "token": "雷",
+                "start_offset": 1,
+                "end_offset": 2,
+                "type": "CN_CHAR",
+                "position": 1
+            },
+            {
+                "token": "尔",
+                "start_offset": 2,
+                "end_offset": 3,
+                "type": "CN_CHAR",
+                "position": 2
+            },
+            {
+                "token": "卓",
+                "start_offset": 3,
+                "end_offset": 4,
+                "type": "CN_CHAR",
+                "position": 3
+            },
+            {
+                "token": "德",
+                "start_offset": 4,
+                "end_offset": 5,
+                "type": "CN_CHAR",
+                "position": 4
+            }
+        ]
+    }
+    ```
+    1. 首先进入 ES 根目录中的 plugins 文件夹下的 ik 文件夹，进入 config 目录，创建 custom.dic文件，写入“弗雷尔卓德”。
+    2. 同时打开 IKAnalyzer.cfg.xml 文件，将新建的 custom.dic 配置其中。
+    3. 重启 ES 服务器 。
+
+    ``` xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+    <properties>
+        <comment>IK Analyzer 扩展配置</comment>
+        <!--用户可以在这里配置自己的扩展字典 -->
+        <entry key="ext_dict">custom.dic</entry>
+        <!--用户可以在这里配置自己的扩展停止词字典-->
+        <entry key="ext_stopwords"></entry>
+        <!--用户可以在这里配置远程扩展字典 -->
+        <!-- <entry key="remote_ext_dict">words_location</entry> -->
+        <!--用户可以在这里配置远程扩展停止词字典-->
+        <!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+    </properties>
+    ```
+    
+    扩展后再次查询
+    ``` json
+    # GET http://localhost:9200/_analyze
+    {
+        "text":"测试单词",
+        "analyzer":"ik_max_word"
+    }
+    ```
+
+    返回结果如下：
+    ``` json
+    {
+        "tokens": [
+            {
+                "token": "弗雷尔卓德",
+                "start_offset": 0,
+                "end_offset": 5,
+                "type": "CN_WORD",
+                "position": 0
+            }
+        ]
+    }
+
+* 自定义分析器
+    虽然Elasticsearch带有一些现成的分析器，然而在分析器上Elasticsearch真正的强大之处在于，你可以通过在一个适合你的特定数据的设置之中组合字符过滤器、分词器、词汇单元过滤器来创建自定义的分析器。在分析与分析器我们说过，一个分析器就是在一个包里面组合了三种函数的一个包装器，三种函数按照顺序被执行：
+
+* 字符过滤器
+    字符过滤器用来整理一个尚未被分词的字符串。例如，如果我们的文本是HTML格式的，它会包含像<p>或者<div>这样的HTML标签，这些标签是我们不想索引的。我们可以使用html清除字符过滤器来移除掉所有的HTML标签，并且像把&Aacute;转换为相对应的Unicode字符Á 这样，转换HTML实体。一个分析器可能有0个或者多个字符过滤器。
+
+* 分词器
+    一个分析器必须有一个唯一的分词器。分词器把字符串分解成单个词条或者词汇单元。标准分析器里使用的标准分词器把一个字符串根据单词边界分解成单个词条，并且移除掉大部分的标点符号，然而还有其他不同行为的分词器存在。
+
+    例如，关键词分词器完整地输出接收到的同样的字符串，并不做任何分词。空格分词器只根据空格分割文本。正则分词器根据匹配正则表达式来分割文本。
+
+* 词单元过滤器
+    经过分词，作为结果的词单元流会按照指定的顺序通过指定的词单元过滤器。词单元过滤器可以修改、添加或者移除词单元。我们已经提到过lowercase和stop词过滤器，但是在Elasticsearch 里面还有很多可供选择的词单元过滤器。词干过滤器把单词遏制为词干。ascii_folding过滤器移除变音符，把一个像"très”这样的词转换为“tres”。
+
+    ngram和 edge_ngram词单元过滤器可以产生适合用于部分匹配或者自动补全的词单元。
+
+* 自定义分析器例子
+    接下来，我们看看如何创建自定义的分析器：
+    ``` json
+    #PUT http://localhost:9200/my_index
+
+    {
+        "settings": {
+            "analysis": {
+                "char_filter": {
+                    "&_to_and": {
+                        "type": "mapping", 
+                        "mappings": [
+                            "&=> and "
+                        ]
+                    }
+                }, 
+                "filter": {
+                    "my_stopwords": {
+                        "type": "stop", 
+                        "stopwords": [
+                            "the", 
+                            "a"
+                        ]
+                    }
+                }, 
+                "analyzer": {
+                    "my_analyzer": {
+                        "type": "custom", 
+                        "char_filter": [
+                            "html_strip", 
+                            "&_to_and"
+                        ], 
+                        "tokenizer": "standard", 
+                        "filter": [
+                            "lowercase", 
+                            "my_stopwords"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    ```
+    
+    索引被创建以后，使用 analyze API 来 测试这个新的分析器：
+    ``` json
+    # GET http://127.0.0.1:9200/my_index/_analyze
+    {
+        "text":"The quick & brown fox",
+        "analyzer": "my_analyzer"
+    }
+    ```
+    返回结果为：
+    ``` json
+    {
+        "tokens": [
+            {
+                "token": "quick",
+                "start_offset": 4,
+                "end_offset": 9,
+                "type": "<ALPHANUM>",
+                "position": 1
+            },
+            {
+                "token": "and",
+                "start_offset": 10,
+                "end_offset": 11,
+                "type": "<ALPHANUM>",
+                "position": 2
+            },
+            {
+                "token": "brown",
+                "start_offset": 12,
+                "end_offset": 17,
+                "type": "<ALPHANUM>",
+                "position": 3
+            },
+            {
+                "token": "fox",
+                "start_offset": 18,
+                "end_offset": 21,
+                "type": "<ALPHANUM>",
+                "position": 4
+            }
+        ]
+    }
+    ```
+
+### 文档控制
+* 文档冲突
