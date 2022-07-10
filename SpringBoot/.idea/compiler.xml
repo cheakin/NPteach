@@ -7,6 +7,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="springdata-elasticsearch" />
         <module name="springboot-11-amqp" />
         <module name="springboot-06-security" />
         <module name="redis-02-springboot" />
@@ -45,6 +46,7 @@
       <module name="springboot-10-cache" options="-parameters" />
       <module name="springboot-11-amqp" options="-parameters" />
       <module name="springboot-shiro" options="-parameters" />
+      <module name="springdata-elasticsearch" options="-parameters" />
     </option>
   </component>
 </project>

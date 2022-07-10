@@ -2367,7 +2367,7 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     translog 也被用来提供实时CRUD。当你试着通过ID查询、更新、删除一个文档，它会在尝试从相应的段中检索之前，首先检查 translog任何最近的变更。这意味着它总是能够实时地获取到文档的最新版本。
     [](./assets/ElasticSearch.md/1657207067292.jpg)
 
-    执行一个提交并且截断translog 的行为在 Elasticsearch被称作一次flush。分片每30分钟被自动刷新（flush)，或者在 translog 太大的时候也会刷新。
+    执行一个提交并且截断translog 的行为在 Elasticsearch 被称作一次flush。分片每30分钟被自动刷新（flush)，或者在 translog 太大的时候也会刷新。
 
     你很少需要自己手动执行flush操作，通常情况下，自动刷新就足够了。这就是说，在重启节点或关闭索引之前执行 flush有益于你的索引。当Elasticsearch尝试恢复或重新打开一个索引，它需要重放translog中所有的操作，所以如果日志越短，恢复越快。
 
@@ -2382,11 +2382,9 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     由于自动刷新流程每秒会创建一个新的段，这样会导致短时间内的段数量暴增。而段数目太多会带来较大的麻烦。每一个段都会消耗文件句柄、内存和 cpu运行周期。更重要的是，每个搜索请求都必须轮流检查每个段；所以段越多，搜索也就越慢。
 
     Elasticsearch通过在后台进行段合并来解决这个问题。小的段被合并到大的段，然后这些大的段再被合并到更大的段。
-
     段合并的时候会将那些旧的已删除文档从文件系统中清除。被删除的文档（或被更新文档的旧版本）不会被拷贝到新的大段中。
 
     启动段合并不需要你做任何事。进行索引和搜索时会自动进行。
-
     1. 当索引的时候，刷新（refresh）操作会创建新的段并将段打开以供搜索使用。
     2. 合并进程选择一小部分大小相似的段，并且在后台将它们合并到更大的段中。这并不会中断索引和搜索。
         [](./assets/ElasticSearch.md/1657207172310.jpg)
@@ -2399,11 +2397,11 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 
 ### 文档分析
 分析包含下面的过程：
-  * 将一块文本分成适合于倒排索引的独立的词条。
+  * 将一块文本分成适合于倒排索引的独立的`词条`。
   * 将这些词条统一化为标准格式以提高它们的“可搜索性”，或者recall。
 
 分析器执行上面的工作。分析器实际上是将三个功能封装到了一个包里：
-  * 字符过滤器：首先，字符串按顺序通过每个 字符过滤器 。他们的任务是在分词前整理字符串。一个字符过滤器可以用来去掉 HTML，或者将 & 转化成 and。
+  * 字符过滤器：首先，字符串按顺序通过每个字符过滤器。他们的任务是在分词前整理字符串。一个字符过滤器可以用来去掉 HTML，或者将 & 转化成 and。
   * 分词器：其次，字符串被分词器分为单个的词条。一个简单的分词器遇到空格和标点的时候，可能会将文本拆分成词条。
   * Token 过滤器：最后，词条按顺序通过每个 token 过滤器 。这个过程可能会改变词条（例如，小写化Quick ），删除词条（例如， 像 a， and， the 等无用词），或者增加词条（例如，像jump和leap这种同义词）
 
@@ -2412,33 +2410,29 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 	``` json
 	"Set the shape to semi-transparent by calling set_trans(5)"
 	```
+    - 标准分析器
+        标准分析器是Elasticsearch 默认使用的分析器。它是分析各种语言文本最常用的选择。它根据Unicode 联盟定义的单词边界划分文本。删除绝大部分标点。最后，将词条小写。它会产生：
+        ``` json
+        set, the, shape, to, semi, transparent, by, calling, set_trans, 5
+        ```
+    - 简单分析器
+        简单分析器在任何不是字母的地方分隔文本，将词条小写。它会产生：
+        ``` json
+        set, the, shape, to, semi, transparent, by, calling, set, trans
+        ```
+    - 空格分析器
+        空格分析器在空格的地方划分文本。它会产生:
+        ``` json
+        Set, the, shape, to, semi-transparent, by, calling, set_trans(5)
+        ```
+    - 语言分析器
+        特定语言分析器可用于很多语言。它们可以考虑指定语言的特点。例如，英语分析器附带了一组英语无用词（常用单词，例如and或者the ,它们对相关性没有多少影响），它们会被删除。由于理解英语语法的规则，这个分词器可以提取英语单词的词干。
 
-* 标准分析器
-  标准分析器是Elasticsearch 默认使用的分析器。它是分析各种语言文本最常用的选择。它根据Unicode 联盟定义的单词边界划分文本。删除绝大部分标点。最后，将词条小写。它会产生：
-  ``` json
-  set, the, shape, to, semi, transparent, by, calling, set_trans, 5
-  ```
-
-* 简单分析器
-  简单分析器在任何不是字母的地方分隔文本，将词条小写。它会产生：
-  ``` json
-  set, the, shape, to, semi, transparent, by, calling, set, trans
-  ```
-
-* 空格分析器
-  空格分析器在空格的地方划分文本。它会产生:
-  ``` json
-  Set, the, shape, to, semi-transparent, by, calling, set_trans(5)
-  ```
-
-* 语言分析器
-    特定语言分析器可用于很多语言。它们可以考虑指定语言的特点。例如，英语分析器附带了一组英语无用词（常用单词，例如and或者the ,它们对相关性没有多少影响），它们会被删除。由于理解英语语法的规则，这个分词器可以提取英语单词的词干。
-
-    英语分词器会产生下面的词条：
-    ``` json
-    set, shape, semi, transpar, call, set_tran, 5
-    ```
-    注意看transparent、calling和 set_trans已经变为词根格式。
+        英语分词器会产生下面的词条：
+        ``` json
+        set, shape, semi, transpar, call, set_tran, 5
+        ```
+        注意看transparent、calling和 set_trans已经变为词根格式。
 
 * 分析器使用场景
     当我们索引一个文档，它的全文域被分析成词条以用来创建倒排索引。但是，当我们在全文域搜索的时候，我们需要将查询字符串通过相同的分析过程，以保证我们搜索的词条格式与索引中的词条格式一致。
@@ -2455,9 +2449,8 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
         "analyzer": "standard",
         "text": "Text to analyze"
     }
-    ```
-    结果中每个元素代表一个单独的词条：
-    ``` json
+    
+    // 结果中每个元素代表一个单独的词条：
     {
         "tokens": [
             {
@@ -2492,282 +2485,270 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     当Elasticsearch在你的文档中检测到一个新的字符串域，它会自动设置其为一个全文字符串域，使用 标准 分析器对它进行分析。你不希望总是这样。可能你想使用一个不同的分析器，适用于你的数据使用的语言。有时候你想要一个字符串域就是一个字符串域，不使用分析，直接索引你传入的精确值，例如用户 ID 或者一个内部的状态域或标签。要做到这一点，我们必须手动指定这些域的映射。
 
     （细粒度指定分析器）
+    - IK分词器
+        向 ES 服务器 发送 `GET` 请求查询分词效果
+        ``` json
+        # GET http://localhost:9200/_analyze
+        {
+            "text":"测试单词"
+        }
+        
+        // ES 的默认分词器无法识别中文中测试、 单词这样的词汇，而是简单的将每个字拆完分为一个词。
+        {
+            "tokens": [
+                {
+                    "token": "测", 
+                    "start_offset": 0, 
+                    "end_offset": 1, 
+                    "type": "<IDEOGRAPHIC>", 
+                    "position": 0
+                }, 
+                {
+                    "token": "试", 
+                    "start_offset": 1, 
+                    "end_offset": 2, 
+                    "type": "<IDEOGRAPHIC>", 
+                    "position": 1
+                }, 
+                {
+                    "token": "单", 
+                    "start_offset": 2, 
+                    "end_offset": 3, 
+                    "type": "<IDEOGRAPHIC>", 
+                    "position": 2
+                }, 
+                {
+                    "token": "词", 
+                    "start_offset": 3, 
+                    "end_offset": 4, 
+                    "type": "<IDEOGRAPHIC>", 
+                    "position": 3
+                }
+            ]
+        }
+        ```
+        这样的结果显然不符合我们的使用要求，所以我们需要下载 ES 对应版本的中文分词器。
+        IK 中文分词器下载网址
+        将解压后的后的文件夹放入 ES 根目录下的 plugins 目录下，重启 ES 即可使用。
+        我们这次加入新的查询参数"analyzer":“ik_max_word”。
+        ``` json
+        # GET http://localhost:9200/_analyze
+        {
+            "text":"测试单词",
+            "analyzer":"ik_max_word"
+        }
+        //* ik_max_word：会将文本做最细粒度的拆分。
+        //* ik_smart：会将文本做最粗粒度的拆分。
+        
+        // 使用中文分词后的结果为：
+        {
+            "tokens": [
+                {
+                    "token": "测试", 
+                    "start_offset": 0, 
+                    "end_offset": 2, 
+                    "type": "CN_WORD", 
+                    "position": 0
+                }, 
+                {
+                    "token": "单词", 
+                    "start_offset": 2, 
+                    "end_offset": 4, 
+                    "type": "CN_WORD", 
+                    "position": 1
+                }
+            ]
+        }
+        ```
 
-* IK分词器
-    首先通过 Postman 发送 GET 请求查询分词效果
-    ``` json
-    # GET http://localhost:9200/_analyze
-    {
-        "text":"测试单词"
-    }
-    ```
-    ES 的默认分词器无法识别中文中测试、 单词这样的词汇，而是简单的将每个字拆完分为一个词。
-    ``` json
-    {
-        "tokens": [
+        **ES 中也可以进行扩展词汇，首先查询**
+        ``` json
+        #GET http://localhost:9200/_analyze
+        {
+            "text":"弗雷尔卓德",
+            "analyzer":"ik_max_word"
+        }
+        
+        // 仅仅可以得到每个字的分词结果，我们需要做的就是使分词器识别到弗雷尔卓德也是一个词语。
+        
+        {
+            "tokens": [
+                {
+                    "token": "弗",
+                    "start_offset": 0,
+                    "end_offset": 1,
+                    "type": "CN_CHAR",
+                    "position": 0
+                },
+                {
+                    "token": "雷",
+                    "start_offset": 1,
+                    "end_offset": 2,
+                    "type": "CN_CHAR",
+                    "position": 1
+                },
+                {
+                    "token": "尔",
+                    "start_offset": 2,
+                    "end_offset": 3,
+                    "type": "CN_CHAR",
+                    "position": 2
+                },
+                {
+                    "token": "卓",
+                    "start_offset": 3,
+                    "end_offset": 4,
+                    "type": "CN_CHAR",
+                    "position": 3
+                },
+                {
+                    "token": "德",
+                    "start_offset": 4,
+                    "end_offset": 5,
+                    "type": "CN_CHAR",
+                    "position": 4
+                }
+            ]
+        }
+        ```
+        * 配置插件
+            1. 首先进入 ES 根目录中的 plugins 文件夹下的 ik 文件夹，进入 config 目录，创建 custom.dic文件，写入“弗雷尔卓德”。
+            2. 同时打开 IKAnalyzer.cfg.xml 文件，将新建的 custom.dic 配置其中。
+            3. 重启 ES 服务器 。
+            ``` xml
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+            <properties>
+                <comment>IK Analyzer 扩展配置</comment>
+                <!--用户可以在这里配置自己的扩展字典 -->
+                <entry key="ext_dict">custom.dic</entry>
+                <!--用户可以在这里配置自己的扩展停止词字典-->
+                <entry key="ext_stopwords"></entry>
+                <!--用户可以在这里配置远程扩展字典 -->
+                <!-- <entry key="remote_ext_dict">words_location</entry> -->
+                <!--用户可以在这里配置远程扩展停止词字典-->
+                <!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+            </properties>
+            ```
+        * 扩展后再次查询
+            ``` json
+            # GET http://localhost:9200/_analyze
             {
-                "token": "测", 
-                "start_offset": 0, 
-                "end_offset": 1, 
-                "type": "<IDEOGRAPHIC>", 
-                "position": 0
-            }, 
-            {
-                "token": "试", 
-                "start_offset": 1, 
-                "end_offset": 2, 
-                "type": "<IDEOGRAPHIC>", 
-                "position": 1
-            }, 
-            {
-                "token": "单", 
-                "start_offset": 2, 
-                "end_offset": 3, 
-                "type": "<IDEOGRAPHIC>", 
-                "position": 2
-            }, 
-            {
-                "token": "词", 
-                "start_offset": 3, 
-                "end_offset": 4, 
-                "type": "<IDEOGRAPHIC>", 
-                "position": 3
+                "text":"测试单词",
+                "analyzer":"ik_max_word"
             }
-        ]
-    }
-    ```
-    这样的结果显然不符合我们的使用要求，所以我们需要下载 ES 对应版本的中文分词器。
-    IK 中文分词器下载网址
-    将解压后的后的文件夹放入 ES 根目录下的 plugins 目录下，重启 ES 即可使用。
-    我们这次加入新的查询参数"analyzer":“ik_max_word”。
-    ``` json
-    # GET http://localhost:9200/_analyze
-    {
-        "text":"测试单词",
-        "analyzer":"ik_max_word"
-    }
-    ```
-    * ik_max_word：会将文本做最细粒度的拆分。
-    * ik_smart：会将文本做最粗粒度的拆分。
-    
-    使用中文分词后的结果为：
-    ``` json
-    {
-        "tokens": [
-            {
-                "token": "测试", 
-                "start_offset": 0, 
-                "end_offset": 2, 
-                "type": "CN_WORD", 
-                "position": 0
-            }, 
-            {
-                "token": "单词", 
-                "start_offset": 2, 
-                "end_offset": 4, 
-                "type": "CN_WORD", 
-                "position": 1
-            }
-        ]
-    }
-    ```
-    
-    ES 中也可以进行扩展词汇，首先查询
-    ``` json
-    #GET http://localhost:9200/_analyze
-    {
-        "text":"弗雷尔卓德",
-        "analyzer":"ik_max_word"
-    }
-    ```
-    仅仅可以得到每个字的分词结果，我们需要做的就是使分词器识别到弗雷尔卓德也是一个词语。
-    ``` json
-    {
-        "tokens": [
-            {
-                "token": "弗",
-                "start_offset": 0,
-                "end_offset": 1,
-                "type": "CN_CHAR",
-                "position": 0
-            },
-            {
-                "token": "雷",
-                "start_offset": 1,
-                "end_offset": 2,
-                "type": "CN_CHAR",
-                "position": 1
-            },
-            {
-                "token": "尔",
-                "start_offset": 2,
-                "end_offset": 3,
-                "type": "CN_CHAR",
-                "position": 2
-            },
-            {
-                "token": "卓",
-                "start_offset": 3,
-                "end_offset": 4,
-                "type": "CN_CHAR",
-                "position": 3
-            },
-            {
-                "token": "德",
-                "start_offset": 4,
-                "end_offset": 5,
-                "type": "CN_CHAR",
-                "position": 4
-            }
-        ]
-    }
-    ```
-    1. 首先进入 ES 根目录中的 plugins 文件夹下的 ik 文件夹，进入 config 目录，创建 custom.dic文件，写入“弗雷尔卓德”。
-    2. 同时打开 IKAnalyzer.cfg.xml 文件，将新建的 custom.dic 配置其中。
-    3. 重启 ES 服务器 。
 
-    ``` xml
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
-    <properties>
-        <comment>IK Analyzer 扩展配置</comment>
-        <!--用户可以在这里配置自己的扩展字典 -->
-        <entry key="ext_dict">custom.dic</entry>
-        <!--用户可以在这里配置自己的扩展停止词字典-->
-        <entry key="ext_stopwords"></entry>
-        <!--用户可以在这里配置远程扩展字典 -->
-        <!-- <entry key="remote_ext_dict">words_location</entry> -->
-        <!--用户可以在这里配置远程扩展停止词字典-->
-        <!-- <entry key="remote_ext_stopwords">words_location</entry> -->
-    </properties>
-    ```
-    
-    扩展后再次查询
-    ``` json
-    # GET http://localhost:9200/_analyze
-    {
-        "text":"测试单词",
-        "analyzer":"ik_max_word"
-    }
-    ```
-
-    返回结果如下：
-    ``` json
-    {
-        "tokens": [
+            // 返回结果如下：
             {
-                "token": "弗雷尔卓德",
-                "start_offset": 0,
-                "end_offset": 5,
-                "type": "CN_WORD",
-                "position": 0
+                "tokens": [
+                    {
+                        "token": "弗雷尔卓德",
+                        "start_offset": 0,
+                        "end_offset": 5,
+                        "type": "CN_WORD",
+                        "position": 0
+                    }
+                ]
             }
-        ]
-    }
 
 * 自定义分析器
     虽然Elasticsearch带有一些现成的分析器，然而在分析器上Elasticsearch真正的强大之处在于，你可以通过在一个适合你的特定数据的设置之中组合字符过滤器、分词器、词汇单元过滤器来创建自定义的分析器。在分析与分析器我们说过，一个分析器就是在一个包里面组合了三种函数的一个包装器，三种函数按照顺序被执行：
 
-* 字符过滤器
-    字符过滤器用来整理一个尚未被分词的字符串。例如，如果我们的文本是HTML格式的，它会包含像<p>或者<div>这样的HTML标签，这些标签是我们不想索引的。我们可以使用html清除字符过滤器来移除掉所有的HTML标签，并且像把&Aacute;转换为相对应的Unicode字符Á 这样，转换HTML实体。一个分析器可能有0个或者多个字符过滤器。
+    - 字符过滤器
+        字符过滤器用来整理一个尚未被分词的字符串。例如，如果我们的文本是HTML格式的，它会包含像<p>或者<div>这样的HTML标签，这些标签是我们不想索引的。我们可以使用html清除字符过滤器来移除掉所有的HTML标签，并且像把&Aacute;转换为相对应的Unicode字符Á 这样，转换HTML实体。一个分析器可能有0个或者多个字符过滤器。
+    - 分词器
+        一个分析器必须有一个唯一的分词器。分词器把字符串分解成单个词条或者词汇单元。标准分析器里使用的标准分词器把一个字符串根据单词边界分解成单个词条，并且移除掉大部分的标点符号，然而还有其他不同行为的分词器存在。
 
-* 分词器
-    一个分析器必须有一个唯一的分词器。分词器把字符串分解成单个词条或者词汇单元。标准分析器里使用的标准分词器把一个字符串根据单词边界分解成单个词条，并且移除掉大部分的标点符号，然而还有其他不同行为的分词器存在。
+        例如，关键词分词器完整地输出接收到的同样的字符串，并不做任何分词。空格分词器只根据空格分割文本。正则分词器根据匹配正则表达式来分割文本。
+    - 词单元过滤器
+        经过分词，作为结果的词单元流会按照指定的顺序通过指定的词单元过滤器。词单元过滤器可以修改、添加或者移除词单元。我们已经提到过lowercase和stop词过滤器，但是在Elasticsearch 里面还有很多可供选择的词单元过滤器。词干过滤器把单词遏制为词干。ascii_folding过滤器移除变音符，把一个像"très”这样的词转换为“tres”。
 
-    例如，关键词分词器完整地输出接收到的同样的字符串，并不做任何分词。空格分词器只根据空格分割文本。正则分词器根据匹配正则表达式来分割文本。
-
-* 词单元过滤器
-    经过分词，作为结果的词单元流会按照指定的顺序通过指定的词单元过滤器。词单元过滤器可以修改、添加或者移除词单元。我们已经提到过lowercase和stop词过滤器，但是在Elasticsearch 里面还有很多可供选择的词单元过滤器。词干过滤器把单词遏制为词干。ascii_folding过滤器移除变音符，把一个像"très”这样的词转换为“tres”。
-
-    ngram和 edge_ngram词单元过滤器可以产生适合用于部分匹配或者自动补全的词单元。
-
-* 自定义分析器例子
-    接下来，我们看看如何创建自定义的分析器：
-    ``` json
-    #PUT http://localhost:9200/my_index
-
-    {
-        "settings": {
-            "analysis": {
-                "char_filter": {
-                    "&_to_and": {
-                        "type": "mapping", 
-                        "mappings": [
-                            "&=> and "
-                        ]
-                    }
-                }, 
-                "filter": {
-                    "my_stopwords": {
-                        "type": "stop", 
-                        "stopwords": [
-                            "the", 
-                            "a"
-                        ]
-                    }
-                }, 
-                "analyzer": {
-                    "my_analyzer": {
-                        "type": "custom", 
-                        "char_filter": [
-                            "html_strip", 
-                            "&_to_and"
-                        ], 
-                        "tokenizer": "standard", 
-                        "filter": [
-                            "lowercase", 
-                            "my_stopwords"
-                        ]
+        ngram和 edge_ngram词单元过滤器可以产生适合用于部分匹配或者自动补全的词单元。
+    - 自定义分析器例子
+        接下来，我们看看如何创建自定义的分析器：
+        ``` json
+        #PUT http://localhost:9200/my_index
+        {
+            "settings": {
+                "analysis": {
+                    "char_filter": {    // ①字符过滤器, 字符转换
+                        "&_to_and": {
+                            "type": "mapping", 
+                            "mappings": [
+                                "&=> and "
+                            ]
+                        }
+                    }, 
+                    "filter": { // ②过滤器, 过滤一些停用词
+                        "my_stopwords": {
+                            "type": "stop", 
+                            "stopwords": [
+                                "the", 
+                                "a"
+                            ]
+                        }
+                    }, 
+                    "analyzer": {
+                        "my_analyzer": {    // 分词器名称
+                            "type": "custom",   // 类型(自定义)
+                            "char_filter": [    // 字符过滤器, 见①
+                                "html_strip", 
+                                "&_to_and"
+                            ], 
+                            "tokenizer": "standard",
+                            "filter": [ // filter过滤器, 见②
+                                "lowercase", 
+                                "my_stopwords"
+                            ]
+                        }
                     }
                 }
             }
         }
-    }
-    ```
-    
-    索引被创建以后，使用 analyze API 来 测试这个新的分析器：
-    ``` json
-    # GET http://127.0.0.1:9200/my_index/_analyze
-    {
-        "text":"The quick & brown fox",
-        "analyzer": "my_analyzer"
-    }
-    ```
-    返回结果为：
-    ``` json
-    {
-        "tokens": [
-            {
-                "token": "quick",
-                "start_offset": 4,
-                "end_offset": 9,
-                "type": "<ALPHANUM>",
-                "position": 1
-            },
-            {
-                "token": "and",
-                "start_offset": 10,
-                "end_offset": 11,
-                "type": "<ALPHANUM>",
-                "position": 2
-            },
-            {
-                "token": "brown",
-                "start_offset": 12,
-                "end_offset": 17,
-                "type": "<ALPHANUM>",
-                "position": 3
-            },
-            {
-                "token": "fox",
-                "start_offset": 18,
-                "end_offset": 21,
-                "type": "<ALPHANUM>",
-                "position": 4
-            }
-        ]
-    }
-    ```
+        ```
+        
+        索引被创建以后，使用 analyze API 来 测试这个新的分析器：
+        ``` json
+        # GET http://127.0.0.1:9200/my_index/_analyze
+        {
+            "text":"The quick & brown fox",
+            "analyzer": "my_analyzer"
+        }
+
+        // 返回结果为：
+        {
+            "tokens": [
+                {
+                    "token": "quick",
+                    "start_offset": 4,
+                    "end_offset": 9,
+                    "type": "<ALPHANUM>",
+                    "position": 1
+                },
+                {
+                    "token": "and",
+                    "start_offset": 10,
+                    "end_offset": 11,
+                    "type": "<ALPHANUM>",
+                    "position": 2
+                },
+                {
+                    "token": "brown",
+                    "start_offset": 12,
+                    "end_offset": 17,
+                    "type": "<ALPHANUM>",
+                    "position": 3
+                },
+                {
+                    "token": "fox",
+                    "start_offset": 18,
+                    "end_offset": 21,
+                    "type": "<ALPHANUM>",
+                    "position": 4
+                }
+            ]
+        }
+        ```
 
 ### 文档控制
 * 文档冲突
@@ -2920,7 +2901,7 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 
 ### 文档展示-Kibana
 Kibana是一个免费且开放的用户界面，能够让你对Elasticsearch 数据进行可视化，并让你在Elastic Stack 中进行导航。你可以进行各种操作，从跟踪查询负载，到理解请求如何流经你的整个应用，都能轻松完成。
-[Kibana下载网址](https://artifacts.elastic.co/downloads/kibana/kibana-7.8.0-windows-x86_64.zip)
+[Kibana下载网址](https://artifacts.elastic.co/downloads/kibana/kibana-8.3.2-windows-x86_64.zip)
 1. 解压缩下载的 zip 文件。
 2. 修改 config/kibana.yml 文件。
     ``` yaml
@@ -2942,24 +2923,24 @@ Kibana是一个免费且开放的用户界面，能够让你对Elasticsearch 数
 Spring Data是一个用于简化数据库、非关系型数据库、索引库访问，并支持云服务的开源框架。其主要目标是使得对数据的访问变得方便快捷，并支持 map-reduce框架和云计算数据服务。Spring Data可以极大的简化JPA(Elasticsearch…)的写法，可以在几乎不用写实现的情况下，实现对数据的访问和操作。除了CRUD 外，还包括如分页、排序等一些常用的功能。
 [Spring Data 的官网](https://spring.io/projects/spring-data)
 
-Spring Data 常用的功能模块如下：
-   * Spring Data JDBC
-   * Spring Data JPA
-   * Spring Data LDAP
-   * Spring Data MongoDB
-   * Spring Data Redis
-   * Spring Data R2DBC
-   * Spring Data REST
-   * Spring Data for Apache Cassandra
-   * Spring Data for Apache Geode
-   * Spring Data for Apache Solr
-   * Spring Data for Pivotal GemFire
-   * Spring Data Couchbase
-   * Spring Data Elasticsearch
-   * Spring Data Envers
-   * Spring Data Neo4j
-   * Spring Data JDBC Extensions
-   * Spring for Apache Hadoop
+* Spring Data 常用的功能模块如下：
+   - **Spring Data JDBC**
+   - Spring Data JPA
+   - Spring Data LDAP
+   - Spring Data MongoDB
+   - Spring Data Redis
+   - Spring Data R2DBC
+   - Spring Data REST
+   - Spring Data for Apache Cassandra
+   - Spring Data for Apache Geode
+   - Spring Data for Apache Solr
+   - Spring Data for Pivotal GemFire
+   - Spring Data Couchbase
+   - **Spring Data Elasticsearch**
+   - Spring Data Envers
+   - Spring Data Neo4j
+   - Spring Data JDBC Extensions
+   - **Spring for Apache Hadoop**
 
 * Spring Data Elasticsearch 介绍
     Spring Data Elasticsearch基于Spring Data API简化 Elasticsearch 操作，将原始操作Elasticsearch 的客户端API进行封装。Spring Data为Elasticsearch 项目提供集成搜索引擎。Spring Data Elasticsearch POJO的关键功能区域为中心的模型与Elastichsearch交互文档和轻松地编写一个存储索引库数据访问层。
@@ -2967,24 +2948,313 @@ Spring Data 常用的功能模块如下：
 
 #### SpringData-代码功能集成
 1. 创建Maven项目。
+   略
 2. 修改pom文件，增加依赖关系。
+   ``` YML
+   <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.6.RELEASE</version>
+        <relativePath/>
+    </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+        </dependency>
+    </dependencies>
+    ```
 3. 增加配置文件。
+    在 resources 目录中增加application.properties文件
+    ``` YML
+    # es 服务地址
+    elasticsearch.host=127.0.0.1
+    # es 服务端口
+    elasticsearch.port=9200
+    # 配置日志级别,开启 debug 日志
+    logging.level.com.atguigu.es=debug
+    ```
 4. Spring Boot 主程序。
+    ``` java
+    @SpringBootApplication
+    public class SpringDataElasticSearchApplication {
+
+        public static void main(String[] args) {
+            SpringApplication.run(SpringDataElasticSearchApplication.class, args);
+        }
+
+    }
+    ```
 5. 数据实体类。
+    ``` java
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @ToString
+    @Document(indexName = "shopping", shards = 3, replicas = 1)
+    public class Product {
+        //必须有 id,这里的 id 是全局唯一的标识，等同于 es 中的"_id"
+        @Id
+        private Long id;//商品唯一标识
+
+        /**
+        * type : 字段数据类型
+        * analyzer : 分词器类型
+        * index : 是否索引(默认:true)
+        * Keyword : 短语,不进行分词
+        */
+        @Field(type = FieldType.Text, analyzer = "ik_max_word")
+        private String title;//商品名称
+
+        @Field(type = FieldType.Keyword)
+        private String category;//分类名称
+
+        @Field(type = FieldType.Double)
+        private Double price;//商品价格
+
+        @Field(type = FieldType.Keyword, index = false)
+        private String images;//图片地址
+    }
+    ```
 6. 配置类
+    * ElasticsearchRestTemplate是spring-data-elasticsearch项目中的一个类,和其他spring项目中的 template类似。
+    * 在新版的spring-data-elasticsearch 中，ElasticsearchRestTemplate 代替了原来的ElasticsearchTemplate。
+    * 原因是ElasticsearchTemplate基于TransportClient，TransportClient即将在8.x 以后的版本中移除。所以，我们推荐使用ElasticsearchRestTemplate。
+    * ElasticsearchRestTemplate基于RestHighLevelClient客户端的。需要自定义配置类，继承AbstractElasticsearchConfiguration，并实现elasticsearchClient()抽象方法，创建RestHighLevelClient对象。
+
+    AbstractElasticsearchConfiguration源码：
+    ``` java
+    public abstract class AbstractElasticsearchConfiguration extends ElasticsearchConfigurationSupport {
+
+        //需重写本方法
+        public abstract RestHighLevelClient elasticsearchClient();
+
+        @Bean(name = { "elasticsearchOperations", "elasticsearchTemplate" })
+        public ElasticsearchOperations elasticsearchOperations(ElasticsearchConverter elasticsearchConverter) {
+            return new ElasticsearchRestTemplate(elasticsearchClient(), elasticsearchConverter);
+        }
+    }
+    ```
+    需要自定义配置类，继承AbstractElasticsearchConfiguration，并实现elasticsearchClient()抽象方法，创建RestHighLevelClient对象。
+    ``` java
+    @ConfigurationProperties(prefix = "elasticsearch")
+    @Configuration
+    @Data
+    public class ElasticsearchConfig extends AbstractElasticsearchConfiguration{
+
+        private String host ;
+        private Integer port ;
+        //重写父类方法
+        @Override
+        public RestHighLevelClient elasticsearchClient() {
+            RestClientBuilder builder = RestClient.builder(new HttpHost(host, port));
+            RestHighLevelClient restHighLevelClient = new
+                    RestHighLevelClient(builder);
+            return restHighLevelClient;
+        }
+    }
+    ```
 7. DAO 数据访问对象
+    ``` java
+    @Repository
+    public interface ProductDao extends ElasticsearchRepository<Product, Long>{
+
+    }
+    ```
 
 #### SpringData-集成测试-索引操作
+``` java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SpringDataESIndexTest {
+    //注入 ElasticsearchRestTemplate
+    @Autowired
+    private ElasticsearchRestTemplate elasticsearchRestTemplate;
+    //创建索引并增加映射配置
+    @Test
+    public void createIndex(){
+        //创建索引，系统初始化会自动创建索引
+        System.out.println("创建索引");
+    }
+
+    @Test
+    public void deleteIndex(){
+        //创建索引，系统初始化会自动创建索引
+        boolean flg = elasticsearchRestTemplate.deleteIndex(Product.class);
+        System.out.println("删除索引 = " + flg);
+    }
+}
+```
 
 检测有没有创建和删除:
 ``` json
 #GET http://localhost:9200/_cat/indices?v 
+
+// 返回结果中有shopping=>表示创建成功
 ```
 
-
 #### SpringData-集成测试-文档操作
+``` java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SpringDataESProductDaoTest {
+    @Autowired
+    private ProductDao productDao;
+    /**
+     * 新增
+     */
+    @Test
+    public void save(){
+        Product product = new Product();
+        product.setId(2L);
+        product.setTitle("华为手机");
+        product.setCategory("手机");
+        product.setPrice(2999.0);
+        product.setImages("http://www.cheakin/hw.jpg");
+        productDao.save(product);
+    }
+    //GET http://localhost:9200/product/_doc/2
+
+    //修改
+    @Test
+    public void update(){
+        Product product = new Product();
+        product.setId(2L);
+        product.setTitle("小米 2 手机");
+        product.setCategory("手机");
+        product.setPrice(9999.0);
+        product.setImages("http://www.cheakin/xm.jpg");
+        productDao.save(product);
+    }
+    //GET http://localhost:9200/product/_doc/2
+
+
+    //根据 id 查询
+    @Test
+    public void findById(){
+        Product product = productDao.findById(2L).get();
+        System.out.println(product);
+    }
+
+    @Test
+    public void findAll(){
+        Iterable<Product> products = productDao.findAll();
+        for (Product product : products) {
+            System.out.println(product);
+        }
+    }
+
+    //删除
+    @Test
+    public void delete(){
+        Product product = new Product();
+        product.setId(2L);
+        productDao.delete(product);
+    }
+    //GET http://localhost:9200/product/_doc/2
+
+    //批量新增
+    @Test
+    public void saveAll(){
+        List<Product> productList = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            Product product = new Product();
+            product.setId(Long.valueOf(i));
+            product.setTitle("["+i+"]小米手机");
+            product.setCategory("手机");
+            product.setPrice(1999.0 + i);
+            product.setImages("http://www.cheakin/xm.jpg");
+            productList.add(product);
+        }
+        productDao.saveAll(productList);
+    }
+
+    //分页查询
+    @Test
+    public void findByPageable(){
+        //设置排序(排序方式，正序还是倒序，排序的 id)
+        Sort sort = Sort.by(Sort.Direction.DESC,"id");
+        int currentPage=0;//当前页，第一页从 0 开始， 1 表示第二页
+        int pageSize = 5;//每页显示多少条
+        //设置查询分页
+        PageRequest pageRequest = PageRequest.of(currentPage, pageSize,sort);
+        //分页查询
+        Page<Product> productPage = productDao.findAll(pageRequest);
+        for (Product Product : productPage.getContent()) {
+            System.out.println(Product);
+        }
+    }
+}
+```
+测试请求略
 
 #### SpringData-集成测试-文档搜索
+``` java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SpringDataESSearchTest {
+    @Autowired
+    private ProductDao productDao;
+    /**
+     * term 查询
+     * search(termQueryBuilder) 调用搜索方法，参数查询构建器对象
+     */
+    @Test
+    public void termQuery(){
+        TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("title", "小米");
+        Iterable<Product> products = productDao.search(termQueryBuilder);
+        for (Product product : products) {
+            System.out.println(product);
+        }
+    }
+    /**
+     * term 查询加分页
+     */
+    @Test
+    public void termQueryByPage(){
+        int currentPage= 0 ;
+        int pageSize = 5;
+        //设置查询分页
+        PageRequest pageRequest = PageRequest.of(currentPage, pageSize);
+        TermQueryBuilder termQueryBuilder = QueryBuilders.termQuery("title", "小米");
+        Iterable<Product> products =
+                productDao.search(termQueryBuilder,pageRequest);
+        for (Product product : products) {
+            System.out.println(product);
+        }
+    }
+
+}
+```
+测试请求略
 
 ### SparkStreaming-集成
 Spark Streaming 是Spark core API的扩展，支持实时数据流的处理，并且具有可扩展，高吞吐量，容错的特点。数据可以从许多来源获取,如Kafka， Flume，Kinesis或TCP sockets，并且可以使用复杂的算法进行处理，这些算法使用诸如 map，reduce，join和 window等高级函数表示。最后，处理后的数据可以推送到文件系统，数据库等。实际上，您可以将Spark的机器学习和图形处理算法应用于数据流。
@@ -3010,13 +3280,10 @@ Apache Flink是一个框架和分布式处理引擎，用于对无界和有界�
 ### 硬件选择
 Elasticsearch 的基础是 Lucene，所有的索引和文档数据是存储在本地的磁盘中，具体的路径可在 ES 的配置文件…/config/elasticsearch.yml中配置，如下：
 ``` yml
-#
 # Path to directory where to store the data (separate multiple locations by comma):
-#
 path.data: /path/to/data
-#
+
 # Path to log files:
-#
 path.logs: /path/to/logs
 ```
 
@@ -3034,24 +3301,23 @@ path.logs: /path/to/logs
 	* 一个分片的底层即为一个 Lucene 索引，会消耗一定文件句柄、内存、以及 CPU运转。
 	* 每一个搜索请求都需要命中索引中的每一个分片，如果每一个分片都处于不同的节点还好， 但如果多个分片都需要在同一个节点上竞争使用相同的资源就有些糟糕了。
 	* 用于计算相关度的词项统计信息是基于分片的。如果有许多分片，每一个都只有很少的数据会导致很低的相关度。
-
-	一个业务索引具体需要分配多少分片可能需要架构师和技术人员对业务的增长有个预先的判断，横向扩展应当分阶段进行。为下一阶段准备好足够的资源。 只有当你进入到下一个阶段，你才有时间思考需要作出哪些改变来达到这个阶段。一般来说，我们遵循一些原则：
+	
+    一个业务索引具体需要分配多少分片可能需要架构师和技术人员对业务的增长有个预先的判断，横向扩展应当分阶段进行。为下一阶段准备好足够的资源。 只有当你进入到下一个阶段，你才有时间思考需要作出哪些改变来达到这个阶段。一般来说，我们遵循一些原则：
 	* 控制每个分片占用的硬盘容量不超过 ES 的最大 JVM 的堆空间设置（一般设置不超过 32G，参考下文的 JVM 设置原则），因此，如果索引的总容量在 500G 左右，那分片大小在 16 个左右即可；当然，最好同时考虑原则 2。
 	* 考虑一下 node 数量，一般一个节点有时候就是一台物理机，如果分片数过多，大大超过了节点数，很可能会导致一个节点上存在多个分片，一旦该节点故障，即使保持了 1 个以上的副本，同样有可能会导致数据丢失，集群无法恢复。所以， 一般都设置分片数不超过节点数的 3 倍。
 	* 主分片，副本和节点最大数之间数量，我们分配的时候可以参考以下关系：`节点数<=主分片数 *（副本数+1）`
 
-### 推迟分片分配
-对于节点瞬时中断的问题，默认情况，集群会等待一分钟来查看节点是否会重新加入，如果这个节点在此期间重新加入，重新加入的节点会保持其现有的分片数据，不会触发新的分片分配。这样就可以减少 ES 在自动再平衡可用分片时所带来的极大开销。
-
-通过修改参数 delayed_timeout ，可以延长再均衡的时间，可以全局设置也可以在索引级别进行修改：
-``` json
-#PUT /_all/_settings
-{
-	"settings": {
-		"index.unassigned.node_left.delayed_timeout": "5m"
-	}
-}
-```
+* 推迟分片分配
+    对于节点瞬时中断的问题，默认情况，集群会等待一分钟来查看节点是否会重新加入，如果这个节点在此期间重新加入，重新加入的节点会保持其现有的分片数据，不会触发新的分片分配。这样就可以减少 ES 在自动再平衡可用分片时所带来的极大开销。
+    通过修改参数 delayed_timeout ，可以延长再均衡的时间，可以全局设置也可以在索引级别进行修改：
+    ``` json
+    #PUT /_all/_settings
+    {
+        "settings": {
+            "index.unassigned.node_left.delayed_timeout": "5m"
+        }
+    }
+    ```
 
 ### 路由选择
 当我们查询文档的时候， Elasticsearch 如何知道一个文档应该存放到哪个分片中呢？它其实是通过下面这个公式来计算出来：
@@ -3075,26 +3341,30 @@ ES 的默认配置，是综合了数据可靠性、写入速度、搜索实时�
 * 优化节点间的任务分布。
 * 优化Lucene层的索引建立，目的是降低CPU及IO。
 
-### 优化存储设备
+#### 批量数据提交
+ES 提供了 Bulk API 支持批量操作，当我们有大量的写任务时，可以使用 Bulk 来进行批量写入。
+通用的策略如下：Bulk 默认设置批量提交的数据量不能超过 100M。数据条数一般是根据文档的大小和服务器性能而定的，但是单次批处理的数据大小应从 5MB~15MB 逐渐增加，当性能没有提升时，把这个数据量作为最大值。
+
+#### 优化存储设备
 ES 是一种密集使用磁盘的应用，在段合并的时候会频繁操作磁盘，所以对磁盘要求较高，当磁盘速度提升之后，集群的整体性能会大幅度提高。
 
-### 合理使用合并
+#### 合理使用合并
 Lucene 以段的形式存储数据。当有新的数据写入索引时， Lucene 就会自动创建一个新的段。
 随着数据量的变化，段的数量会越来越多，消耗的多文件句柄数及 CPU 就越多，查询效率就会下降。
 由于 Lucene 段合并的计算量庞大，会消耗大量的 I/O，所以 ES 默认采用较保守的策略，让后台定期进行段合并。
 
-### 减少 Refresh 的次数
+#### 减少 Refresh 的次数
 Lucene 在新增数据时，采用了延迟写入的策略，默认情况下索引的refresh_interval 为1 秒。
 Lucene 将待写入的数据先写到内存中，超过 1 秒（默认）时就会触发一次 Refresh，然后 Refresh 会把内存中的的数据刷新到操作系统的文件缓存系统中。
 如果我们对搜索的实效性要求不高，可以将 Refresh 周期延长，例如 30 秒。
 这样还可以有效地减少段刷新次数，但这同时意味着需要消耗更多的 Heap 内存。
 
-### 加大 Flush 设置
+#### 加大 Flush 设置
 Flush 的主要目的是把文件缓存系统中的段持久化到硬盘，当 Translog 的数据量达到 512MB 或者 30 分钟时，会触发一次 Flush。
 index.translog.flush_threshold_size 参数的默认值是 512MB，我们进行修改。
 增加参数值意味着文件缓存系统中可能需要存储更多的数据，所以我们需要为操作系统的文件缓存系统留下足够的空间。
 
-### 减少副本的数量
+#### 减少副本的数量
 ES 为了保证集群的可用性，提供了 Replicas（副本）支持，然而每个副本也会执行分析、索引及可能的合并过程，所以 Replicas 的数量会严重影响写索引的效率。
 当写索引时，需要把写入的数据都同步到副本节点，副本节点越多，写索引的效率就越慢。
 如果我们需要大批量进行写入操作，可以先禁止Replica复制，设置
@@ -3102,7 +3372,6 @@ index.number_of_replicas: 0 关闭副本。在写入完成后， Replica 修改�
 
 ### 内存设置
 ES 默认安装后设置的内存是 1GB，对于任何一个现实业务来说，这个设置都太小了。如果是通过解压安装的 ES，则在 ES 安装文件中包含一个 jvm.option 文件，添加如下命令来设置 ES 的堆大小， Xms 表示堆的初始大小， Xmx 表示可分配的最大内存，都是 1GB。
-
 确保 Xmx 和 Xms 的大小是相同的，其目的是为了能够在 Java 垃圾回收机制清理完堆区后不需要重新分隔计算堆区的大小而浪费资源，可以减轻伸缩堆大小带来的压力。
 
 假设你有一个 64G 内存的机器，按照正常思维思考，你可能会认为把 64G 内存都给ES 比较好，但现实是这样吗， 越大越好？虽然内存对 ES 来说是非常重要的，但是答案是否定的！
@@ -3113,18 +3382,18 @@ ES 默认安装后设置的内存是 1GB，对于任何一个现实业务来说�
 
 最终我们都会采用 31 G 设置
 * -Xms 31g
-* -Xmx 31g
+* -Xmx 31g  
 假设你有个机器有 128 GB 的内存，你可以创建两个节点，每个节点内存分配不超过 32 GB。也就是说不超过 64 GB 内存给 ES 的堆内存，剩下的超过 64 GB 的内存给 Lucene。
 
 ### 重要配置
-| 参数名 |	参数值 |	说明 |
-| --- | --- | --- | --- |
+| 参数名 | 参数值 | 说明 |
+| --- | --- | --- |
 |cluster.name |	elasticsearch |	配置 ES 的集群名称，默认值是 ES，建议改成与所存数据相关的名称， ES 会自动发现在同一网段下的 集群名称相同的节点。 |
 |node.name | node-1 |	集群中的节点名，在同一个集群中不能重复。节点 的名称一旦设置，就不能再改变了。当然，也可以 设 置 成 服 务 器 的 主 机 名 称 ， 例 如 node.name:${HOSTNAME}。 |
-|node.master |	true |	指定该节点是否有资格被选举成为 Master 节点，默 认是 True，如果被设置为 True，则只是有资格成为 Master 节点，具体能否成为 Master 节点，需要通 过选举产生。 |
-|node.data |	true |	指定该节点是否存储索引数据，默认为 True。数据 的增、删、改、查都是在 Data 节点完成的。 |
+|node.master |	true |	指定该节点是否有资格被选举成为 Master 节点，默 认是 True，如果被设置为 True，则只是有资格成为 Master 节点，具体能否成为 Master 节点，需要通 过选举产生。**ES8.0以上已取消, 将以role的方式指定!!!** |
+|node.data |	true |	指定该节点是否存储索引数据，默认为 True。数据 的增、删、改、查都是在 Data 节点完成的。**ES8.0以上已取消, 将以role的方式指定!!!**|
 |index.number_of_shards |	1 |	设置都索引分片个数，默认是 1 片。也可以在创建 索引时设置该值，具体设置为多大都值要根据数据 量的大小来定。如果数据量不大，则设置成 1 时效 率最高 |
-|index.number_of_replicas |	1 |	设置默认的索引副本个数，默认为 1 个。副本数越 多，集群的可用性越好，但是写索引时需要同步的 数据越多。 |
+|index.number_of_replicas |	1 |	设置默认的索引副本个数，默认为 1 个。副本数越多，集群的可用性越好，但是写索引时需要同步的数据越多。 |
 |transport.tcp.compress |	true |	设置在节点间传输数据时是否压缩，默认为 False， 不压缩 |
 |discovery.zen.minimum_master_nodes |	1 |	设置在选举 Master 节点时需要参与的最少的候选 主节点数，默认为 1。如果使用默认值，则当网络 不稳定时有可能会出现脑裂。 合 理 的 数 值 为 `(master_eligible_nodes/2)+1` ， 其 中 master_eligible_nodes 表示集群中的候选主节点数 |
 |discovery.zen.ping.timeout |	3s |	设置在集群中自动发现其他节点时 Ping 连接的超 时时间，默认为 3 秒。 在较差的网络环境下需要设置得大一点，防止因误 判该节点的存活状态而导致分片的转移 |
@@ -3148,7 +3417,7 @@ ES 默认安装后设置的内存是 1GB，对于任何一个现实业务来说�
 
 脑裂问题解决方案：
 * 减少误判：discovery.zen ping_ timeout 节点状态的响应时间，默认为3s，可以适当调大，如果master在该响应时间的范围内没有做出响应应答，判断该节点已经挂掉了。调大参数（如6s，discovery.zen.ping_timeout:6），可适当减少误判。
-* 选举触发：discovery.zen.minimum. _master_ nodes:1，该参數是用于控制选举行为发生的最小集群主节点数量。当备选主节点的个數大于等于该参数的值，且备选主节点中有该参数个节点认为主节点挂了，进行选举。官方建议为(n / 2) +1, n为主节点个数（即有资格成为主节点的节点个数）。
+* 选举触发：discovery.zen.minimum. _master_ nodes:1，该参數是用于控制选举行为发生的最小集群主节点数量。当备选主节点的个数大于等于该参数的值，且备选主节点中有该参数个节点认为主节点挂了，进行选举。官方建议为(n / 2) +1, n为主节点个数（即有资格成为主节点的节点个数）。
 * 角色分离：即master节点与data节点分离，限制角色
   * 主节点配置为：node master: true，node data: false
   * 从节点配置为：node master: false，node data: true
@@ -3188,16 +3457,20 @@ Filesystem Cache 的，但是有部分数据还在 Memory Buffer，所以搜索�
 * 内存交换到磁盘对服务器性能来说是致命的。如果内存交换到磁盘上，一个 100 微秒的操作可能变成 10 毫秒。 再想想那么多 10 微秒的操作时延累加起来。 不难看出 swapping 对于性能是多么可怕。
 * Lucene 使用了大量的文件。同时， Elasticsearch 在节点和 HTTP 客户端之间进行通信也使用了大量的套接字。 所有这一切都需要足够的文件描述符。你应该增加你的文件描述符，设置一个很大的值，如 64,000。
 
+补充: 索引阶段性提升方法
+* 使用批量请求并调整其大小：每次批量数据5 - 15 MB 大是个不错的起始点。
+* 存储：使用 SSD
+* 段和合并：Elasticsearch 默认值是 20 MB/s，对机械磁盘应该是个不错的设置。如果你用的是 SSD,可以考虑提高到 100 - 200 MB/S。如果量导入，完全不在意搜索，你可以彻底关掉合并限流。
+另外还可以增加 index.translog.fhush_threshold_size 设置，从默认的 512 MB 到更大一些的值,比如1GB，这可以在一次清空触发的时候在事务日志里积累出更大的段。
+* 如果你的搜索结果不需要近实时的准确度，考虑把每个素引的index.refresh interval 改到30s。
+* 如果你在做大批量导入，考虑通过设置 index.number_of_replicas:0 关闭副本。
+
 ### GC 方面，在使用 Elasticsearch 时要注意什么？
-倒排词典的索引需要常驻内存，无法 GC，需要监控 data node 上 segment memory 增长趋势。
-
-各类缓存， field cache, filter cache, indexing cache, bulk queue 等等，要设置合理的大小，并且要应该根据最坏的情况来看 heap 是否够用，也就是各类缓存全部占满的时候，还有 heap 空间可以分配给其他任务吗？避免采用 clear cache 等“自欺欺人”的方式来释放内存。
-
-避免返回大量结果集的搜索与聚合。确实需要大量拉取数据的场景，可以采用 scan & scroll api 来实现。
-
-cluster stats 驻留内存并无法水平扩展，超大规模集群可以考虑分拆成多个集群通过 tribe node 连接。
-
-想知道 heap 够不够，必须结合实际应用场景，并对集群的 heap 使用情况做持续的监控。
+* 倒排词典的索引需要常驻内存，无法 GC，需要监控 data node 上 segment memory 增长趋势。
+* 倒各类缓存， field cache, filter cache, indexing cache, bulk queue 等等，要设置合理的大小，并且要应该根据最坏的情况来看 heap 是否够用，也就是各类缓存全部占满的时候，还有 heap 空间可以分配给其他任务吗？避免采用 clear cache 等“自欺欺人”的方式来释放内存。
+* 避免返回大量结果集的搜索与聚合。确实需要大量拉取数据的场景，可以采用 scan & scroll api 来实现。
+* cluster stats 驻留内存并无法水平扩展，超大规模集群可以考虑分拆成多个集群通过 tribe node 连接。
+* 想知道 heap 够不够，必须结合实际应用场景，并对集群的 heap 使用情况做持续的监控。
 
 
 ### Elasticsearch 对于大数据量（上亿量级）的聚合如何实现？
@@ -3225,8 +3498,7 @@ Trie 的核心思想是空间换时间，利用字符串的公共前缀来降低
 * 集群是一个或多个节点（服务器）的集合，它们共同保存您的整个数据，并提供跨所有节点的联合索引和搜索功能。群集由唯一名 称标识，默认情况下为"elasticsearch"。此名称很重要，因为如果节点设置为按名称加入群集，则该节点只能是群集的一部分。
 * 节点是属于集群一部分的单个服务器。它存储数据并参与群集索引和搜索功能。
 * 索引就像关系数据库中的“数据库”。它有一个定义多种类型的映射。索引是逻辑名称空间，映射到一个或多个主分片，并且可以有零个或多个副本分片。MySQL =>数据库，Elasticsearch=>索引。
-* 文档类似于关系数据库中的一行。不同之处在于索引中的每个文档可以具有不同的结构(字段)，但是对于通用字段应该具有相同的数据类型。MySQL => Databases => Tables => Columns / Rows，Elasticsearch=> Indices => Types =>具有属性的文档Doc。
-* 类型是索引的逻辑类别/分区，其语义完全取决于用户。
+* 文档类似于关系数据库中的一行。不同之处在于索引中的每个文档可以具有不同的结构(字段)，但是对于通用字段应该具有相同的数据类型。~~MySQL => Databases => Tables => Columns / Rows，Elasticsearch=> Indices => Types =>具有属性的文档Doc~~, 已经不能够理解为这样的对应关系了, 因为`types`已经不是新版所推荐使用的了。类型是索引的逻辑类别/分区，其语义完全取决于用户。
 
 ### Elasticsearch 中的倒排索引是什么？
 倒排索引是搜索引擎的核心。搜索引擎的主要目标是在查找发生搜索条件的文档时提供快速搜索。ES中的倒排索引其实就是 lucene 的倒排索引，区别于传统的正向索引， 倒排索引会再存储数据时将关键词和数据进行关联，保存到倒排表中，然后查询时，将查询内容进行分词后在倒排表中进行查询，最后匹配数据即可。
