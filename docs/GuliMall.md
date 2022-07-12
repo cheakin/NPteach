@@ -147,7 +147,89 @@ A服务调用B服务，A服务不知道B服务当前在哪几台服务器上有�
 在微服务架构中，API Gateway 作为整体架构的重要组件，它*抽象服务中需要的公共功能*，同时它提供了客户端**负载均衡，服务自动熔断，灰度发布，统一认证，限流监控，日志统计**等丰富功能，帮助我们解决很多API管理的难题
 [](./assets/GuliMall.md/GuliMall_base/20201218211725909.png)
 
+### 微服务架构图
+
+
 ## 环境搭建
+### 安装虚拟机(CentOS)
+Oracle VM VirtualBox下载地址: https://download.virtualbox.org/virtualbox/6.1.34/VirtualBox-6.1.34a-150636-Win.exe
+Vagrant下载地址: https://releases.hashicorp.com/vagrant/2.2.19/vagrant_2.2.19_x86_64.msi
+> 如果vagrant下载速度很慢, 可以将地址复制到迅雷中, 使用迅雷下载  
+安装完后再`cmd`命令窗口内运行`vagrant`查看安装结果
+
+* 初始化并启动虚拟机
+  ``` shell
+  # 初始化虚拟机, 运行后可以在对应目录下看到`Vagrantfile`文件
+  vagrant init centos/7 # 初始化虚拟机, 会自动下载镜像, 若下载慢可以更换镜像源
+
+  # 启动虚拟机
+  vagrant up
+
+  # 进入虚拟机
+  vagrant ssh
+  ```
+  > VirtualBox可能与其他软件冲突, 安装时注意避免
+
+* 网络设置
+  如果使用端口转发的方式, 每安装一个软件就需要设置一次, 比较麻烦. 所以使用设置网络的方式, 可以设置一次, 后续不用再设置了
+
+  默认虚拟机的ip地址是不固定的,开发不方便
+  修改`Vagrantfile`文件, 在`Vagrantfile`文件中添加如下内容
+  ``` shell
+  config.vm.network "private_network", ip: "192.168.56.10"
+  ```
+  设置完后在cmd执行`vagrant reload`重启并重新加载即可
+
+  检查网络配置
+  ``` shell
+  # 进入虚拟机
+  vagrant ssh
+  
+  # 查看ip地址
+  ip addr
+  ```
+  也可以宿主机与虚拟机互ping
+
+
+### 安装docker（CentOS）
+Docker, 虚拟化容器技术。Docker基于镜像，可以秒级启动各种容器。每一种容器都是一个完整的运环境，容器之间互相隔离。
+[](./assets/GuliMall.md/GuliMall_base/1657605006009.jpg)
+docker官方文档: https://docs.docker.com/get-started/overview/
+
+``` shell
+# 1.卸载系统之前的docker(没有可以省略)
+sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine
+
+# 2.设置存储库
+sudo yum install -y yum-utils
+sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+
+# 3.安装DOCKER引擎
+sudo yum install docker-ce docker-ce-cli containerd.io
+
+# 4.启动Docker.
+sudo systemctl start docker
+
+# 5.配置镜像加速
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://chqac97z.mirror.aliyuncs.com"]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
 ### 安装jdk1.8
 ``` shell
 #1.下载并解压jdk1.8
@@ -163,19 +245,126 @@ export PATH=$PATH:$JAVA_HOME/bin
 source  /etc/profile
 ```
 
-### 安装docker（CentOS）
+
 
 ### 安装mysql
+``` shell
+# 1.拉去mysql镜像
+sudo docker pull mysql:8.0
+
+# 2.启动mysql容器
+# --name指定容器名字 -v目录挂载 -p指定端口映射  -e设置mysql参数 -d后台运行
+sudo docker run --name mysql -v /usr/local/mysql/data:/var/lib/mysql -v /usr/local/mysql:/etc/mysql/conf.d -v /usr/local/mysql/log:/var/log/mysql  -e MYSQL_ROOT_PASSWORD=root  -p 3306:3306 -d mysql:8.0
+
+# 3.使用su - root（切换为root，这样就不用每次都sudo来赐予了）
+su - root
+# 4.进入mysql容器
+docker exec -it 容器名称|容器id bin/bash
+```
 
 ### 安装redis
+``` shell
+# 1.在docker hub搜索redis镜像
+docker search redis
+
+# 2.拉取redis镜像到本地
+docker pull redis:6.0.10
+
+# 3.修改需要自定义的配置(docker-redis默认没有配置文件，自己在宿主机建立后挂载映射)
+创建并修改/usr/local/redis/redis.conf
+bind 0.0.0.0 开启远程权限
+appendonly yes 开启aof持久化
+
+# 4.启动redis服务运行容器
+docker run --name redis  -v /usr/local/redis/data:/data  -v /usr/local/redis/redis.conf:/usr/local/etc/redis/redis.conf -p 6379:6379 -d redis:6.0.10  redis-server /usr/local/etc/redis/redis.conf 
+
+解释： -v /usr/local/redis/data:/data  # 将数据目录挂在到本地保证数据安全
+ -v /root/redis/redis.conf:/usr/local/etc/redis/redis.conf   # 将配置文件挂在到本地修改方便
+ 
+# 5.直接进去redis客户端。
+docker exec -it redis redis-cli
+```
 
 ### Maven
+``` shell
+在maven配置文件配置
+配置阿里云镜像
+<mirrors>
+	<mirror>
+		<id>nexus-aliyun</id>
+		<mirrorOf>central</mirrorOf>
+		<name>Nexus aliyun</name>
+		<url>http://maven.aliyun.com/nexus/content/groups/public</url>
+	</mirror>
+</mirrors>
+
+配置 jdk 1.8 编译项目
+<profiles>
+	<profile>
+		<id>jdk-1.8</id>
+		<activation>
+			<activeByDefault>true</activeByDefault>
+			<jdk>1.8</jdk>
+		</activation>
+		<properties>
+			<maven.compiler.source>1.8</maven.compiler.source>
+			<maven.compiler.target>1.8</maven.compiler.target>
+			<maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
+		</properties>
+	</profile>
+</profiles>
+```
 
 ### 安装开发插件(可选-方便开发)
+``` shell
+vscode
+
+Auto Close Tag  
+Auto Rename Tag 
+Chinese 
+ESlint 
+HTML CSS Support
+HTML Snippets
+JavaScript (ES6) code snippets
+Live Server
+open in brower
+Vetur
+
+idea
+lombok、mybatisx
+``
 
 ### 安装git
+``` shell
+# 配置用户名
+git config --global user.name "username"  //(名字，随意写)
+
+# 配置邮箱
+git config --global user.email "55333@qq.com" // 注册账号时使用的邮箱
+
+# 配置ssh免密登录
+ssh-keygen -t rsa -C "55333@qq.com"
+
+三次回车后生成了密钥，也可以查看密钥
+cat ~/.ssh/id_rsa.pub
+
+
+浏览器登录码云后，个人头像上点设置、然后点ssh公钥、随便填个标题，然后赋值
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6MWhGXSKdRxr1mGPZysDrcwABMTrxc8Va2IWZyIMMRHH9Qn/wy3PN2I9144UUqg65W0CDE/thxbOdn78MygFFsIG4j0wdT9sdjmSfzQikLHFsJ02yr58V6J2zwXcW9AhIlaGr+XIlGKDUy5mXb4OF+6UMXM6HKF7rY9FYh9wL6bun9f1jV4Ydlxftb/xtV8oQXXNJbI6OoqkogPKBYcNdWzMbjJdmbq2bSQugGaPVnHEqAD74Qgkw1G7SIDTXnY55gBlFPVzjLWUu74OWFCx4pFHH6LRZOCLlMaJ9haTwT2DB/sFzOG/Js+cEExx/arJ2rvvdmTMwlv/T+6xhrMS3 894548575@qq.com
+
+# 测试
+ssh -T git@gitee.com
+
+# 测试成功
+Hi unique_perfect! You've successfully a
+```
 
 ### 创建仓库
+``` shell
+在码云新建仓库，仓库名gulimall，选择语言java，在.gitignore选中maven，
+许可证选Apache-2.0，开发模型选生产/开发模型，开发时在dev分支，
+发布时在master分支，创建如图所示
+```
 
 ### 新建项目并创建出以下服务模块
 
