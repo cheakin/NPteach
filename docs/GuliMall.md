@@ -3,6 +3,7 @@
 > [从前慢-谷粒商城篇章1](https://blog.csdn.net/unique_perfect/article/details/111392634)
 > [从前慢-谷粒商城篇章2](https://blog.csdn.net/unique_perfect/article/details/113824202)
 > [从前慢-谷粒商城篇章3](https://blog.csdn.net/unique_perfect/article/details/114035775)
+> [guli-mall](https://www.yuque.com/zhangshuaiyin/guli-mall)
 
 ## 项目简介
 *  电商模式
@@ -211,7 +212,7 @@ sudo yum remove docker \
 
 # 2.安装依赖并
 sudo yum install -y yum-utils \
-  device-manager-persistent-data \
+  device-mapper-persistent-data \
   lvm2
 
 # 3. 设置存储库(阿里云)
@@ -219,12 +220,13 @@ sudo yum-config-manager \
   --add-repo \
   http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
 
-
 # 4.安装DOCKER引擎
 sudo yum install docker-ce docker-ce-cli containerd.io
 
 # 4.启动Docker.
 sudo systemctl start docker
+# 4.1 设置开机自启
+sudo systemctl enable docker
 
 # 5.配置镜像加速
 sudo mkdir -p /etc/docker
@@ -235,67 +237,123 @@ sudo tee /etc/docker/daemon.json <<-'EOF'
 EOF
 sudo systemctl daemon-reload
 sudo systemctl restart docker
+
+# 检查docker状态
+systemctl docker status
 ```
 
-### 安装jdk1.8
-``` shell
-#1.下载并解压jdk1.8
-tar  -zxvf  jdk-8u281-linux-x64.tar.gz(检查本机有没有jdk有的话卸载掉。安装上自己的jdk)
+### 安装mysql(docker)
+1. 安装mysql
+    ``` shell
+    # 1.拉取mysql镜像
+    sudo docker pull mysql:5.7
+    # 1.1.检查镜像
+    sudo docker images
 
-# 2.配上环境变量
-vim /etc/profile
-# 添加一下两行代码
-export JAVA_HOME=jdk的位置
-export PATH=$PATH:$JAVA_HOME/bin
+    # 2.启动mysql容器
+    # --name指定容器名字 -p指定端口映射[容器端口:宿主机端口] -v目录挂载[宿主机路径:容器内路径] -e设置mysql启动参数 -d后台运行 镜像名
+    sudo docker run --name mysql\
+      -p 3306:3306\
+      -v /mydata/mysql/log:/var/log/mysql\
+      -v /mydata/mysql/data:/var/lib/mysql\
+      -v /mydata/mysql/conf:/etc/mysql\
+      -e MYSQL_ROOT_PASSWORD=root\
+      -d mysql:5.7
+    # 2.1.查看容器
+    sudo docker ps
 
-# 3.使配置生效
-source  /etc/profile
-```
+    # 0.切换为root，这样就不用每次都sudo来赐予了. 因为时使用vagrant创建的, 默认密码为`vagrant`
+    su - root
 
+    # 3.进入mysql容器
+    docker exec -it 容器名称|容器id bin/bash
 
+    # 9.推出mysql容器
+    exit
+    ```
+    [](./assets/GuliMall.md/GuliMall_base/1657690334567.jpg)
 
-### 安装mysql
-``` shell
-# 1.拉去mysql镜像
-sudo docker pull mysql:8.0
+2. 配置mysql 
+    进入配置文件(参考docker映射的目录)
+    ``` shell
+    vi /mydata/mysql/conf/my.cnf
+    ```
+    插入以下内容
+    ``` shell
+    [client]
+    default-character-set=utf8
+    [mysql]
+    default-character-set=utf8
+    [mysqld]
+    init_connect='SET collation_connection = utf8_unicode_ci'
+    init_connect='SET NAMES utf8'
+    character-set-server=utf8
+    collation-server=utf8_unicode_ci
+    skip-character-set-client-handshake
+    skip-name-resolve
 
-# 2.启动mysql容器
-# --name指定容器名字 -v目录挂载 -p指定端口映射  -e设置mysql参数 -d后台运行
-sudo docker run --name mysql -v /usr/local/mysql/data:/var/lib/mysql -v /usr/local/mysql:/etc/mysql/conf.d -v /usr/local/mysql/log:/var/log/mysql  -e MYSQL_ROOT_PASSWORD=root  -p 3306:3306 -d mysql:8.0
+    # Esc
+    # :wq
+    ```
 
-# 3.使用su - root（切换为root，这样就不用每次都sudo来赐予了）
-su - root
-# 4.进入mysql容器
-docker exec -it 容器名称|容器id bin/bash
-```
+3. 重启容器使配置生效
+    ``` shell
+    docker restart mysql
+    ```
 
-### 安装redis
-``` shell
-# 1.在docker hub搜索redis镜像
-docker search redis
+### 安装redis(docker)
+Redis中文文档: [](http://www.redis.cn/)
+1. 拉取redis镜像到本地
+  docker pull redis
+2. 修改需要自定义的配置(docker-redis默认没有配置文件，自己在宿主机建立后挂载映射)
+  ``` shell
+  # 创建并编辑一下文件
+  mkdir -p /mydata/redis/conf
+  touch /mydata/redis/conf/redis.conf
+  ```
 
-# 2.拉取redis镜像到本地
-docker pull redis:6.0.10
+3. 启动redis服务运行容器
+  ``` shell
+  docker run --name redis  -v /usr/local/redis/data:/data  -v /usr/local/redis/redis.conf:/usr/local/etc/redis/redis.conf -p 6379:6379 -d redis:6.0.10  redis-server /usr/local/etc/redis/redis.conf 
+  ```
 
-# 3.修改需要自定义的配置(docker-redis默认没有配置文件，自己在宿主机建立后挂载映射)
-创建并修改/usr/local/redis/redis.conf
-bind 0.0.0.0 开启远程权限
-appendonly yes 开启aof持久化
+  查看容器
+  ``` shell
+  docker ps
+  ```
 
-# 4.启动redis服务运行容器
-docker run --name redis  -v /usr/local/redis/data:/data  -v /usr/local/redis/redis.conf:/usr/local/etc/redis/redis.conf -p 6379:6379 -d redis:6.0.10  redis-server /usr/local/etc/redis/redis.conf 
+  进入容器内的redis, 并测试
+  ``` shell
+  # 进入redis
+  docker exec -it redis redis-cli
+  
+  # 存
+  set a b
 
-解释： -v /usr/local/redis/data:/data  # 将数据目录挂在到本地保证数据安全
- -v /root/redis/redis.conf:/usr/local/etc/redis/redis.conf   # 将配置文件挂在到本地修改方便
- 
-# 5.直接进去redis客户端。
-docker exec -it redis redis-cli
-```
+  # 取
+  get a
 
-### Maven
-``` shell
-在maven配置文件配置
-配置阿里云镜像
+  # 退出
+  exit
+  ```
+
+4. 配置redis
+  ``` shell
+  # 开启远程权限
+  echo "bind 0.0.0.0"  >> /mydata/redis/conf/redis.conf
+  
+  # 开启aof持久化
+  echo "appendonly yes"  >> /mydata/redis/conf/redis.conf
+
+  # 重启redis容器, 重启完后redis数据便可以持久化了
+  docker restart redis
+  ```
+
+### 安装开发工具及插件(可选-方便开发)
+#### Maven
+这里在平时开发的时候应该已经配置过了,具体步骤就略过了
+``` yaml
+# 在maven配置文件配置配置阿里云镜像
 <mirrors>
 	<mirror>
 		<id>nexus-aliyun</id>
@@ -305,7 +363,7 @@ docker exec -it redis redis-cli
 	</mirror>
 </mirrors>
 
-配置 jdk 1.8 编译项目
+# 配置 jdk 1.8 编译项目
 <profiles>
 	<profile>
 		<id>jdk-1.8</id>
@@ -322,7 +380,17 @@ docker exec -it redis redis-cli
 </profiles>
 ```
 
-### 安装开发插件(可选-方便开发)
+#### IDEA设置及插件
+后端使用 IDEA 开发
+* 设置Manven构建工具
+  在 File -> Settings -> Build,Execution,Deployment -> Build Tools -> Maven 中
+  将 User settings file 配置为指定的安装路径
+
+* 插件
+  - Lombok
+  - MyBatisX
+
+#### VS Code及插件
 ``` shell
 vscode
 
@@ -1627,9 +1695,6 @@ gulimall_wms
 </details>
 
 
- renren-fast
-
-
 
 
 
@@ -1641,6 +1706,8 @@ gulimall_wms
 # 谷粒商城-集群篇
 包括k8s集群，CI/CD(持续集成)，DevOps等
 
+
+# 其他
 ## 项目架构
 ### 架构图
 [](./assets/GuliMall.md/谷粒商城-微服务架构图.jpg)
@@ -1655,3 +1722,19 @@ gulimall_wms
 
 ## [集群篇](./GuliMall_cluster.md)
 [集群篇](./GuliMall_cluster.md), 包括k8s集群，CI/CD(持续集成)，DevOps等
+
+## 环境
+### 安装jdk1.8
+``` shell
+#1.下载并解压jdk1.8
+tar  -zxvf  jdk-8u281-linux-x64.tar.gz(检查本机有没有jdk有的话卸载掉。安装上自己的jdk)
+
+# 2.配上环境变量
+vim /etc/profile
+# 添加一下两行代码
+export JAVA_HOME=jdk的位置
+export PATH=$PATH:$JAVA_HOME/bin
+
+# 3.使配置生效
+source  /etc/profile
+```
