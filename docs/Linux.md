@@ -449,5 +449,14 @@ du -sh *
 sudo rm -rf 文件(夹)名
 ```
 
+### vagrant可能会遇到磁盘爆满的情况
+> 参考: [Vagrant 磁盘爆满](https://blog.csdn.net/weixin_45518808/article/details/122429563)
+使用Vagrant安装虚拟机可能会遇到vagrant磁盘爆满的情况
+根目录下用`du -sh *`分析后会发现`/vagrant`占用超级大. 原因是vagrant同步了`c/user/用户名`下的文件
+解决: 
+1. 创建`VagrantSyncFolder`文件夹;
+2. 在`Vagrantfile`加上`config.vm.synced_folder "./VagrantSyncFolder", "/vagrant"`(指定映射文件夹)
+3. 加载配置并重启`vagrant reload`
+
 
 

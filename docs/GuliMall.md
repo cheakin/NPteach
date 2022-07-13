@@ -172,6 +172,7 @@ Vagrant下载地址: https://releases.hashicorp.com/vagrant/2.2.19/vagrant_2.2.1
   vagrant ssh
   ```
   > VirtualBox可能与其他软件冲突, 安装时注意避免
+  > vagrant可能会遇到磁盘爆满的情况, 根目录下用`du -sh *`分析后会发现`/vagrant`占用超级大. 原因是vagrant同步了`c/user/用户名`下的文件,解决: 1.创建`VagrantSyncFolder`文件夹; 2.在`Vagrantfile`加上`config.vm.synced_folder "./VagrantSyncFolder", "/vagrant"`(指定映射文件夹); 3.加载配置并重启`vagrant reload`
 
 * 网络设置
   如果使用端口转发的方式, 每安装一个软件就需要设置一次, 比较麻烦. 所以使用设置网络的方式, 可以设置一次, 后续不用再设置了
@@ -239,7 +240,7 @@ sudo systemctl daemon-reload
 sudo systemctl restart docker
 
 # 检查docker状态
-systemctl docker status
+systemctl status docker
 ```
 
 ### 安装mysql(docker)
@@ -263,7 +264,7 @@ systemctl docker status
     sudo docker ps
 
     # 0.切换为root，这样就不用每次都sudo来赐予了. 因为时使用vagrant创建的, 默认密码为`vagrant`
-    su - root
+    su root
 
     # 3.进入mysql容器
     docker exec -it 容器名称|容器id bin/bash
@@ -304,7 +305,10 @@ systemctl docker status
 ### 安装redis(docker)
 Redis中文文档: [](http://www.redis.cn/)
 1. 拉取redis镜像到本地
+  ``` shell
   docker pull redis
+  ```
+
 2. 修改需要自定义的配置(docker-redis默认没有配置文件，自己在宿主机建立后挂载映射)
   ``` shell
   # 创建并编辑一下文件
@@ -314,7 +318,10 @@ Redis中文文档: [](http://www.redis.cn/)
 
 3. 启动redis服务运行容器
   ``` shell
-  docker run --name redis  -v /usr/local/redis/data:/data  -v /usr/local/redis/redis.conf:/usr/local/etc/redis/redis.conf -p 6379:6379 -d redis:6.0.10  redis-server /usr/local/etc/redis/redis.conf 
+  docker run --name redis -p 6379:6379\
+    -v /usr/local/redis/data:/data\
+    -v /usr/local/redis/redis.conf:/usr/local/etc/redis/redis.conf\
+    -d redis:6.0.10  redis-server /usr/local/etc/redis/redis.conf 
   ```
 
   查看容器
@@ -391,47 +398,48 @@ Redis中文文档: [](http://www.redis.cn/)
   - MyBatisX
 
 #### VS Code及插件
-``` shell
-vscode
+前端使用 VS Code 开发
 
-Auto Close Tag  
-Auto Rename Tag 
-Chinese 
-ESlint 
-HTML CSS Support
-HTML Snippets
-JavaScript (ES6) code snippets
-Live Server
-open in brower
-Vetur
-
-idea
-lombok、mybatisx
-``
+* 插件
+  - Auto Close Tag
+  - Auto Rename Tag
+  - Chinese
+  - ESlint
+  - HTML CSS Support
+  - HTML Snippets
+  - JavaScript (ES6) code snippets
+  - Live Server
+  - open in brower
+  - Vetur
 
 ### 安装git
-``` shell
-# 配置用户名
-git config --global user.name "username"  //(名字，随意写)
+安装完git后, 打开git bash
 
-# 配置邮箱
-git config --global user.email "55333@qq.com" // 注册账号时使用的邮箱
+* 配置账户
+  ``` shell
+  # 配置用户名
+  git config --global user.name "username"  //(用户名)
 
-# 配置ssh免密登录
-ssh-keygen -t rsa -C "55333@qq.com"
+  # 配置邮箱
+  git config --global user.email "xxxx@qq.com" // 注册账号时使用的邮箱
+  ```
 
-三次回车后生成了密钥，也可以查看密钥
-cat ~/.ssh/id_rsa.pub
+* 配置ssh免密登录
+  ``` shell
+  # 生成ssh密钥
+  ssh-keygen -t rsa -C "xxx@qq.com"
 
+  # 三次回车后生成了密钥，也可以查看密钥
+  cat ~/.ssh/id_rsa.pub
+  ```
+  浏览器登录码云后，个人头像上点设置、然后点ssh公钥、设置标题后，然后赋值刚才打印的密钥
 
-浏览器登录码云后，个人头像上点设置、然后点ssh公钥、随便填个标题，然后赋值
-ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6MWhGXSKdRxr1mGPZysDrcwABMTrxc8Va2IWZyIMMRHH9Qn/wy3PN2I9144UUqg65W0CDE/thxbOdn78MygFFsIG4j0wdT9sdjmSfzQikLHFsJ02yr58V6J2zwXcW9AhIlaGr+XIlGKDUy5mXb4OF+6UMXM6HKF7rY9FYh9wL6bun9f1jV4Ydlxftb/xtV8oQXXNJbI6OoqkogPKBYcNdWzMbjJdmbq2bSQugGaPVnHEqAD74Qgkw1G7SIDTXnY55gBlFPVzjLWUu74OWFCx4pFHH6LRZOCLlMaJ9haTwT2DB/sFzOG/Js+cEExx/arJ2rvvdmTMwlv/T+6xhrMS3 894548575@qq.com
+* 测试
+  ``` shell
+  ssh -T git@gitee.com
 
-# 测试
-ssh -T git@gitee.com
-
-# 测试成功
-Hi unique_perfect! You've successfully a
+    # 测试成功
+    Hi unique_perfect! You've successfully a
 ```
 
 ### 创建仓库
@@ -441,49 +449,101 @@ Hi unique_perfect! You've successfully a
 发布时在master分支，创建如图所示
 ```
 
-### 新建项目并创建出以下服务模块
-``` shell
-在IDEA中New Project from version control Git  复制刚才项目的地址，如https://gitee.com/yxj/gulimall.git
+### 项目结构创建
+> 这里我创建工程和依赖管理的方式和视频有出入，请酌情参考!!!
+> 在码云创建项目和拉取这里就省略了
 
-创建以下模块
+**创建模块**
+创建以下根模块(gulimall)下创建一下微服务
 商品服务product
 存储服务ware
 订单服务order
 优惠券服务coupon
 用户服务member
-每个模块导入web和openFeign
+
+每个服务都有一下共同点:
+1. 每个模块都导入基础依赖web和openFeign
+2. 每个服务包名都统一一下, 以`com.atguigu.gulimall.xxx(product/order/ware/coupon/member)`
+3. 模块名均应符合`gulimall-xxx`格式
+
+**目录结构**
+[](./assets/GuliMall.md/GuliMall_base/1657725334297.jpg)
+多模块开发
+多模块开发中，使用父模块对子模块的管理非常方便。
+1. 父模块pom中的<properties>属性会被子模块继承
+2. 父模块pom中，在<dependencyManagement>中可以进行子模块依赖的版本管理，子模块继承父模块之后，提供作用：锁定版本 + 子模块不用再写 version。
+3. 此外，父模块中可以添加依赖作为全局依赖，子模块自动继承。<dependencyManagement>外的<dependencies>中定义全局依赖。
+
+**修改夫模块pom**
+创建父模块：在gulimall中创建并修改pom.xml(以后还会继续添加)
+``` xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.cheakin</groupId>
+    <artifactId>gulimall</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>gulimall</name>
+    <description>聚合服务</description>
+
+    <modules>
+        <module>gulimall-coupon</module>
+        <module>gulimall-member</module>
+        <module>gulimall-order</module>
+        <module>gulimall-product</module>
+        <module>gulimall-ware</module>
+    </modules>
+</project>
 ```
 
-创建父模块：在gulimall中创建pom.xml
-
-在maven窗口刷新，并点击+号，找到刚才的pom.xml添加进来，发现多了个root。这样比如运行root的clean命令，其他项目也一起clean了。
-
+**修改gitignore**
 修改总项目的.gitignore，把小项目里的垃圾文件在提交的时候忽略掉
 ``` shell
+ HELP.md
 target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
 
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### other ###
 **/mvnw
 **/mvnw.cmd
-
 **/.mvn
 **/target
-
-.idea
-
-
-**/.gitignore
-
-**/README.md
 ```
+删除各模块下的`mvnw`, `mvnw.cmd`, `.mvn`, 这几个文件是声明maven版本的, 我们已经在设置中指定和修改过镜像源了, 不在需要这几个文件了; `HELP.md`也可以删除, 要的话留根目录下的就可以了
 
 ### 创建数据库
 创建数据库之前需要启动docker服务

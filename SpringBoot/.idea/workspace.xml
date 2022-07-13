@@ -5,8 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="43548d7b-427d-4601-8f72-b1926be8add3" name="变更" comment="">
-      <change afterPath="$PROJECT_DIR$/springdata-elasticsearch/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../docs/ElasticSearch.md" beforeDir="false" afterPath="$PROJECT_DIR$/../docs/ElasticSearch.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../docs/GuliMall.md" beforeDir="false" afterPath="$PROJECT_DIR$/../docs/GuliMall.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../docs/Linux.md" beforeDir="false" afterPath="$PROJECT_DIR$/../docs/Linux.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,7 +52,7 @@
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.2",
     "settings.editor.selected.configurable": "editor.preferences.import",
-    "spring.configuration.checksum": "0138e21ae4c79554fa7913de0c6fbda2"
+    "spring.configuration.checksum": "4e2c9f687e0ad74ecfd5d7c4accdd3ce"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -273,6 +273,7 @@
       <workItem from="1656736811157" duration="6506000" />
       <workItem from="1656944817392" duration="393000" />
       <workItem from="1657354507510" duration="6470000" />
+      <workItem from="1657718772887" duration="1044000" />
     </task>
     <servers />
   </component>
