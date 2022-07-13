@@ -434,5 +434,20 @@ source /etc/profile
 这样脚本就会先去加载`/etc/profile`的内容了, 这个文件是环境变量的配置
 当然也可以用到什么环境加什么环境变量
 
+### No usable temporary directory found in ['/tmp', '/var/tmp', '/usr/tmp', '/home/vagrant']
+在运行一些命令时,找不到这些文件夹, 一般是由于系统没有足够的空间了, 所以无法创建这些文件
+
+解决: 删除占用过大的文件(可能时缓存, 可能时日志)
+``` shell
+# 进入根目录
+cd /
+
+# 分析文件大小
+du -sh * 
+
+# 删除较大的文件
+sudo rm -rf 文件(夹)名
+```
+
 
 
