@@ -562,21 +562,18 @@ sudo docker start redis
 sudo docker exec -it mysql /bin/bash
 ```
 
-``` shell
-接着创建数据库
-然后接着去sqlyog直接我们的操作，在左侧root上右键建立数据库：
-字符集选utf8mb4，他能兼容utf8且能解决一些乱码的问题。分别
-建立了下面数据库
-
-gulimall_oms
-gulimall_pms
-gulimall_sms
-gulimall_ums
-gulimall_wms
-
-所有的数据库数据再复杂也不建立外键，因为在电商系统里，数据量大，
+> 所有的数据库数据再复杂也不建立外键，因为在电商系统里，数据量大，
 做外键关联很耗性能。
-```
+
+**创建数据库**
+数据库工具中开始操作操作
+建立数据库：字符集选utf8mb4，他能兼容utf8且能解决一些乱码的问题。
+分别建立了下面数据库:
+- gulimall_oms
+- gulimall_pms
+- gulimall_sms
+- gulimall_ums
+- gulimall_wms
 
 <details>
   <summary>gulimall-oms.sql</summary>
