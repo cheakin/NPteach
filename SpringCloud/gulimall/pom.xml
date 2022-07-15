@@ -17,6 +17,9 @@
         <module>gulimall-order</module>
         <module>gulimall-product</module>
         <module>gulimall-ware</module>
+
+        <module>renren-fast</module>
+        <module>renren-generator</module>
     </modules>
 
     <!--  这里的属性会被子模块继承  -->
