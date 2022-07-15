@@ -474,8 +474,8 @@ Redis中文文档: [](http://www.redis.cn/)
 2. 父模块pom中，在<dependencyManagement>中可以进行子模块依赖的版本管理，子模块继承父模块之后，提供作用：锁定版本 + 子模块不用再写 version。
 3. 此外，父模块中可以添加依赖作为全局依赖，子模块自动继承。<dependencyManagement>外的<dependencies>中定义全局依赖。
 
-**修改夫模块pom**
-创建父模块：在gulimall中创建并修改pom.xml(以后还会继续添加)
+**修改父模块pom**
+创建父模块：在gulimall中创建并修改pom.xml(以后还会继续添加), 并引入公共依赖
 ``` xml
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -486,7 +486,7 @@ Redis中文文档: [](http://www.redis.cn/)
     <groupId>cn.cheakin</groupId>
     <artifactId>gulimall</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.0.1-SNAPSHOT</version>
     <name>gulimall</name>
     <description>聚合服务</description>
 
@@ -497,6 +497,77 @@ Redis中文文档: [](http://www.redis.cn/)
         <module>gulimall-product</module>
         <module>gulimall-ware</module>
     </modules>
+
+    <!--  这里的属性会被子模块继承  -->
+    <properties>
+        <java.version>1.8</java.version>
+        <spring.boot.version>2.7.1</spring.boot.version>
+        <spring-cloud.version>2021.0.3</spring-cloud.version>
+    </properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!--  这里的依赖会被子模块继承  -->
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
+```
+子模块pom示例
+``` xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.zsy</groupId>
+        <artifactId>guli-mall</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <groupId>com.zsy</groupId>
+    <artifactId>mall-product</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>mall-product</name>
+    <description>商品服务</description>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>
 ```
 
@@ -2181,46 +2252,163 @@ password: root
 git clone https://gitee.com/renrenio/renren-generator.git
 下载到桌面后，同样把里面的.git文件删除，然后移动到我们IDEA项目目录中，
 
-同样配置好pom.xml(root)
-``` xml
-<modules>
-		<module>gulimall-coupon</module>
-		<module>gulimall-member</module>
-		<module>gulimall-order</module>
-		<module>gulimall-product</module>
-		<module>gulimall-ware</module>
-		<module>renren-fast</module>
-		<module>renren-generator</module>
-</modules>
-```
+* 生成代码
+  同样配置好pom.xml(root)
+  ``` xml
+  <modules>
+      <module>gulimall-coupon</module>
+      <module>gulimall-member</module>
+      <module>gulimall-order</module>
+      <module>gulimall-product</module>
+      <module>gulimall-ware</module>
+      <module>renren-fast</module>
+      <module>renren-generator</module>
+  </modules>
+  ```
 
-修改`renren-generator`的`application.yml`
-``` yml
-url: jdbc:mysql://192.168.1.103:3306/要生成的对应的数据库?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
-username: root
-password: root
-```
+  修改`renren-generator`的`application.yml`
+  ``` yml
+  url: jdbc:mysql://192.168.1.103:3306/要生成的对应的数据库?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
+  username: root
+  password: root
+  ```
+  修改`renren-generator`的`generator.properties`
+  ``` properties
+  mainPath=cn.cheakin # 主目录
+  package=cn.cheakin.gulimall # 包名
+  moduleName=对应的模块名   # 模块名
+  author=botboy  # 作者
+  email=cheakin@foxmail.com  # email
+  tablePrefix=对应数据库的表前缀   # 我们的对应数据库中的表的都用相同前缀，如果写了表前缀，每一张表对于的javaBean就不会添加前缀了
+  ```
+  修改`renren-generator`中`resource/templates/Controller.java.vm`(这是生成Controller的模板). 
+  将`@RequiresPermissions("xxx")`以java注释的方式注释掉, 并将`import org.apache.shiro.authz.annotation.RequiresPermissions;`包引入删除掉
 
-修改`renren-generator`的`generator.properties`
-``` properties
-mainPath=cn.cheakin # 主目录
-package=cn.cheakin.gulimall # 包名
-moduleName=对应的模块名   # 模块名
-author=botboy  # 作者
-email=cheakin@foxmail.com  # email
-tablePrefix=对应数据库的表前缀   # 我们的对应数据库中的表的都用相同前缀，如果写了表前缀，每一张表对于的javaBean就不会添加前缀了
-```
 
-运行`RenrenApplication`。如果启动不成功，修改`application.yml`中是`port`为`80`。访问`http://localhost:80`
-然后点击全部，点击生成代码。下载了压缩包
-解压压缩包，把`main`放到`对应模块(guilmall-product, gulimall-order...)`的同级目录下。
+  运行`RenrenApplication`。如果启动不成功，修改`application.yml`中的`port`为`其他端口`。访问`http://localhost:80`
+  1. 然后选择对应模块,选择全部(注意分页)，点击生成代码。下载压缩包
+  2. 解压压缩包，把`main`放到`对应模块(guilmall-product, gulimall-order...)`的同级目录下; `main/resources/view/`文件夹用不到,可以删除
+  依次创建以下代码
+  * product(pms)
+  * coupon
+  * member
+  * order
+  * ware
 
-* product(pms)
-  
-* coupon
-* member
-* order
-* ware
+* 创建公共模块`gulimall-common`
+  创建后会发现有很多报红, 是因为缺少对应的包, 在`renren-fast`中都包含了这些缺失的包.
+  现在我们将这个公共的整合到一个公共模块`gulimall-common`中
+  1. 新建`gulimall-common`模块
+  2. 将每个guli-*模块的`pom.xml`中引入`gulimall-common`
+  3. 查看报红的地方, 依次将代码从`renren-fast`中移动到`gulimall-common`中, 其中`pom.xml`也需要同样拷贝过来
+    `gulimall-common`模块的`pom.xml`, *xxs攻击后面处理*
+    [](./assets/GuliMall.md/GuliMall_base/1657871814306.jpg)
+    ``` xml
+    <?xml version="1.0" encoding="UTF-8"?>
+      <project xmlns="http://maven.apache.org/POM/4.0.0"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+          <modelVersion>4.0.0</modelVersion>
+          <parent>
+              <artifactId>gulimall</artifactId>
+              <groupId>cn.cheakin</groupId>
+              <version>0.0.1-SNAPSHOT</version>
+          </parent>
+          <groupId>cn.cheakin</groupId>
+          <artifactId>gulimall-common</artifactId>
+          <version>0.0.1-SNAPSHOT</version>
+          <description>公共模块</description>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-compiler-plugin</artifactId>
+                      <configuration>
+                          <source>8</source>
+                          <target>8</target>
+                      </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+
+          <dependencies>
+              <!--mybatis-plus-->
+              <dependency>
+                  <groupId>com.baomidou</groupId>
+                  <artifactId>mybatis-plus-boot-starter</artifactId>
+                  <version>3.5.1 </version>
+              </dependency>
+
+              <!--lombok-->
+              <dependency>
+                  <groupId>org.projectlombok</groupId>
+                  <artifactId>lombok</artifactId>
+                  <version>1.18.22</version>
+              </dependency>
+
+              <!--renrenfast其他依赖-->
+              <dependency>
+                  <groupId>org.apache.httpcomponents</groupId>
+                  <artifactId>httpcore</artifactId>
+                  <version>4.4.15</version>
+              </dependency>
+              <dependency>
+                  <groupId>commons-lang</groupId>
+                  <artifactId>commons-lang</artifactId>
+                  <version>2.6</version>
+              </dependency>
+          </dependencies>
+
+      </project>
+    ```
+  4. 配置(整合)`mybatis-plus`
+    1. 配置数据源:
+      1. 导入`mybatis-plus-spring-boot-starter`依赖
+        ``` xml
+        <!--mybatis-plus-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.5.1 </version>
+        </dependency>
+        ```
+      2. 导入MySQL数据库的驱动, 官方提示: 5.1或8.0(推荐)的依赖是兼容5.7的
+        ```xml
+        <!--mysql驱动-->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.27</version>
+        </dependency>
+        ```
+      3. 配置数据源
+        为每个模块都配置对应的数据源, 如`gulimall-product`的`application.yml`:
+        ``` yml
+        spring:
+          datasource: 
+            username: root
+            password: root
+            url: jdbc:mysql://192.168.56.10:3306/gulimall_pms
+            driver-class-name: com.mysql.jdbc.Driver 
+        ```
+    2. 配置MyBatis-Plus
+      1. 使用`@MapperScan`
+        在启动类上添加`@MapperScan`注解
+      2. 指定MyBtis-Plus的映射文件位置
+        同样在每个模块配置的配置文件`application.yml`中添加
+        ``` yml 
+        mybatis-plus:
+          # 指定mapper文件位置
+          mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
+          # 指定主键自增
+          global-config:
+            db-config:
+              id-type: auto
+        ```
+  5. 测试
+    在`gulimall-product`模块的单元测试中测试
+    
+
 
 
 # 谷粒商城-高级篇

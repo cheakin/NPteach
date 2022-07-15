@@ -25,6 +25,8 @@
   <!-- [Redis](./Redis.md) 有基础知识到Redis的应用、持久化操作、集群搭建...... -->
   - [Docker](./Docker.md)
   <!-- [Docker](./Docker.md) 基础知识(docker、dockerfile、docker-compose) -->
+  - [ElasticSearch](./ElasticSearch.md)
+  <!-- [ElasticSearch](./ElasticSearch.md) 全文检索笔记... -->
   - [Kubernetes](./Kubernetes.md)
   <!-- [Kubernetes](./Kubernetes.md) 集群搭建的知识(请准备至少3台服务器) -->
   - [Nssm](./Nssm.md)
