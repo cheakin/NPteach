@@ -2393,7 +2393,7 @@ git clone https://gitee.com/renrenio/renren-generator.git
         ```
     2. 配置MyBatis-Plus
       1. 使用`@MapperScan`
-        在启动类上添加`@MapperScan`注解
+        在启动类上添加`@MapperScan`注解. **注意：不要重复注入，可能会出现bean重复**
       2. 指定MyBtis-Plus的映射文件位置
         同样在每个模块配置的配置文件`application.yml`中添加
         ``` yml 
@@ -2407,6 +2407,42 @@ git clone https://gitee.com/renrenio/renren-generator.git
         ```
   5. 测试
     在`gulimall-product`模块的单元测试中测试
+    ``` java
+    @SpringBootTest
+    class GulimallProductApplicationTests {
+
+        @Autowired
+        BrandService brandService;
+
+        @Test
+        void add() {
+            BrandEntity brandEntity = new BrandEntity();
+            brandEntity.setName("华为");
+
+            brandService.save(brandEntity);
+            System.out.println("保存完成");
+        }
+
+        @Test
+        void update() {
+            BrandEntity brandEntity = new BrandEntity();
+
+            brandEntity.setBrandId(1L);
+            brandEntity.setDescript("华为手机");
+
+            brandService.updateById(brandEntity);
+        }
+
+        @Test
+        void quey() {
+            List<BrandEntity> list = brandService.list(new QueryWrapper<BrandEntity>().eq("brand_id", 1L));
+            list.forEach(item -> {
+                System.out.println("item = " + item);
+            });
+        }
+
+    }
+    ```
     
 
 
