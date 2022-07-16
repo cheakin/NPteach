@@ -2289,11 +2289,11 @@ git clone https://gitee.com/renrenio/renren-generator.git
   1. 然后选择对应模块,选择全部(注意分页)，点击生成代码。下载压缩包
   2. 解压压缩包，把`main`放到`对应模块(guilmall-product, gulimall-order...)`的同级目录下; `main/resources/view/`文件夹用不到,可以删除
   依次创建以下代码
-  * product(pms)
-  * coupon
-  * member
-  * order
-  * ware
+  * coupon(sms)(7000端口)
+  * member(ums)(8000端口)
+  * order(oms)(9000端口)
+  * product(pms)(100000端口)
+  * ware(wms)(11000端口)
 
 * 创建公共模块`gulimall-common`
   创建后会发现有很多报红, 是因为缺少对应的包, 在`renren-fast`中都包含了这些缺失的包.
@@ -2363,34 +2363,34 @@ git clone https://gitee.com/renrenio/renren-generator.git
     ```
   4. 配置(整合)`mybatis-plus`
     1. 配置数据源:
-      1. 导入`mybatis-plus-spring-boot-starter`依赖
-        ``` xml
-        <!--mybatis-plus-->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.5.1 </version>
-        </dependency>
-        ```
-      2. 导入MySQL数据库的驱动, 官方提示: 5.1或8.0(推荐)的依赖是兼容5.7的
-        ```xml
-        <!--mysql驱动-->
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.27</version>
-        </dependency>
-        ```
-      3. 配置数据源
-        为每个模块都配置对应的数据源, 如`gulimall-product`的`application.yml`:
-        ``` yml
-        spring:
-          datasource: 
-            username: root
-            password: root
-            url: jdbc:mysql://192.168.56.10:3306/gulimall_pms
-            driver-class-name: com.mysql.jdbc.Driver 
-        ```
+         1. 导入`mybatis-plus-spring-boot-starter`依赖
+           ``` xml
+           <!--mybatis-plus-->
+           <dependency>
+               <groupId>com.baomidou</groupId>
+               <artifactId>mybatis-plus-boot-starter</artifactId>
+               <version>3.5.1 </version>
+           </dependency>
+           ```
+         2. 导入MySQL数据库的驱动, 官方提示: 5.1或8.0(推荐)的依赖是兼容5.7的
+           ```xml
+           <!--mysql驱动-->
+           <dependency>
+               <groupId>mysql</groupId>
+               <artifactId>mysql-connector-java</artifactId>
+               <version>8.0.27</version>
+           </dependency>
+           ```
+         3. 配置数据源
+           为每个模块都配置对应的数据源, 如`gulimall-product`的`application.yml`:
+           ``` yml
+           spring:
+             datasource: 
+               username: root
+               password: root
+               url: jdbc:mysql://192.168.56.10:3306/gulimall_pms
+               driver-class-name: com.mysql.cj.jdbc.Driver # 8.o用com.mysql.cj.jdbc.Driver， 8.0一下可以用 com.mysql.jdbc.Driver
+           ```
     2. 配置MyBatis-Plus
       1. 使用`@MapperScan`
         在启动类上添加`@MapperScan`注解. **注意：不要重复注入，可能会出现bean重复**
@@ -2405,6 +2405,26 @@ git clone https://gitee.com/renrenio/renren-generator.git
             db-config:
               id-type: auto
         ```
+    3. application.yml
+      applicatin.yml的完整配置
+      ``` YML
+      spring:
+        datasource:
+          username: root
+          password: root
+          url: jdbc:mysql://192.168.56.10:3306/gulimall_pms
+          driverClassName: com.mysql.cj.jdbc.Driver
+      mybatis-plus:
+        # 指定mapper文件位置
+        mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
+        # 指定主键自增
+        global-config:
+          db-config:
+            id-type: auto
+      server:
+        port: 10000
+      ```
+      注意区别不通模块的数据库和端口
   5. 测试
     在`gulimall-product`模块的单元测试中测试
     ``` java

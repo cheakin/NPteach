@@ -7,6 +7,9 @@
 		<groupId>cn.cheakin</groupId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
+	<groupId>cn.cheakin</groupId>
+	<artifactId>gulimall-ware</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
 	<name>gulimall-ware</name>
 	<description>gulimall-ware</description>
 
