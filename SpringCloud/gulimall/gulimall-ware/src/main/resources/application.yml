@@ -9,8 +9,8 @@ spring:
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
-    application:
-      name: gulimall-ware
+  application:
+    name: gulimall-ware
 
 mybatis-plus:
   # 指定mapper文件位置
