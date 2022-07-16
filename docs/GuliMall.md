@@ -2546,7 +2546,98 @@ Spring Cloud Ablibab - Nacos Discovery (注册中心): https://github.com/alibab
    [](./assets/GuliMall.md/GuliMall_base/1657974842626.jpg)
 5. 依上, 为其他服务配置注册中心
 
-### 测试member和coupon的远程调用
+若远程服务掉线, 那么nacos也会对应更新状态
+[](./assets/GuliMall.md/GuliMall_base/1657993655727.jpg)
+
+
+### Feign远程调用
+### 简介
+Feign是一个声明式的HTTP客户端.它的目的就是让远程调用更加简单。Feign 提供了 HTTP请求的横板，**通过编写简单的接口和插入注解**，就可以定义好HTTP请求的参数、格式、地址等信息。
+Feign 整合了**Ribbon（负载均衡）**和**Hystrix(服务熔断)**，可以让我们不再需要显式地使用这两个组件。
+SpringCloudFeign 在 NetflixFelgn的基础上扩展了 对SpringMVC注解的支持，在其实现下，我们只需创建一个接口并用注解的方式来配置它，即可完成对服务提供方的接口绑定。简化了SpringCloudRibbon自行封装服务调用客户端的开发量。
+
+### 使用
+* 引入依赖
+  创建项目时引入过的就可以忽略了
+  ``` xml
+  <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-openfeign</artifactId>
+  </dependency>
+  ```
+* 开启Feign功能(如前端通过**接口调用gulimall-member**, **gulimall-member远程调用**远程的**gulimall-coupon的接口和服务**)
+  首先gulimall-coupon需要有相应的接口和服务, 如在`gulimall-coupon`的`CouponController`新建接口和服务(为方便,这里简单写一个controller层的方法)
+  ``` java
+  @RequestMapping("/member/list")
+  public R membercouponList(){
+      CouponEntity entity = new CouponEntity();
+      entity.setCouponName("满100-10");
+      return R.ok().put("coupons", Arrays.asList(entity));
+  }
+  ```
+  1. 引入open-feign
+    启动类使用`@EnableDiscoveryClient`注解(**gulimall-member的启动类**)
+  2. 编写接口, 告诉SpringCloud这个接口这个接口需要远程服务(**gulimall-member中**)
+    - 声明远程服务调用哪一个方法
+      方便管理, 把统一服务的远程调用写到同一个类中
+      ``` java
+      @FeignClient("gulimall-coupon")
+      public interface CouponFeignService {
+
+          @RequestMapping("/coupon/coupon/member/list") // 需要完整的路径
+          public R membercouponList();
+
+      }
+      ```
+    - 声明接口(**gulimall-member中发起远程调用的接口**)
+      如在`gulimall-member`的`MemberController`中增加用户调用接口
+      ``` java
+      @RequestMapping("/coupons")
+      public R test(){
+          MemberEntity memberEntity = new MemberEntity();
+          memberEntity.setNickname("张三");
+
+          R membercoupons = couponFeignService.membercouponList();
+
+          return R.ok().put("member", memberEntity)
+                  .put("coupons", membercoupons.get("coupons"));
+      }
+      ```
+  3. 开启远程调用功能
+    使用`@EnableFeignClients`注解(**在gulimall-member的启动类上加`@EnableFeignClients(basePackages = "cn.cheakin.gulimall.member.feign")`注解**)
+  4. 排错
+    OpenFeign报错
+    ``` java
+    No Feign Client for loadBalancing defined. Didyou forget to include spring-cloud-starter-loadbalance
+    ```
+    Spring Cloud版本 2020.0.3, Spring Boot版本 2.4.6
+    原因是因为SpringCloud Feign在Hoxton.M2 RELEASED版本之后抛弃了Ribbon，使用了spring-cloud-loadbalancer，所以我们这里还需要引入spring-cloud-loadbalancer的依赖，否则就会报错
+    ``` xml
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-loadbalancer</artifactId>
+    </dependency>
+    ```
+    同时nacos也要排除掉ribbo
+    ``` xml
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        <exclusions>
+            <exclusion>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-netflix-ribbon</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+    ```
+    > 参考: https://blog.csdn.net/weixin_44524763/article/details/121730595
+  5. 测试
+    访问`http://localhost:8000/member/member/coupons`, 返回
+    ``` json
+    {"msg":"success","code":0,"coupons":[{"id":null,"couponType":null,"couponImg":null,"couponName":"满100-10","num":null,"amount":null,"perLimit":null,"minPoint":null,"startTime":null,"endTime":null,"useType":null,"note":null,"publishCount":null,"useCount":null,"receiveCount":null,"enableStartTime":null,"enableEndTime":null,"code":null,"memberLevel":null,"publish":null}],"member":{"id":null,"levelId":null,"username":null,"password":null,"nickname":"张三","mobile":null,"email":null,"header":null,"gender":null,"birth":null,"city":null,"job":null,"sign":null,"sourceType":null,"integration":null,"growth":null,"status":null,"createTime":null}}
+    ```
+
 ### 配置中心
 ### 配置中心进阶
 ### 网关
