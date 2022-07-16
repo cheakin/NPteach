@@ -23,8 +23,8 @@
     <!--  这里的属性会被子模块继承  -->
     <properties>
         <java.version>1.8</java.version>
-        <spring.boot.version>2.7.1</spring.boot.version>
-        <spring-cloud.version>2021.0.3</spring-cloud.version>
+        <spring.boot.version>2.6.3</spring.boot.version>
+        <spring-cloud.version>2021.0.1</spring-cloud.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -48,12 +48,13 @@
     <!--  这里的依赖会被子模块继承  -->
     <dependencies>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
         <dependency>
@@ -65,6 +66,10 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
             <!--jdk编译插件-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

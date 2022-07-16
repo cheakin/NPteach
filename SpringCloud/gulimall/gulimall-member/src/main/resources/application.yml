@@ -5,6 +5,13 @@ spring:
     url: jdbc:mysql://192.168.56.10:3306/gulimall_ums
     driverClassName: com.mysql.cj.jdbc.Driver
 
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    application:
+      name: gulimall-member
+
 mybatis-plus:
   # 指定mapper文件位置
   mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目

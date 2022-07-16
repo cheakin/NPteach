@@ -476,6 +476,9 @@ Redis中文文档: [](http://www.redis.cn/)
 
 **修改父模块pom**
 创建父模块：在gulimall中创建并修改pom.xml(以后还会继续添加), 并引入公共依赖
+> 注意版本关系, 可参考官网
+> Spring Cloud Alibaba: https://github.com/alibaba/spring-cloud-alibaba/wiki/%E7%89%88%E6%9C%AC%E8%AF%B4%E6%98%8E
+> Spring Cloud: https://github.com/alibaba/spring-cloud-alibaba/wiki/%E7%89%88%E6%9C%AC%E8%AF%B4%E6%98%8E
 ``` xml
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -501,8 +504,8 @@ Redis中文文档: [](http://www.redis.cn/)
     <!--  这里的属性会被子模块继承  -->
     <properties>
         <java.version>1.8</java.version>
-        <spring.boot.version>2.7.1</spring.boot.version>
-        <spring-cloud.version>2021.0.3</spring-cloud.version>
+        <spring.boot.version>2.6.3</spring.boot.version>
+        <spring-cloud.version>2021.0.1</spring-cloud.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -2466,6 +2469,88 @@ git clone https://gitee.com/renrenio/renren-generator.git
     
 
 
+
+## Spring Cloud Alibab
+[](./assets/GuliMall.md/GuliMall_base/1657939731397.jpg)
+
+### 简介
+Spring Cloud Alibaba 致力于提供微服务开发的一站式解决方案。此项目包含开发分布式应用微服务的必需组件，方便开发者通过 Spring Cloud 编程模型轻松使用这些组件来开发分布
+式应用服务。
+依托 Spring Cloud Alibaba，您只需要添加一些注解和少量配置，就可以将 Spring Cloud应用接入阿里微服务解决方案，通过阿里中间件来迅速搭建分布式应用系统。
+官方仓库: https://github.com/alibaba/spring-cloud-alibaba
+Spring Cloud Alibaba 版本说明:https://github.com/alibaba/spring-cloud-alibaba/wiki/%E7%89%88%E6%9C%AC%E8%AF%B4%E6%98%8E 
+
+SpringCloud的几大痛点:
+* SpringCloud部分组件停止维护和更新，给开发带来不便；
+* SpringCloud部分环境搭建复杂，没有完善的可视化界面，我们需要大量的二次开发和定制
+* SpringCloud配置复杂，难以上手，部分配置差别难以区分和合理应用
+
+SpringCloud Alibaba 的优势：
+阿里使用过的组件经历了考验，性能强悍，设计合理，现在开源出来大家用成套的产品搭配完善的可视化界面给开发运维带来极大的便利. 搭建简单，学习曲线低。
+
+结合 SpringCloud Alibaba 我们最终的技术搭配方案。
+**SpringCloud Alibaba - Nacos：注册中心（服务发现/注册）**
+**SpringCloud Allbaba - Nacos " 配置中心（动态配直管理）**
+**SpringCloud - Ribbon：负载均衡**
+**SpringCloud - Feign：卢明式HTTP客户请（调用远程服务）**
+**Springdloud Allbaba - Sentinel：服务容错（限流、降级、熔断）**
+**SpringCloud - Gateway : API 网关（webflux 编程模式)**
+**SpringCloud - Sleuth：调用链监控**
+**SpringCloud Alibaba - Seata . 原 Fescar，即分布式事务解决方案**
+
+* 引入依赖
+在`gulimall-common`中的`pom.xml`中添加(参考:[Spring Cloud Alibaba](https://github.com/alibaba/spring-cloud-alibaba/blob/2021.x/README-zh.md))
+``` xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+            <version>2021.0.1.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+### Nacos
+官方文档: https://nacos.io/zh-cn/docs/what-is-nacos.html
+Spring Cloud Ablibab - Nacos Discovery (注册中心): https://github.com/alibaba/spring-cloud-alibaba/blob/2.2.x/spring-cloud-alibaba-examples/nacos-example/nacos-discovery-example/readme-zh.md
+
+1. 下载并启动
+  下载地址： https://github.com/alibaba/nacos/releases
+  下载对应的版本即可，默认端口是`8848`, 启动后访问`http://127.0.0.1:8848/nacos`, 默认账号密码都是`nacos`
+  > 注意: 目前我们是非集群模式, windows下启动需要将`/bin/startup.sh`启动脚本中的`set MODE="cluster"`修改为`set MODE="standalone"`; linux下参照文档使用`sh startup.sh -m standalone`启动即可
+2. 引入依赖
+  在`gulimall-common`中的`pom.xml`中添加
+  ``` xml
+  <dependency>
+      <groupId>com.alibaba.cloud</groupId>
+      <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+  </dependency>
+  ```
+3. 配置注册地址
+  在需要的模块(即除gulimall-common外)的`application.yml`中增加
+  ``` yml
+  spring:  
+    cloud:
+      nacos:
+        discovery:
+          server-addr: 127.0.0.1:8848
+    application:
+      name: gulimall-coupon # 必须指定服务名称, 否则无法注册成功
+  ```
+4. 使用`@EnableDiscoveryClient`注解开启服务注册与发现功能
+   启动服务后在注册中心就可以看到服务了
+   [](./assets/GuliMall.md/GuliMall_base/1657974842626.jpg)
+5. 依上, 为其他服务配置注册中心
+
+### 测试member和coupon的远程调用
+### 配置中心
+### 配置中心进阶
+### 网关
+* 创建模块gulimall-gateway
 
 # 谷粒商城-高级篇
 围绕商城前端的流程系统. 搜索、结算、登录, 以及周边治理、流控、链路追踪等
