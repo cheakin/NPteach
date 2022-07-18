@@ -1,24 +1,24 @@
-spring:
-  datasource:
-    username: root
-    password: root
-    url: jdbc:mysql://192.168.56.10:3306/gulimall_sms
-    driverClassName: com.mysql.cj.jdbc.Driver
-
-  cloud:
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848
-  application:
-    name: gulimall-coupon
-
-mybatis-plus:
-  # 指定mapper文件位置
-  mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
-  # 指定主键自增
-  global-config:
-    db-config:
-      id-type: auto
-
-server:
-  port: 7000
+#spring:
+#  datasource:
+#    username: root
+#    password: root
+#    url: jdbc:mysql://192.168.56.10:3306/gulimall_sms
+#    driverClassName: com.mysql.cj.jdbc.Driver
+#
+#  cloud:
+#    nacos:
+#      discovery:
+#        server-addr: 127.0.0.1:8848
+#  application:
+#    name: gulimall-coupon
+#
+#mybatis-plus:
+#  # 指定mapper文件位置
+#  mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
+#  # 指定主键自增
+#  global-config:
+#    db-config:
+#      id-type: auto
+#
+#server:
+#  port: 7000

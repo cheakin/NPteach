@@ -2777,10 +2777,31 @@ Spring Cloud Ablibab - Nacos Discovery (注册中心): https://github.com/alibab
     port: 7000
   ```
 在`bootstrap.properties`中新增配置
+``` yml
+spring.cloud.nacos.config.extension-configs[0].data-id=datasource.yml
+spring.cloud.nacos.config.extension-configs[0].group=dev
+spring.cloud.nacos.config.extension-configs[0].refresh=true
+
+spring.cloud.nacos.config.extension-configs[1].data-id=mybatis.yml
+spring.cloud.nacos.config.extension-configs[1].group=dev
+spring.cloud.nacos.config.extension-configs[1].refresh=true
+
+spring.cloud.nacos.config.extension-configs[2].data-id=other.yml
+spring.cloud.nacos.config.extension-configs[2].group=dev
+spring.cloud.nacos.config.extension-configs[2].refresh=true
+```
+能正常启动并能正常访问`http://localhost:7000/coupon/coupon/test`即可
+- 微服务任何配置信息, 任何配置文件都可以放在配置中心中
+- 只需要在`bootstrap.properties`说明加载配置重谢的哪些配置文件即可
+- @Value, @ConfigrationPoroperties同样可以使用(原来怎么用现在还是怎么用)
   
 
 
 ### 网关
+[](./assets/GuliMall.md/GuliMall_base/1658136252118.jpg)
+#### 简介
+网关作为流量的入口，常用功能包括路由转发、权限校验、限流控制等。而springcloud gateway作为SpringCloud官方推出的第二代网关框架，取代了Zuul网关。
+
 * 创建模块gulimall-gateway
 
 # 谷粒商城-高级篇
