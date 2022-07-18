@@ -2514,7 +2514,7 @@ SpringCloud Alibaba 的优势：
 </dependencyManagement>
 ```
 
-### Nacos
+### Nacos(注册中心)
 官方文档: https://nacos.io/zh-cn/docs/what-is-nacos.html
 Spring Cloud Ablibab - Nacos Discovery (注册中心): https://github.com/alibaba/spring-cloud-alibaba/blob/2.2.x/spring-cloud-alibaba-examples/nacos-example/nacos-discovery-example/readme-zh.md
 
@@ -2528,6 +2528,12 @@ Spring Cloud Ablibab - Nacos Discovery (注册中心): https://github.com/alibab
   <dependency>
       <groupId>com.alibaba.cloud</groupId>
       <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+      <exclusions>
+          <exclusion>
+              <groupId>org.springframework.cloud</groupId>
+              <artifactId>spring-cloud-netflix-ribbon</artifactId>
+          </exclusion>
+      </exclusions>
   </dependency>
   ```
 3. 配置注册地址
@@ -2551,12 +2557,12 @@ Spring Cloud Ablibab - Nacos Discovery (注册中心): https://github.com/alibab
 
 
 ### Feign远程调用
-### 简介
+#### 简介
 Feign是一个声明式的HTTP客户端.它的目的就是让远程调用更加简单。Feign 提供了 HTTP请求的横板，**通过编写简单的接口和插入注解**，就可以定义好HTTP请求的参数、格式、地址等信息。
 Feign 整合了**Ribbon（负载均衡）**和**Hystrix(服务熔断)**，可以让我们不再需要显式地使用这两个组件。
 SpringCloudFeign 在 NetflixFelgn的基础上扩展了 对SpringMVC注解的支持，在其实现下，我们只需创建一个接口并用注解的方式来配置它，即可完成对服务提供方的接口绑定。简化了SpringCloudRibbon自行封装服务调用客户端的开发量。
 
-### 使用
+#### 使用
 * 引入依赖
   创建项目时引入过的就可以忽略了
   ``` xml
@@ -2639,7 +2645,141 @@ SpringCloudFeign 在 NetflixFelgn的基础上扩展了 对SpringMVC注解的支�
     ```
 
 ### 配置中心
+官方文档: https://nacos.io/zh-cn/docs/what-is-nacos.html
+Spring Cloud Ablibab - Nacos Discovery (注册中心): https://github.com/alibaba/spring-cloud-alibaba/blob/2.2.x/spring-cloud-alibaba-examples/nacos-example/nacos-config-example/readme-zh.md
+
+1. 下载并启动
+    略
+2. 引入依赖
+    在`gulimall-common`中的`pom.xml`中添加
+    ``` xml
+    <!--Nacos注册中心-->
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+    </dependency>
+    <!--新版spring-cloud弃用bootstrap.properties导致的传统配置方式不生效-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-bootstrap</artifactId>
+    </dependency>
+    ```
+3. 配置配置中心地址(如`gulimall-coupon`模块)
+    在应用的 `/src/main/resources/bootstrap.properties`(bootstrap.properties的启动优先级是大于aplication.yml的) 配置文件中配置 Nacos Config 元数据
+    ``` YML
+    spring.application.name=gulimall-coupon # 一般用服务名
+    spring.cloud.nacos.config.server-addr=127.0.0.1:8848
+    ```
+4. 编写配置(如`gulimall-coupon`模块)
+    在`gulimall-coupon`新建`/src/main/resources/application.properties`, 充当默认配置
+    ``` yml
+    coupon.user.name=zhangsan
+    coupon.user.age=18
+    ```
+
+    **在配置中心配置**
+    [](./assets/GuliMall.md/GuliMall_base/1658061630460.jpg)
+    [](./assets/GuliMall.md/GuliMall_base/1658061780954.jpg)
+    Data ID 默认为 应用名.properties, 如gulimall-coupon.properties
+5. 测试(如`gulimall-coupon`模块)
+    编写测试接口, 在`CouponController`类中, **类上加`@RefreshScope`注解表示启用启动刷新**
+    ``` java
+    @Value("${coupon.user.name}")
+    private String name;
+    @Value("${coupon.user.age}")
+    private Integer age;
+
+    /**
+     * 测试配置中心
+     */
+    @RequestMapping("/test")
+    public R test() {
+        return R.ok().put("name", name).put("age", age);
+    }
+    ```
+    访问`http://localhost:7000/coupon/coupon/test`, 返回结果:
+    ``` json
+    {"msg":"success","code":0,"name":"zhangsan","age":18}
+    ```
+
+    **若修改配置**
+    [](./assets/GuliMall.md/GuliMall_base/1658063170131.jpg)
+    访问`http://localhost:7000/coupon/coupon/test`, 返回结果:
+    ``` json
+    {"msg":"success","code":0,"name":"zhangsan","age":22}
+    ```
+
+    > 如果配置中心和当前应用都配置了相同的项, 会优先使用配置中心的
+
 ### 配置中心进阶
+1. 命名空间
+    用于进行租户粒度的配置隔离。不同的命名空间下，可以存在相同的 `Group` 或 `Data ID` 的配置。`Namespace` 的常用场景之一是不同环境的配置的区分隔离，例如开发测试环境和生产环境的资源（如配置、服务）隔离等。
+    默认：public（保留空间）：默认新增的所有配百都在pubLic空间。Nacos2.1是可以自定义id的
+    - 方式一
+      如开发（dev)、测试(test)、生产(prod)，切换不同的命名空间, 可以利用命名空间做环境隔离
+      只需要在`bootstrap.properties`中配置
+      ``` yml
+      spring.cloud.nacos.config.namespace=e62d9969-bade-4ab7-a028-e6201d362a23  # 命名空间id
+      ```
+      [](./assets/GuliMall.md/GuliMall_base/1658064849230.jpg)
+    - 方式二
+      每一个微服务之间项目隔离配置, 每个微服务都创建自己的命名空间, 只加载自己命名空间下的所有配置
+      原理都是一样的, 只是分类的方式不同而已
+
+2. 配置集
+  所有配置的集合
+
+3. 配置集ID
+  即Data ID, 类似文件名
+
+4. 配置分组
+  默认所有的配置集都属于: DEFAULT_GROUP
+  可以用与区分环境配置
+
+`gulimall`中我们将采用: 每个微服务船舰自己命名空间, 使用配置分组区分环境(dev/test/prod)
+[](./assets/GuliMall.md/GuliMall_base/1658067186247.jpg)
+
+**加载多配置集**
+我们将`application.yml`中不同类型的配置独立开来
+* 数据源相关配置`datasource.yml`
+  [](./assets/GuliMall.md/GuliMall_base/1658067448324.jpg)
+  ``` yml
+  spring:
+    datasource:
+      username: root
+      password: root
+      url: jdbc:mysql://192.168.56.10:3306/gulimall_sms
+      driverClassName: com.mysql.cj.jdbc.Driver
+  ```
+* MyBatis相关配置`mybatis.yml`
+  [](./assets/GuliMall.md/GuliMall_base/1658067562785.jpg)
+  ``` yml
+  mybatis-plus:
+  # 指定mapper文件位置
+  mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
+  # 指定主键自增
+  global-config:
+    db-config:
+      id-type: auto
+  ```
+* 其他相关配置`other.yml`
+  [](./assets/GuliMall.md/GuliMall_base/1658067755354.jpg)
+  ``` yml
+  spring:
+    cloud:
+      nacos:
+        discovery:
+          server-addr: 127.0.0.1:8848
+    application:
+      name: gulimall-coupon
+
+  server:
+    port: 7000
+  ```
+在`bootstrap.properties`中新增配置
+  
+
+
 ### 网关
 * 创建模块gulimall-gateway
 

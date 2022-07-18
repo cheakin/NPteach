@@ -68,6 +68,7 @@
             <scope>provided</scope> <!--scope在tomcat中有，不打包到jar包中-->
         </dependency>
 
+        <!--Nacos注册中心-->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
@@ -77,6 +78,16 @@
                     <artifactId>spring-cloud-netflix-ribbon</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <!--Nacos注册中心-->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+        <!--新版spring-cloud弃用bootstrap.properties导致的传统配置方式不生效-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
         </dependency>
 
     </dependencies>

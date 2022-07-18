@@ -4,6 +4,9 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,12 +27,29 @@ import cn.cheakin.common.utils.R;
  * @email cheakin@foxmail.com
  * @date 2022-07-16 02:10:57
  */
+@RefreshScope
 @RestController
 @RequestMapping("coupon/coupon")
 public class CouponController {
     @Autowired
     private CouponService couponService;
 
+    @Value("${coupon.user.name}")
+    private String name;
+    @Value("${coupon.user.age}")
+    private Integer age;
+
+    /**
+     * 测试配置中心
+     */
+    @RequestMapping("/test")
+    public R test() {
+        return R.ok().put("name", name).put("age", age);
+    }
+
+    /**
+     * 测试服务调用
+     */
     @RequestMapping("/member/list")
     public R membercouponList(){
         CouponEntity entity = new CouponEntity();
