@@ -5,8 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="43548d7b-427d-4601-8f72-b1926be8add3" name="变更" comment="">
-      <change beforePath="$PROJECT_DIR$/../docs/GuliMall.md" beforeDir="false" afterPath="$PROJECT_DIR$/../docs/GuliMall.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../docs/Linux.md" beforeDir="false" afterPath="$PROJECT_DIR$/../docs/Linux.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SpringCloud/gulimall/gulimall-gateway/src/main/java/cn/cheakin/gulimall/gateway/GulimallGatewayApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../SpringCloud/gulimall/gulimall-gateway/src/main/java/cn/cheakin/gulimall/gateway/GulimallGatewayApplication.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,6 +21,18 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/springboot-shiro/src/test/java/com/bilibili/ShiroSpringbootApplicationTests.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/pom.xml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/AbstractElasticsearchConfiguration.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/ElasticsearchConfig.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/Product.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/ProductDao.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/SpringDataESIndexTest.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/SpringDataESProductDaoTest.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/SpringDataESSearchTest.java" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/springdata-elasticsearch/src/main/java/cn/cheakin/springdataelasticsearch/SpringDataElasticSearchApplication.java" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -47,7 +58,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
     "jdk.selected.JAVA_MODULE": "corretto-11",
-    "last_opened_file_path": "D:/Project/NPteach/springboot",
+    "last_opened_file_path": "D:/Project/NPteach/springcloud/gulimall",
     "project.structure.last.edited": "SDK",
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.2",
@@ -274,6 +285,7 @@
       <workItem from="1656944817392" duration="393000" />
       <workItem from="1657354507510" duration="6470000" />
       <workItem from="1657718772887" duration="1044000" />
+      <workItem from="1658230202381" duration="71000" />
     </task>
     <servers />
   </component>
