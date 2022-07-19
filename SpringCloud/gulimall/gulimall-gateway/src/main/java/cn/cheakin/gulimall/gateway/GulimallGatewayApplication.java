@@ -1,0 +1,14 @@
+package cn.cheakin.gulimall.gateway;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@EnableDiscoveryApplication
+@SpringBootApplication
+public class GulimallGatewayApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(GulimallGatewayApplication.class, args);
+	}
+
+}

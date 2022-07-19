@@ -2800,7 +2800,28 @@ spring.cloud.nacos.config.extension-configs[2].refresh=true
 ### 网关
 [](./assets/GuliMall.md/GuliMall_base/1658136252118.jpg)
 #### 简介
-网关作为流量的入口，常用功能包括路由转发、权限校验、限流控制等。而springcloud gateway作为SpringCloud官方推出的第二代网关框架，取代了Zuul网关。
+网关作为流量的入口，常用功能包括路由转发、权限校验、限流控制等。而springcloud gateway作为SpringCloud官方推出的第二代网关框架，取代了Zuul网关。  
+网关提供API全托管服务。丰富的API管理功能，辅助企业管理大规模的 APl，以降低管理成本和安全风险，包括协议适配、协议转发、安全策略、防刷、流量、监控日志等功能。
+Spring Cloud Gateway 旨在提供一种简单而有效的方式来对 API进行路由，并为他们提供切面，例如：安全性，监控/指标 和弹性等。  
+
+官方文档：https://docs.spring.io/spring-cloud-gateway/docs/current/reference/html/
+
+特点：
+* Predicate(断言)
+	参考的是Java8的jva.util.functin.Predicate, 开发人员可以匹配HTTP请求中的所有内容(例如请求头或请求参数)，如果请求与断言相匹配则进行路由
+* Route(路由)
+  路由是构建网关的基本模块，它由ID，目标URI， 一系列的断言和过滤器组成，如果断言为true则匹配该路由
+* Filter(过滤)
+	指的是Spring框架中Gatewayfilter的实例，使用过滤器，可以在请求被路由前或者之后对请求进行修改。
+
+
+工作流程
+[](./assets/GuliMall.md/GuliMall_base/1658163534280.jpg)
+客户端向Spring Cloud Gateway发出请求。然后在Gateway Handler Mapping中找到与请求相匹配的路由，将其发送到GatewayWeb Handler.  
+Handler再通过指定的过滤器链来将请求发送到我们实际的服务执行业务逻辑，然后返回。  
+过滤器之间用虚线分开是因为过滤器可能会在发送代理请求之前( "pre" )或之后( "post" )执行业务逻辑。  
+Filter在"pre" 类型的过滤器可以做参数校验、权限校验、流量监控、日志输出、协议转换等，在"post" 类型的过滤器中可以做响应内容、响应头的修改，日志的输出，流量监控等有着非常重要的作用。
+
 
 * 创建模块gulimall-gateway
 
