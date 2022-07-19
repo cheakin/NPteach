@@ -2822,8 +2822,88 @@ Handler再通过指定的过滤器链来将请求发送到我们实际的服务�
 过滤器之间用虚线分开是因为过滤器可能会在发送代理请求之前( "pre" )或之后( "post" )执行业务逻辑。  
 Filter在"pre" 类型的过滤器可以做参数校验、权限校验、流量监控、日志输出、协议转换等，在"post" 类型的过滤器中可以做响应内容、响应头的修改，日志的输出，流量监控等有着非常重要的作用。
 
+##### 创建服务
+* 创建模块`gulimall-gateway`, 同时引入`gulimall-gateway依赖`
+  ``` xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+      <artifactId>gulimall</artifactId>
+      <groupId>cn.cheakin</groupId>
+      <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <groupId>cn.cheakin</groupId>
+    <artifactId>gulimall-gateway</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>gulimall-gateway</name>
+    <description>gulimall-gateway</description>
 
-* 创建模块gulimall-gateway
+    <dependencies>
+      <dependency>
+        <groupId>cn.cheakin</groupId>
+        <artifactId>gulimall-common</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-gateway</artifactId>
+      </dependency>
+    </dependencies>
+
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+      </plugins>
+    </build>
+
+  </project>
+  ```
+* 开启服务注册发现
+  1. 在启动类上使用`@EnableDiscoveryClient`注解
+  2. 在`application.properties`中配置注册中心的地址
+      ``` yml
+      spring.cloud.nacos.server-addr=127.0.0.1:8848
+      spring.application.name=gulimall-gateway
+      spring.main.web-application-type=reactive # 解决srpingboot-web冲突
+
+      server.port=88
+      ```
+  3. 在`nacos`中新建命名空间和配置
+      命名空间
+      [](./assets/GuliMall.md/GuliMall_base/1658199239155.jpg)
+
+      配置
+      [](./assets/GuliMall.md/GuliMall_base/1658199536362.jpg)
+      ``` yml
+      spring:
+        application:
+          name: gulimall-gateway
+      ```
+  4. 在`bootstrap.properties`中配置配置中心的地址和命名空间
+      ``` yml
+      spring.application.name=gulimall-gateway
+      spring.cloud.nacos.server-addr=127.0.0.1:8848
+      spring.cloud.nacos.config.namespace=gulimall-gateway
+      ```
+  5. `gulimall-gateway`还用不到数据库相关配置, 所以我们先排除数据库相关配置, 否侧无法启动
+      - 可以启动类上使用`@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})`注解
+      - 也可以在`application.properties`中加注解
+          ```yml
+          spring.main.web-application-type=reactive
+          ```
+
+* 使用
+* 
+
+
+    
+
 
 # 谷粒商城-高级篇
 围绕商城前端的流程系统. 搜索、结算、登录, 以及周边治理、流控、链路追踪等
