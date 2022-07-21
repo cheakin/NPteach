@@ -1,12 +1,11 @@
 <!-- - NPteach-note -->
 <!-- 本项目用以学习、笔记以及资料整理，共分为两类，分别是`开发相关`和`运维相关`。有且不限于Spring、SpirngBoot、Redis、SpringCloud(Alibaba)、Electron、Mysql、Nssm、JavaScript...... -->
 - 开发相关
-  - [SpringBoot](./SpringBoot)
+  - [SpringBoot](./SpringBoot.md)
   <!-- [SpringBoot](./SpringBoot) 包括多种中间件的整合，Druid、MyBatis、SpringSecurity、Shiro、Swagger、任务（多线程）、缓存（Cache）、RabbitMQ、Dubbo（Zookeeper）...... -->
-  - [SpringCloud](./SpringCloud)(含SpringCloudAlibaba)
+  - [SpringCloud](./SpringCloud.md)(含SpringCloudAlibaba)
   <!-- ![SpringCloud](./assets/ReadMe.md/1609683765035_image.png) -->
-  - SpringCloud整合内容包括：
-  <!-- 服务注册与发现（Eureka、Zookeeper、Consul）服务调用（Ribbon、OpenFeign）服务降级（Hystrix）服务网关（gateway）服务配置（Config）服务总线（Spring Cloud Bus）消息驱动（SpringCloud Stream）链路追踪（SpringCloud Sleuth） -->
+  <!-- SpringCloud整合内容包括：服务注册与发现（Eureka、Zookeeper、Consul）服务调用（Ribbon、OpenFeign）服务降级（Hystrix）服务网关（gateway）服务配置（Config）服务总线（Spring Cloud Bus）消息驱动（SpringCloud Stream）链路追踪（SpringCloud Sleuth） -->
   <!-- - SpringCloudAlibaba内容包括 -->
   <!-- SpringCloud Alibaba简介 -->
   <!-- 服务注册和配置中心（SpringCloud AlibabaNacos） -->
@@ -32,9 +31,9 @@
   - [Nssm](./Nssm.md)
   <!-- [Nssm](./Nssm.md) 一个在windows平台下，可以将`jar包+bat脚本`部署并注册为服务的技术 -->
 - 其他
-  - [软考-信息系统项目管理师](./PM.md)
+  - [软考](./PM.md)
   <!-- [软考-信息系统项目管理师](./PM.md) 信息系统项目管理师相关笔记，持续记录中...... -->
-  - [常用工具集Utils](./Utils.md)
+  - [常用工具集Utils]
   <!-- 保存一些常用的工具、代码片段、脚本 -->
 
 

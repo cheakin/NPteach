@@ -25,7 +25,7 @@
           "/.*/_sidebar.md": "/_sidebar.md",
         },
         subMaxLevel: 4, // 最大渲染层级
-        sidebarDisplayLevel: 2, // 目录展示层级
+        sidebarDisplayLevel: 3, // 目录展示层级
 
         count: {
           countable: true,
@@ -52,11 +52,22 @@
     <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
     <!-- 图片缩放 -->
     <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/zoom-image.min.js"></script>
-    <!-- 侧栏 -->
-    <!-- <script src="//cdn.jsdelivr.net/npm/docsify/lib/docsify.min.js"></script> -->
+    <!-- 侧栏折叠 -->
+    <script src="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/docsify-sidebar-collapse.min.js"></script>
     <!-- 字数统计 -->
     <script src="//unpkg.com/docsify-count/dist/countable.js"></script>
     <!-- 翻页 -->
     <script src="//unpkg.com/docsify-pagination/dist/docsify-pagination.min.js"></script>
+    <!-- Tabs -->
+    <script src="https://cdn.jsdelivr.net/npm/docsify-tabs@1"></script>
+    <!-- 代码高亮扩充, 默认有Markup(markup, html, xml, svg, mathml, ssml, atom, rss), CSS, C-like, JavaScript(javascript, js) 
+      参考: https://cdn.jsdelivr.net/npm/prismjs@1/components/
+    -->
+    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-java.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-yaml.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-properties.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-sql.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
   </body>
 </html>
