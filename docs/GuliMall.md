@@ -6282,6 +6282,145 @@ private List<CategoryEntity> getChildrens(CategoryEntity root, List<CategoryEnti
 测试: 启动并访问`localhost:10000/product/cacategory/list/tree`
 
 #### 配置网关路由与路径重写
+打开`renren-fast-vue`项目
+``` shell
+npm install
+npm run dev
+```
+> 如遇到`node-sass`报错, 注意node,node-sass, sass-loader的版本, 
+> node使用12.x, node-sass使用4.14.1, sass-loader使用7.3.1
+> 另外, idea会在.gitignore中忽略buid目录, 需要放开
+
+* 新增`商品系统`目录
+  点击系统管理->菜单管理->新增
+  [](./assets/GuliMall.md/GuliMall_base/1658455344491.jpg)
+  可以在`gulimall-admin`数据库中的`sysmenu`表中查看新增的记录
+  - 新增`分类维护`菜单
+    点击系统管理->菜单管理->新增
+    [](./assets/GuliMall.md/GuliMall_base/1658455704277.jpg)
+
+在左侧点击【分类维护】，希望在此展示3级分类
+注意地址栏http://localhost:8001/#/product-category 可以注意到product-category我们的/被替换为了-
+比如sys-role具体的视图在renren-fast-vue/views/modules/sys/role.vue
+
+所以要自定义我们的product/category视图的话，就是创建`mudules/product/category.vue`
+``` html
+<template>
+    <el-tree :data="data" :props="defaultProps" @node-click="handleNodeClick"></el-tree>
+</template>
+
+<script>
+export default {
+    name: 'category',
+    components: {},
+    directives: {},
+     data() {
+      return {
+        data: [],
+        defaultProps: {
+          children: 'children',
+          label: 'label'
+        }
+      };
+    },
+    mounted() {
+        
+    },
+    methods: {
+        handleNodeClick(data) {
+        console.log(data);
+      },
+      getMenus(){
+        this.$http({
+          url: this.$http.adornUrl('/product/category/list/tree'),
+          method: 'get'
+        }).then(data=>{
+            console.log(data)
+        })
+      }
+    },
+    created(){
+        this.getMenus();
+    }
+};
+</script>
+
+<style scoped>
+
+</style>
+```
+会发现仍然获取不到数据, 查看接口, 发现访问的是8080端口, 而不是10000端口
+解决这个问题, 我们的方法是: 搭建个网关，让网关路由到10000
+
+在`static/config/index.js`里, 修改为
+``` js
+window.SITE_CONFIG['baseUrl'] = 'http://localhost:88/api';
+```
+接着让重新登录http://localhost:8001/#/login，验证码是请求88的，所以不显示。而验证码是来源于fast后台的
+现在的验证码请求路径为: `http://localhost:88/api/captcha.jpg?uuid=69c79f02-d15b-478a-8465-a07fd09001e6`
+原始的验证码请求路径: `http://localhost:8001/renren-fast/captcha.jpg?uuid=69c79f02-d15b-478a-8465-a07fd09001e6`
+那么, `renren-fast`也需要将服务**注册到注册中心**, 并且将请求88网关转发到fast的8080端口
+
+* `renren-fast`也需要将服务注册到注册中心
+  让`renren-fast`的`pom.xml`里引入`gulimall-common`依赖, 在
+  ``` xml
+  <dependency>
+      <!-- 里面有注册中心 -->
+      <groupId>com.yxj.gulimall</groupId>
+      <artifactId>gulimall-common</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
+  </dependency> 
+  ```
+  在`renren-fast`的`application.yml`中添加:
+  ``` yml
+  spring:
+    application:
+      name: renren-fast
+    cloud:
+      nacos:
+        discovery:
+          server-addr: localhost:8848 # nacos
+  ```
+  然后在`renren-fast`启动类上加上注解`@EnableDiscoveryClient`，重启
+  > 如果报错gson依赖，就导入google的gson依赖
+
+  然后在nacos的服务列表里看到了renren-fast
+
+* 配置网关
+  在`gateway`的`application.yml`中按格式加入
+  ``` yml
+  spring:
+  cloud:
+    gateway:
+      routes:
+        - id: admin_route
+          uri: lb://renren-fast # 路由给renren-fast，lb代表负载均衡
+          predicates: # 什么情况下路由给它
+            - Path=/api/** # 默认前端项目都带上api前缀，
+          filters:
+            - RewritePath=/api/(?<segment>.*),/renren-fast/$\{segment} # 路由给renren-fast，并且把前缀替换为空
+  ```
+  将`renren-fast-vue`的`springcloud\renren-fast-vue\static\config\index.js`请求地址修改以下
+  ``` js
+  window.SITE_CONFIG['baseUrl'] = 'http://localhost:88/api';
+  ```
+登录, **验证码正常, 登录还是报错**: 从8001访问88，引发CORS跨域请求，浏览器会拒绝跨域请求
+
+#### 网关统一配置跨域
+* 跨域
+  跨域：指的是浏览器不能执行其他网站的脚本。它是由浏览器的同源策略造成的，是**浏览器对js施加的安全限制**。（ajax可以）
+  同源策略：是指协议，域名，端囗都要相同，其中有一个不同都会产生跨域；
+  [](./assets/GuliMall.md/GuliMall_base/20210217100904479.png)
+
+  跨域流程: 这个跨域请求的实现是通过预检请求实现的，先发送一个OPSTIONS探路，收到响应允许跨域后再发送真实请求
+  [](./assets/GuliMall.md/GuliMall_base/1658460292192.jpg)
+
+  跨域的解决方案：
+  方法1：设置nginx包含admin和gateway
+  方法2：让服务器告诉预检请求能跨域
+  [](./assets/GuliMall.md/GuliMall_base/1658460481451.jpg)
+  [](./assets/GuliMall.md/GuliMall_base/1658460702230.jpg)
+
 
 
 # 谷粒商城-高级篇
