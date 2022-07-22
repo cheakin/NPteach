@@ -6420,7 +6420,44 @@ window.SITE_CONFIG['baseUrl'] = 'http://localhost:88/api';
   方法2：让服务器告诉预检请求能跨域
   [](./assets/GuliMall.md/GuliMall_base/1658460481451.jpg)
   [](./assets/GuliMall.md/GuliMall_base/1658460702230.jpg)
+  我们的解决方法：
+  在`gulimall-gateway`的`application.yml`中添加
+  ``` yml
+  spring: 
+    application:
+      name: renren-fast
+    cloud:
+      nacos:
+        discovery:
+          server-addr: 127.0.0.1:8848
+  ```
+  在`gulimall-gateway`中定义`GulimallCorsConfiguration`类，该类用来做过滤，允许所有的请求跨域。
+  ``` java
+  @Configuration // gateway
+  public class GulimallCorsConfiguration {
 
+      @Bean // 添加过滤器
+      public CorsWebFilter corsWebFilter(){
+          // 基于url跨域，选择reactive包下的
+          UrlBasedCorsConfigurationSource source=new UrlBasedCorsConfigurationSource();
+          // 跨域配置信息
+          CorsConfiguration corsConfiguration = new CorsConfiguration();
+          // 允许跨域的头
+          corsConfiguration.addAllowedHeader("*");
+          // 允许跨域的请求方式
+          corsConfiguration.addAllowedMethod("*");
+          // 允许跨域的请求来源
+          corsConfiguration.addAllowedOrigin("*");
+          // 是否允许携带cookie跨域
+          corsConfiguration.setAllowCredentials(true);
+          
+        // 任意url都要进行跨域配置
+          source.registerCorsConfiguration("/**",corsConfiguration);
+          return new CorsWebFilter(source);
+      }
+  }
+  ```
+  重启后, 再次登录, 现在就能够正常登录了
 
 
 # 谷粒商城-高级篇
