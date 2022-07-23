@@ -5,6 +5,7 @@
 > [从前慢-谷粒商城篇章3](https://blog.csdn.net/unique_perfect/article/details/114035775)
 > [guli-mall](https://www.yuque.com/zhangshuaiyin/guli-mall)
 
+
 ## 项目简介
 *  电商模式
   市面上有5种常见的电商模式 B2B、B2C、C2B、C2C、O2O
@@ -18,6 +19,12 @@
     C2C (Customer to Consumer) 客户之间把自己的东西放到网上去卖 。如淘宝、咸鱼
   - O2O 模式
     O2O 即 Online To Offline，也即将线下商务的机会与互联网结合在一起，让互联网成为线上交易前台，线上快速支付，线上优质服务，如：饿了么，美团，淘票票，京东到家
+
+### 项目架构
+* 架构图
+  [](./assets/GuliMall.md/谷粒商城-微服务架构图.jpg)
+* 微服务划分图
+  [](./assets/GuliMall.md/谷粒商城-微服务划分图.jpg)
 
 ### 谷粒商城
 谷粒商城是一个B2C模式的电商平台，销售自营商品给客户
@@ -84,7 +91,6 @@
 
 # 谷粒商城-基础篇
 围绕电商后台管理系统. 使用前后端分离, 前端使用Vue.
-
 ## 分布式基础概念
 ### 微服务
 微服务架构风格，就像是把一个单独的应用程序开发成一套小服务，每个小服务运行在自己的进程中，并使用轻量级机制通信，通常是 HTTP API 这些服务围绕业务能力来构建，	并通过完全自动化部署机制来独立部署，这些服务使用不同的编程语言书写，以及不同数据存储技术，并保持最低限度的集中式管理  
@@ -6306,7 +6312,7 @@ npm run dev
 所以要自定义我们的product/category视图的话，就是创建`mudules/product/category.vue`
 ``` html
 <template>
-    <el-tree :data="data" :props="defaultProps" @node-click="handleNodeClick"></el-tree>
+    <el-tree :data="menus" :props="defaultProps" @node-click="handleNodeClick"></el-tree>
 </template>
 
 <script>
@@ -6316,7 +6322,7 @@ export default {
     directives: {},
      data() {
       return {
-        data: [],
+        menus: [],
         defaultProps: {
           children: 'children',
           label: 'label'
@@ -6407,58 +6413,1622 @@ window.SITE_CONFIG['baseUrl'] = 'http://localhost:88/api';
 登录, **验证码正常, 登录还是报错**: 从8001访问88，引发CORS跨域请求，浏览器会拒绝跨域请求
 
 #### 网关统一配置跨域
-* 跨域
-  跨域：指的是浏览器不能执行其他网站的脚本。它是由浏览器的同源策略造成的，是**浏览器对js施加的安全限制**。（ajax可以）
-  同源策略：是指协议，域名，端囗都要相同，其中有一个不同都会产生跨域；
-  [](./assets/GuliMall.md/GuliMall_base/20210217100904479.png)
+跨域：指的是浏览器不能执行其他网站的脚本。它是由浏览器的同源策略造成的，是**浏览器对js施加的安全限制**。（ajax可以）
+同源策略：是指协议，域名，端囗都要相同，其中有一个不同都会产生跨域；
+[](./assets/GuliMall.md/GuliMall_base/20210217100904479.png)
 
-  跨域流程: 这个跨域请求的实现是通过预检请求实现的，先发送一个OPSTIONS探路，收到响应允许跨域后再发送真实请求
-  [](./assets/GuliMall.md/GuliMall_base/1658460292192.jpg)
+跨域流程: 这个跨域请求的实现是通过预检请求实现的，先发送一个OPSTIONS探路，收到响应允许跨域后再发送真实请求
+[](./assets/GuliMall.md/GuliMall_base/1658460292192.jpg)
 
-  跨域的解决方案：
-  方法1：设置nginx包含admin和gateway
-  方法2：让服务器告诉预检请求能跨域
-  [](./assets/GuliMall.md/GuliMall_base/1658460481451.jpg)
-  [](./assets/GuliMall.md/GuliMall_base/1658460702230.jpg)
-  我们的解决方法：
-  在`gulimall-gateway`的`application.yml`中添加
-  ``` yml
-  spring: 
-    application:
-      name: renren-fast
-    cloud:
-      nacos:
-        discovery:
-          server-addr: 127.0.0.1:8848
-  ```
-  在`gulimall-gateway`中定义`GulimallCorsConfiguration`类，该类用来做过滤，允许所有的请求跨域。
-  ``` java
-  @Configuration // gateway
-  public class GulimallCorsConfiguration {
+跨域的解决方案：
+方法1：设置nginx包含admin和gateway
+方法2：让服务器告诉预检请求能跨域
+[](./assets/GuliMall.md/GuliMall_base/1658460481451.jpg)
+[](./assets/GuliMall.md/GuliMall_base/1658460702230.jpg)
+我们的解决方法：
+在`gulimall-gateway`的`application.yml`中添加
+``` yml
+spring: 
+  application:
+    name: renren-fast
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+```
+在`gulimall-gateway`中定义`GulimallCorsConfiguration`类，该类用来做过滤，允许所有的请求跨域。
+``` java
+@Configuration // gateway
+public class GulimallCorsConfiguration {
 
-      @Bean // 添加过滤器
-      public CorsWebFilter corsWebFilter(){
-          // 基于url跨域，选择reactive包下的
-          UrlBasedCorsConfigurationSource source=new UrlBasedCorsConfigurationSource();
-          // 跨域配置信息
-          CorsConfiguration corsConfiguration = new CorsConfiguration();
-          // 允许跨域的头
-          corsConfiguration.addAllowedHeader("*");
-          // 允许跨域的请求方式
-          corsConfiguration.addAllowedMethod("*");
-          // 允许跨域的请求来源
-          corsConfiguration.addAllowedOrigin("*");
-          // 是否允许携带cookie跨域
-          corsConfiguration.setAllowCredentials(true);
-          
-        // 任意url都要进行跨域配置
-          source.registerCorsConfiguration("/**",corsConfiguration);
-          return new CorsWebFilter(source);
+    @Bean // 添加过滤器
+    public CorsWebFilter corsWebFilter(){
+        // 基于url跨域，选择reactive包下的
+        UrlBasedCorsConfigurationSource source=new UrlBasedCorsConfigurationSource();
+        // 跨域配置信息
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+        // 允许跨域的头
+        corsConfiguration.addAllowedHeader("*");
+        // 允许跨域的请求方式
+        corsConfiguration.addAllowedMethod("*");
+        // 允许跨域的请求来源
+        //corsConfiguration.addAllowedOrigin("*");
+        corsConfiguration.addAllowedOriginPattern("*"); // 如果配置中多次解决了跨域, 可以使用这个统一处理; 否则多次解决跨域会报错(需要注释掉renren-fast中跨域的处理)
+        // 是否允许携带cookie跨域
+        corsConfiguration.setAllowCredentials(true);
+        
+      // 任意url都要进行跨域配置
+        source.registerCorsConfiguration("/**",corsConfiguration);
+        return new CorsWebFilter(source);
+    }
+}
+```
+重启后, 再次登录, 现在就能够正常登录了
+
+#### 树形展示三级分类数据
+在显示商品系统/分类信息的时候，出现了404异常，请求的`http://localhost:88/api/product/category/list/tree`不存在
+这是因为网关上所做的路径映射不正确，映射后的路径为~http://localhost:8001/renren-fast/product/category/list/tree~
+但是只有通过`http://localhost:10000/product/category/list/tree`路径才能够正常访问，所以会报404异常。
+
+所以需要在`gulimall-gateway`的`application.yml`中添加路由规则
+``` yaml
+- id: product_route
+  uri: lb://gulimall-product
+  predicates:
+    - Path=/api/product/**
+  filters:
+    - RewritePath=/api/(?<segment>.*),/$\{segment}
+```
+`gulimall-product`注册到注册中心. 在nacos中创建命名空间
+[](./assets/GuliMall.md/GuliMall_base/1658545998862.jpg)
+`guliamll-product`中新建`bootstrap.properties`
+``` properties
+spring.cloud.nacos.config.server-addr=127.0.0.1:8848
+spring.cloud.nacos.config.namespace=e6cd36a8-81a2-4df2-bfbc-f0524fa17664
+```
+`gulimall-product`的`application.ym`中添加配置中心地址
+```yml
+spring:
+  datasource:
+    username: root
+    password: root
+    url: jdbc:mysql://192.168.56.10:3306/gulimall_pms
+    driverClassName: com.mysql.cj.jdbc.Driver
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+  application:
+    name: gulimall-product
+
+mybatis-plus:
+  # 指定mapper文件位置
+  mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
+  # 指定主键自增
+  global-config:
+    db-config:
+      id-type: auto
+
+server:
+  port: 10000
+```
+并在`gulimall-product`的启动类上使用`@EnableDiscoveryClient`注解
+
+此时访问 `localhost:88/api/product/category/list/tree` 报 `invalid token`(非法令牌)，后台管理系统中没有登录，所以没有带令牌
+原因：`gulimall-gateway`先匹配的先路由，fast是泛匹配, 与product有路由重叠，且fast匹配在前, 所以要求登录
+那么就需要修改路由规则的顺序:
+``` yml
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: baidu_route
+          uri: https://www.baidu.com
+          predicates:
+            - Query=url, baidu  # Query指请求参数
+
+        - id: qq_route
+          uri: https://www.qq.com
+          predicates:
+            - Query=url, qq
+
+        - id: product_rout
+          uri: lb://gulimall-product
+          predicates:
+            - Path=/api/product/**
+          filters:
+            - RewritePath=/api/(?<segment>.*),/$\{segment}
+
+        - id: admin_route
+          uri: lb://renren-fast # 路由给renren-fast，lb代表负载均衡
+          predicates: # 什么情况下路由给它
+            - Path=/api/** # 默认前端项目都带上api前缀，
+          filters:
+            - RewritePath=/api/(?<segment>.*),/renren-fast/$\{segment}  # 路由给renren-fast，并且把前缀替换为空, 请求到真实路径
+```
+此时访问`http://localhost:88/api/product/category/list/tree`就能正常访问了, 前端的`分类维护`控制台中也能正常打印了
+
+接着继续写**前端**
+结构请求的返回体
+``` js
+getMenus() {
+  this.$http({ // http://localhost:10000/renren-fast/product/category/list/tree
+    url: this.$http.adornUrl("/product/category/list/tree"),
+    method: "get"
+  })
+    .then(({ data }) => { // success
+      this.menus = data.data; // 数组内容，把数据给menus，就是给了vue实例，最后绑定到视图上
+    }) //fail
+    .catch(() => {});
+}
+```
+而在data中
+``` js
+defaultProps: {
+  children: "children",
+  label: "name"
+}
+```
+
+
+#### 删除数据
+`scoped slot`（插槽）：在el-tree标签里把内容写到span标签栏里即可
+修改`category.vue`的代码
+``` html
+<template>
+  <el-tree :data="menus" :props="defaultProps" :expand-on-click-node="false" show-checkbox node-key="catId">
+    <span class="custom-tree-node" slot-scope="{ node, data }">
+      <span>{{ node.label }}</span>
+      <span>
+        <el-button
+          v-if="node.level <= 2"
+          type="text"
+          size="mini"
+          @click="() => append(data)"
+        >
+          Append
+        </el-button>
+        <el-button
+          v-if="node.childNodes.length==0"
+          type="text"
+          size="mini"
+          @click="() => remove(node, data)"
+        >
+          Delete
+        </el-button>
+      </span>
+    </span>
+  </el-tree>
+</template>
+
+<script>
+export default {
+  name: "category",
+  components: {},
+  directives: {},
+  data() {
+    return {
+      menus: [],
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  mounted() {},
+  methods: {
+    append(data) {},
+    remove(node, data) {},
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get",
+      }).then(({ data }) => {
+        console.log("成功获取到菜单数据...", data.data);
+        this.menus = data.data;
+      });
+    },
+  },
+  created() {
+    this.getMenus();
+  },
+};
+</script>
+
+<style scoped>
+</style>
+```
+
+测试删除数据, 为了比对效果, 可以在删除之前查询数据库的`pms_category`表：
+``` json
+POST http://localhost:88/api/product/category/delete
+[1432]
+// 返回结果
+{
+    "msg": "success",
+    "code": 0
+}
+```
+此时看数据库已经没有1432这条数据了 
+
+但是我们删除前通常需要修改检查当前菜单是否被引用,
+``` java
+//修改`CategoryController`类，修改为如下代码
+@RequestMapping("/delete")
+  public R delete(@RequestBody Long[] catIds){
+    //删除之前需要判断待删除的菜单那是否被别的地方所引用。
+//		categoryService.removeByIds(Arrays.asList(catIds));
+    categoryService.removeMenuByIds(Arrays.asList(catIds));
+
+    return R.ok();
+}
+
+
+@Override
+public void removeMenuByIds(List<Long> asList) {
+    //TODO 1 检查当前的菜单是否被别的地方所引用
+    baseMapper.deleteBatchIds(asList);
+}
+product.service.impl.CategoryServiceImpl
+```
+
+**逻辑删除**
+然而多数时候，我们并不希望删除数据，而是标记它被删除了，这就是逻辑删除；
+逻辑删除是mybatis-plus 的内容，会在项目中配置一些内容，告诉此项目执行delete语句时并不删除，只是标志位
+可以设置show_status为0，标记它已经被删除。
+mybatis-plus的逻辑删除：https://baomidou.com/pages/6b03c5/
+``` yml
+mybatis-plus:
+  # 指定mapper文件位置
+  mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
+  # 指定主键自增
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+```
+修改`CategoryEntity`实体类，对应字段添加上`@TableLogic`，表明使用逻辑删除;
+
+另外在`application.yml`”`文件中，设置日志级别，打印出SQL语句：
+``` YML
+logging:
+  level:
+    cn.cheakin.gulimall: debug
+```
+测试一下是否能够满足需要
+``` json
+POST http://localhost:88/api/product/category/delete
+[1431]
+// 返回结果
+{
+    "msg": "success",
+    "code": 0
+}
+// 控制台打印
+==>  Preparing: UPDATE pms_category SET show_status=0 WHERE cat_id IN ( ? ) AND show_status=1 
+==> Parameters: 1000(Long)
+<==    Updates: 1
+```
+
+**前端删除方法**
+在`util/httpRequest.js`中，封装了一些拦截器
+* http.adornParams是封装get请求的数据
+* http.adornData封装post请求的数据
+> ajax的get请求会被缓存，就不会请求服务器了. 所以我们在url后面拼接个时间戳，让他每次都请求服务器的请求都不同, 获取到的就是新数据了
+
+``` html
+<template>
+  <div>
+    <el-tree
+      :data="menus"
+      :props="defaultProps"
+      :expand-on-click-node="false"
+      show-checkbox
+      node-key="catId"
+      :default-expanded-keys="expandedKey"
+    >
+      <span class="custom-tree-node" slot-scope="{ node, data }">
+        <span>{{ node.label }}</span>
+        <span>
+          <el-button
+            v-if="node.level <= 2"
+            type="text"
+            size="mini"
+            @click="() => append(data)"
+          >
+            Append
+          </el-button>
+          <el-button
+            v-if="node.childNodes.length == 0"
+            type="text"
+            size="mini"
+            @click="() => remove(node, data)"
+          >
+            Delete
+          </el-button>
+        </span>
+      </span>
+    </el-tree>
+    <el-dialog title="提示" :visible.sync="dialogVisible" width="30%">
+      <el-form :model="category">
+        <el-form-item label="分类名称">
+          <el-input v-model="category.name" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="addCategory">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "category",
+  components: {},
+  directives: {},
+  data() {
+    return {
+      dialogVisible: false,
+      menus: [],
+      expandedKey: [],
+      category: { name: "", parentCid: 0, catLevel: 0, showStatus: 1, sort: 0 },
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  mounted() {},
+  methods: {
+    append(data) {
+      console.log("append----", data);
+      this.category.parentCid = data.catId;
+      this.category.catLevel = data.catLevel * 1 + 1;
+      this.dialogVisible = true;
+    },
+    // 添加三级分类
+    addCategory() {
+      console.log("提交的三级分类数据", this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单保存成功!",
+          });
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    remove(node, data) {
+      console.log("remove---", node);
+      console.log("data---", data);
+      var ids = [data.catId];
+
+      this.$confirm(`是否删除【${data.name}】当前菜单?`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(ids, false),
+          })
+            .then(({ data }) => {
+              this.$message({
+                type: "success",
+                message: "菜单删除成功!",
+              });
+              // 刷新出新的菜单
+              this.getMenus();
+              // 设置需要默认展开的节点
+              this.expandedKey = [node.parent.data.catId];
+            })
+            .catch(() => {});
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
+    },
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get",
+      }).then(({ data }) => {
+        console.log("成功获取到菜单数据...", data.data);
+        this.menus = data.data;
+      });
+    },
+  },
+  created() {
+    this.getMenus();
+  },
+};
+</script>
+
+<style scoped>
+</style>
+```
+
+#### 新增数据
+使用到了ElementUI的对话框功能
+``` html
+<template>
+  <div>
+    <el-tree
+      :data="menus"
+      :props="defaultProps"
+      :expand-on-click-node="false"
+      show-checkbox
+      node-key="catId"
+      :default-expanded-keys="expandedKey"
+    >
+      <span class="custom-tree-node" slot-scope="{ node, data }">
+        <span>{{ node.label }}</span>
+        <span>
+          <el-button
+            v-if="node.level <= 2"
+            type="text"
+            size="mini"
+            @click="() => append(data)"
+          >
+            Append
+          </el-button>
+          <el-button
+            v-if="node.childNodes.length == 0"
+            type="text"
+            size="mini"
+            @click="() => remove(node, data)"
+          >
+            Delete
+          </el-button>
+        </span>
+      </span>
+    </el-tree>
+    <el-dialog title="提示" :visible.sync="dialogVisible" width="30%">
+      <el-form :model="category">
+        <el-form-item label="分类名称">
+          <el-input v-model="category.name" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="addCategory">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "category",
+  components: {},
+  directives: {},
+  data() {
+    return {
+      dialogVisible: false,
+      menus: [],
+      expandedKey: [],
+      category: { name: "", parentCid: 0, catLevel: 0, showStatus: 1, sort: 0 },
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  mounted() {},
+  methods: {
+    append(data) {
+      console.log("append----", data);
+      this.category.parentCid = data.catId;
+      this.category.catLevel = data.catLevel * 1 + 1;
+      this.dialogVisible = true;
+    },
+    // 添加三级分类
+    addCategory() {
+      console.log("提交的三级分类数据", this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单保存成功!",
+          });
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    remove(node, data) {
+      console.log("remove---", node);
+      console.log("data---", data);
+      var ids = [data.catId];
+
+      this.$confirm(`是否删除【${data.name}】当前菜单?`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(ids, false),
+          })
+            .then(({ data }) => {
+              this.$message({
+                type: "success",
+                message: "菜单删除成功!",
+              });
+              // 刷新出新的菜单
+              this.getMenus();
+              this.expandedKey = [node.parent.data.catId];
+            })
+            .catch(() => {});
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
+    },
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get",
+      }).then(({ data }) => {
+        console.log("成功获取到菜单数据...", data.data);
+        this.menus = data.data;
+      });
+    },
+  },
+  created() {
+    this.getMenus();
+  },
+};
+</script>
+
+<style scoped>
+</style>
+```
+
+#### 修改分类
+`CategoryController`类修改
+``` java
+/**
+  * 信息
+  */
+@RequestMapping("/info/{catId}")
+// @RequiresPermissions("product:category:info")
+public R info(@PathVariable("catId") Long catId){
+  CategoryEntity category = categoryService.getById(catId);
+
+  return R.ok().put("data", category);
+}
+```
+`category.vue`页面
+``` html
+<template>
+  <div>
+    <el-tree
+      :data="menus"
+      :props="defaultProps"
+      :expand-on-click-node="false"
+      show-checkbox
+      node-key="catId"
+      :default-expanded-keys="expandedKey"
+    >
+      <span class="custom-tree-node" slot-scope="{ node, data }">
+        <span>{{ node.label }}</span>
+        <span>
+          <el-button
+            v-if="node.level <= 2"
+            type="text"
+            size="mini"
+            @click="() => append(data)"
+          >
+            Append
+          </el-button>
+          <el-button type="text" size="mini" @click="() => edit(data)">
+            Edit
+          </el-button>
+          <el-button
+            v-if="node.childNodes.length == 0"
+            type="text"
+            size="mini"
+            @click="() => remove(node, data)"
+          >
+            Delete
+          </el-button>
+        </span>
+      </span>
+    </el-tree>
+    <el-dialog
+      :title="title"
+      :visible.sync="dialogVisible"
+      width="30%"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="category">
+        <el-form-item label="分类名称">
+          <el-input v-model="category.name" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="图标">
+          <el-input v-model="category.icon" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="计量单位">
+          <el-input
+            v-model="category.productUnit"
+            autocomplete="off"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitData">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "category",
+  components: {},
+  directives: {},
+  data() {
+    return {
+      title: "",
+      dialogType: "", //edit,add
+      dialogVisible: false,
+      menus: [],
+      expandedKey: [],
+      category: {
+        name: "",
+        parentCid: 0,
+        catLevel: 0,
+        showStatus: 1,
+        sort: 0,
+        icon: "",
+        productUnit: "",
+        catId: null,
+      },
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  mounted() {},
+  methods: {
+    append(data) {
+      console.log("append----", data);
+      this.dialogType = "add";
+      this.title = "添加分类";
+      this.category.parentCid = data.catId;
+      this.category.catLevel = data.catLevel * 1 + 1;
+      this.category.catId = null;
+      this.category.name = null;
+      this.category.icon = "";
+      this.category.productUnit = "";
+      this.category.sort = 0;
+      this.category.showStatus = 1;
+      this.dialogVisible = true;
+    },
+    // 添加三级分类
+    addCategory() {
+      console.log("提交的三级分类数据", this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单保存成功!",
+          });
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    // 修改三级分类数据
+    editCategory() {
+      // 需要修改什么就解构什么
+      var { catId, name, icon, productUnit } = this.category;
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update"),
+        method: "post",
+        data: this.$http.adornData({ catId, name, icon, productUnit }, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单修改成功!",
+          });
+          // 关闭对话框
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          // 设置需要默认展开的菜单
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    edit(data) {
+      console.log("要修改的数据", data);
+      this.dialogType = "edit";
+      this.title = "修改分类";
+      // 发送请求获取节点最新的数据
+      this.$http({
+        url: this.$http.adornUrl(`/product/category/info/${data.catId}`),
+        method: "get",
+      }).then(({ data }) => {
+        // 请求成功
+        console.log("要回显得数据", data);
+        this.category.name = data.data.name;
+        this.category.catId = data.data.catId;
+        this.category.icon = data.data.icon;
+        this.category.productUnit = data.data.productUnit;
+        this.category.parentCid = data.data.parentCid;
+        this.dialogVisible = true;
+      });
+    },
+    submitData() {
+      if (this.dialogType == "add") {
+        this.addCategory();
       }
-  }
-  ```
-  重启后, 再次登录, 现在就能够正常登录了
+      if (this.dialogType == "edit") {
+        this.editCategory();
+      }
+    },
+    remove(node, data) {
+      console.log("remove---", node);
+      console.log("data---", data);
+      var ids = [data.catId];
 
+      this.$confirm(`是否删除【${data.name}】当前菜单?`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(ids, false),
+          })
+            .then(({ data }) => {
+              this.$message({
+                type: "success",
+                message: "菜单删除成功!",
+              });
+              // 刷新出新的菜单
+              this.getMenus();
+              this.expandedKey = [node.parent.data.catId];
+            })
+            .catch(() => {});
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
+    },
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get",
+      }).then(({ data }) => {
+        console.log("成功获取到菜单数据...", data.data);
+        this.menus = data.data;
+      });
+    },
+  },
+  created() {
+    this.getMenus();
+  },
+};
+</script>
+
+<style scoped>
+</style>
+```
+
+#### 拖拽效果
+为了防止误操作，我们通过edit把拖拽功能开启后才能进行操作。所以添加`switch`标签，操作是否可以拖拽。
+
+但是现在存在的一个问题是每次拖拽的时候，都会发送请求，更新数据库这样频繁的与数据库交互
+现在想要实现一个拖拽过程中不更新数据库，拖拽完成后，统一提交拖拽后的数据。
+`<el-button v-if="draggable" @click="batchSave">批量保存</el-button>`
+`category.vue`页面
+``` html
+<template>
+  <div>
+    <el-switch
+      v-model="draggable"
+      active-text="开启拖拽"
+      inactive-text="关闭拖拽"
+    >
+    </el-switch>
+    <el-button @click="batchSave" v-if="draggable">批量保存</el-button>
+    <el-tree
+      @node-drop="handleDrop"
+      :data="menus"
+      :props="defaultProps"
+      :expand-on-click-node="false"
+      show-checkbox
+      node-key="catId"
+      :default-expanded-keys="expandedKey"
+      :draggable="draggable"
+      :allow-drop="allowDrop"
+    >
+      <span class="custom-tree-node" slot-scope="{ node, data }">
+        <span>{{ node.label }}</span>
+        <span>
+          <el-button
+            v-if="node.level <= 2"
+            type="text"
+            size="mini"
+            @click="() => append(data)"
+          >
+            Append
+          </el-button>
+          <el-button type="text" size="mini" @click="() => edit(data)">
+            Edit
+          </el-button>
+          <el-button
+            v-if="node.childNodes.length == 0"
+            type="text"
+            size="mini"
+            @click="() => remove(node, data)"
+          >
+            Delete
+          </el-button>
+        </span>
+      </span>
+    </el-tree>
+    <el-dialog
+      :title="title"
+      :visible.sync="dialogVisible"
+      width="30%"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="category">
+        <el-form-item label="分类名称">
+          <el-input v-model="category.name" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="图标">
+          <el-input v-model="category.icon" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="计量单位">
+          <el-input
+            v-model="category.productUnit"
+            autocomplete="off"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitData">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "category",
+  components: {},
+  directives: {},
+  data() {
+    return {
+      pCid: [],
+      draggable: false,
+      updateNodes: [],
+      maxLevel: 0,
+      title: "",
+      dialogType: "", //edit,add
+      dialogVisible: false,
+      menus: [],
+      expandedKey: [],
+      category: {
+        name: "",
+        parentCid: 0,
+        catLevel: 0,
+        showStatus: 1,
+        sort: 0,
+        icon: "",
+        productUnit: "",
+        catId: null,
+      },
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  mounted() {},
+  methods: {
+    batchSave() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update/sort"),
+        method: "post",
+        data: this.$http.adornData(this.updateNodes, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单顺序修改成功!",
+          });
+          // 刷新出新的菜单
+          this.getMenus();
+          // 设置需要默认展开的菜单
+          this.expandedKey = this.pCid;
+          this.updateNodes = [];
+          this.maxLevel = 0;
+          // this.pCid = 0;
+        })
+        .catch(() => {});
+    },
+    handleDrop(draggingNode, dropNode, dropType, ev) {
+      console.log("handleDrop: ", draggingNode, dropNode, dropType);
+
+      //1 当前节点最新的父节点
+      let pCid = 0;
+      let siblings = null;
+      if (dropType == "before" || dropType == "after") {
+        pCid =
+          dropNode.parent.data.catId == undefined
+            ? 0
+            : dropNode.parent.data.catId;
+        siblings = dropNode.parent.childNodes;
+      } else {
+        pCid = dropNode.data.catId;
+        siblings = dropNode.childNodes;
+      }
+      this.pCid.push(pCid);
+      //2 当前拖拽节点的最新顺序
+      for (let i = 0; i < siblings.length; i++) {
+        if (siblings[i].data.catId == draggingNode.data.catId) {
+          // 如果遍历的是当前正在拖拽的节点
+          let catLevel = draggingNode.level;
+          if (siblings[i].level != draggingNode.level) {
+            // 当前节点的层级发生变化
+            catLevel = siblings[i].level;
+            // 修改他子节点的层级
+            this.updateChildNodeLevlel(siblings[i]);
+          }
+          this.updateNodes.push({
+            catId: siblings[i].data.catId,
+            sort: i,
+            parentCid: pCid,
+            catLevel: catLevel,
+          });
+        } else {
+          this.updateNodes.push({ catId: siblings[i].data.catId, sort: i });
+        }
+      }
+      //3 当前拖拽节点的最新层级
+      console.log("updateNodes", this.updateNodes);
+    },
+    updateChildNodeLevlel(node) {
+      if (node.childNodes.length > 0) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          var cNode = node.childNodes[i].data;
+          this.updateNodes.push({
+            catId: cNode.catId,
+            catLevel: node.childNodes[i].level,
+          });
+          this.updateChildNodeLevlel(node.childNodes[i]);
+        }
+      }
+    },
+    allowDrop(draggingNode, dropNode, type) {
+      //1 被拖动的当前节点以及所在的父节点总层数不能大于3
+
+      //1 被拖动的当前节点总层数
+      console.log("allowDrop:", draggingNode, dropNode, type);
+
+      var level = this.countNodeLevel(draggingNode);
+
+      // 当前正在拖动的节点+父节点所在的深度不大于3即可
+      let deep = Math.abs(this.maxLevel - draggingNode.level) + 1;
+      console.log("深度:", deep);
+
+      // this.maxLevel
+      if (type == "innner") {
+        // console.log(
+        //   `this.maxLevel: ${this.maxLevel}; draggingNode.data.catLevel:${draggingNode.data.catLevel};dropNode.level: ${dropNode.level}`
+        // );
+        return deep + dropNode.level <= 3;
+      } else {
+        return deep + dropNode.parent.level <= 3;
+      }
+    },
+    countNodeLevel(node) {
+      // 找到所有子节点，求出最大深度
+      if (node.childNodes != null && node.childNodes.length > 0) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          if (node.childNodes[i].level > this.maxLevel) {
+            this.maxLevel = node.childNodes[i].level;
+          }
+          this.countNodeLevel(node.childNodes);
+        }
+      }
+    },
+    append(data) {
+      console.log("append----", data);
+      this.dialogType = "add";
+      this.title = "添加分类";
+      this.category.parentCid = data.catId;
+      this.category.catLevel = data.catLevel * 1 + 1;
+      this.category.catId = null;
+      this.category.name = null;
+      this.category.icon = "";
+      this.category.productUnit = "";
+      this.category.sort = 0;
+      this.category.showStatus = 1;
+      this.dialogVisible = true;
+    },
+    // 添加三级分类
+    addCategory() {
+      console.log("提交的三级分类数据", this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单保存成功!",
+          });
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    // 修改三级分类数据
+    editCategory() {
+      // 需要修改什么就解构什么
+      var { catId, name, icon, productUnit } = this.category;
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update"),
+        method: "post",
+        data: this.$http.adornData({ catId, name, icon, productUnit }, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单修改成功!",
+          });
+          // 关闭对话框
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          // 设置需要默认展开的菜单
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    edit(data) {
+      console.log("要修改的数据", data);
+      this.dialogType = "edit";
+      this.title = "修改分类";
+      // 发送请求获取节点最新的数据
+      this.$http({
+        url: this.$http.adornUrl(`/product/category/info/${data.catId}`),
+        method: "get",
+      }).then(({ data }) => {
+        // 请求成功
+        console.log("要回显得数据", data);
+        this.category.name = data.data.name;
+        this.category.catId = data.data.catId;
+        this.category.icon = data.data.icon;
+        this.category.productUnit = data.data.productUnit;
+        this.category.parentCid = data.data.parentCid;
+        this.dialogVisible = true;
+      });
+    },
+    submitData() {
+      if (this.dialogType == "add") {
+        this.addCategory();
+      }
+      if (this.dialogType == "edit") {
+        this.editCategory();
+      }
+    },
+    remove(node, data) {
+      console.log("remove---", node);
+      console.log("data---", data);
+      var ids = [data.catId];
+
+      this.$confirm(`是否删除【${data.name}】当前菜单?`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(ids, false),
+          })
+            .then(({ data }) => {
+              this.$message({
+                type: "success",
+                message: "菜单删除成功!",
+              });
+              // 刷新出新的菜单
+              this.getMenus();
+              this.expandedKey = [node.parent.data.catId];
+            })
+            .catch(() => {});
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
+    },
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get",
+      }).then(({ data }) => {
+        console.log("成功获取到菜单数据...", data.data);
+        this.menus = data.data;
+      });
+    },
+  },
+  created() {
+    this.getMenus();
+  },
+};
+</script>
+
+<style scoped>
+</style>
+```
+`CategoryController`类增加
+``` java
+/**
+ * 修改分类
+ */
+@RequestMapping("/update/sort")
+// @RequiresPermissions("product:category:update")
+public R update(@RequestBody CategoryEntity[] category){
+  categoryService.updateBatchById(Arrays.asList(category));
+  return R.ok();
+}
+```
+
+#### 批量删除
+`category.vue`页面
+``` html
+<template>
+  <div>
+    <el-switch
+      v-model="draggable"
+      active-text="开启拖拽"
+      inactive-text="关闭拖拽"
+    >
+    </el-switch>
+    <el-button @click="batchSave" v-if="draggable">批量保存</el-button>
+    <el-button type="danger" @click="batchDelete">批量删除</el-button>
+    <el-tree
+      @node-drop="handleDrop"
+      :data="menus"
+      :props="defaultProps"
+      :expand-on-click-node="false"
+      show-checkbox
+      node-key="catId"
+      :default-expanded-keys="expandedKey"
+      :draggable="draggable"
+      :allow-drop="allowDrop"
+      ref="menuTree"
+    >
+      <span class="custom-tree-node" slot-scope="{ node, data }">
+        <span>{{ node.label }}</span>
+        <span>
+          <el-button
+            v-if="node.level <= 2"
+            type="text"
+            size="mini"
+            @click="() => append(data)"
+          >
+            Append
+          </el-button>
+          <el-button type="text" size="mini" @click="() => edit(data)">
+            Edit
+          </el-button>
+          <el-button
+            v-if="node.childNodes.length == 0"
+            type="text"
+            size="mini"
+            @click="() => remove(node, data)"
+          >
+            Delete
+          </el-button>
+        </span>
+      </span>
+    </el-tree>
+    <el-dialog
+      :title="title"
+      :visible.sync="dialogVisible"
+      width="30%"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="category">
+        <el-form-item label="分类名称">
+          <el-input v-model="category.name" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="图标">
+          <el-input v-model="category.icon" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="计量单位">
+          <el-input
+            v-model="category.productUnit"
+            autocomplete="off"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitData">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "category",
+  components: {},
+  directives: {},
+  data() {
+    return {
+      pCid: [],
+      draggable: false,
+      updateNodes: [],
+      maxLevel: 0,
+      title: "",
+      dialogType: "", //edit,add
+      dialogVisible: false,
+      menus: [],
+      expandedKey: [],
+      category: {
+        name: "",
+        parentCid: 0,
+        catLevel: 0,
+        showStatus: 1,
+        sort: 0,
+        icon: "",
+        productUnit: "",
+        catId: null,
+      },
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  mounted() {},
+  methods: {
+    // 批量删除
+    batchDelete() {
+      let catIds = [];
+      let checkedNodes = this.$refs.menuTree.getCheckedNodes();
+      console.log("被选中的元素", checkedNodes);
+      for (let i = 0; i < checkedNodes.length; i++) {
+        catIds.push(checkedNodes[i].catId);
+      }
+
+      this.$confirm(`是否批量删除【${catIds}】菜单?`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(catIds, false),
+          })
+            .then(({ data }) => {
+              this.$message({
+                type: "success",
+                message: "菜单批量删除成功!",
+              });
+              // 刷新出新的菜单
+              this.getMenus();
+            })
+            .catch(() => {});
+        })
+        .catch(() => {});
+    },
+    // 批量修改
+    batchSave() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update/sort"),
+        method: "post",
+        data: this.$http.adornData(this.updateNodes, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单顺序修改成功!",
+          });
+          // 刷新出新的菜单
+          this.getMenus();
+          // 设置需要默认展开的菜单
+          this.expandedKey = this.pCid;
+          this.updateNodes = [];
+          this.maxLevel = 0;
+          // this.pCid = 0;
+        })
+        .catch(() => {});
+    },
+    handleDrop(draggingNode, dropNode, dropType, ev) {
+      console.log("handleDrop: ", draggingNode, dropNode, dropType);
+
+      //1 当前节点最新的父节点
+      let pCid = 0;
+      let siblings = null;
+      if (dropType == "before" || dropType == "after") {
+        pCid =
+          dropNode.parent.data.catId == undefined
+            ? 0
+            : dropNode.parent.data.catId;
+        siblings = dropNode.parent.childNodes;
+      } else {
+        pCid = dropNode.data.catId;
+        siblings = dropNode.childNodes;
+      }
+      this.pCid.push(pCid);
+      //2 当前拖拽节点的最新顺序
+      for (let i = 0; i < siblings.length; i++) {
+        if (siblings[i].data.catId == draggingNode.data.catId) {
+          // 如果遍历的是当前正在拖拽的节点
+          let catLevel = draggingNode.level;
+          if (siblings[i].level != draggingNode.level) {
+            // 当前节点的层级发生变化
+            catLevel = siblings[i].level;
+            // 修改他子节点的层级
+            this.updateChildNodeLevlel(siblings[i]);
+          }
+          this.updateNodes.push({
+            catId: siblings[i].data.catId,
+            sort: i,
+            parentCid: pCid,
+            catLevel: catLevel,
+          });
+        } else {
+          this.updateNodes.push({ catId: siblings[i].data.catId, sort: i });
+        }
+      }
+      //3 当前拖拽节点的最新层级
+      console.log("updateNodes", this.updateNodes);
+    },
+    updateChildNodeLevlel(node) {
+      if (node.childNodes.length > 0) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          var cNode = node.childNodes[i].data;
+          this.updateNodes.push({
+            catId: cNode.catId,
+            catLevel: node.childNodes[i].level,
+          });
+          this.updateChildNodeLevlel(node.childNodes[i]);
+        }
+      }
+    },
+    allowDrop(draggingNode, dropNode, type) {
+      //1 被拖动的当前节点以及所在的父节点总层数不能大于3
+
+      //1 被拖动的当前节点总层数
+      console.log("allowDrop:", draggingNode, dropNode, type);
+
+      var level = this.countNodeLevel(draggingNode);
+
+      // 当前正在拖动的节点+父节点所在的深度不大于3即可
+      let deep = Math.abs(this.maxLevel - draggingNode.level) + 1;
+      console.log("深度:", deep);
+
+      // this.maxLevel
+      if (type == "innner") {
+        // console.log(
+        //   `this.maxLevel: ${this.maxLevel}; draggingNode.data.catLevel:${draggingNode.data.catLevel};dropNode.level: ${dropNode.level}`
+        // );
+        return deep + dropNode.level <= 3;
+      } else {
+        return deep + dropNode.parent.level <= 3;
+      }
+    },
+    countNodeLevel(node) {
+      // 找到所有子节点，求出最大深度
+      if (node.childNodes != null && node.childNodes.length > 0) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          if (node.childNodes[i].level > this.maxLevel) {
+            this.maxLevel = node.childNodes[i].level;
+          }
+          this.countNodeLevel(node.childNodes);
+        }
+      }
+    },
+    append(data) {
+      console.log("append----", data);
+      this.dialogType = "add";
+      this.title = "添加分类";
+      this.category.parentCid = data.catId;
+      this.category.catLevel = data.catLevel * 1 + 1;
+      this.category.catId = null;
+      this.category.name = null;
+      this.category.icon = "";
+      this.category.productUnit = "";
+      this.category.sort = 0;
+      this.category.showStatus = 1;
+      this.dialogVisible = true;
+    },
+    // 添加三级分类
+    addCategory() {
+      console.log("提交的三级分类数据", this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单保存成功!",
+          });
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    // 修改三级分类数据
+    editCategory() {
+      var { catId, name, icon, productUnit } = this.category;
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update"),
+        method: "post",
+        data: this.$http.adornData({ catId, name, icon, productUnit }, false),
+      })
+        .then(({ data }) => {
+          this.$message({
+            type: "success",
+            message: "菜单修改成功!",
+          });
+          // 关闭对话框
+          this.dialogVisible = false;
+          // 刷新出新的菜单
+          this.getMenus();
+          // 设置需要默认展开的菜单
+          this.expandedKey = [this.category.parentCid];
+        })
+        .catch(() => {});
+    },
+    edit(data) {
+      console.log("要修改的数据", data);
+      this.dialogType = "edit";
+      this.title = "修改分类";
+      // 发送请求获取节点最新的数据
+      this.$http({
+        url: this.$http.adornUrl(`/product/category/info/${data.catId}`),
+        method: "get",
+      }).then(({ data }) => {
+        // 请求成功
+        console.log("要回显得数据", data);
+        this.category.name = data.data.name;
+        this.category.catId = data.data.catId;
+        this.category.icon = data.data.icon;
+        this.category.productUnit = data.data.productUnit;
+        this.category.parentCid = data.data.parentCid;
+        this.dialogVisible = true;
+      });
+    },
+    submitData() {
+      if (this.dialogType == "add") {
+        this.addCategory();
+      }
+      if (this.dialogType == "edit") {
+        this.editCategory();
+      }
+    },
+    remove(node, data) {
+      console.log("remove---", node);
+      console.log("data---", data);
+      var ids = [data.catId];
+
+      this.$confirm(`是否删除【${data.name}】当前菜单?`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(ids, false),
+          })
+            .then(({ data }) => {
+              this.$message({
+                type: "success",
+                message: "菜单删除成功!",
+              });
+              // 刷新出新的菜单
+              this.getMenus();
+              this.expandedKey = [node.parent.data.catId];
+            })
+            .catch(() => {});
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
+    },
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get",
+      }).then(({ data }) => {
+        console.log("成功获取到菜单数据...", data.data);
+        this.menus = data.data;
+      });
+    },
+  },
+  created() {
+    this.getMenus();
+  },
+};
+</script>
+
+<style scoped>
+</style>
+```
+`CategoryController`类修改
+``` java
+@RequestMapping("/delete")
+// @RequiresPermissions("product:category:delete")
+public R delete(@RequestBody Long[] catIds){
+  categoryService.removeMenuByIds(Arrays.asList(catIds));
+  return R.ok();
+}
+```
 
 # 谷粒商城-高级篇
 围绕商城前端的流程系统. 搜索、结算、登录, 以及周边治理、流控、链路追踪等
@@ -6466,36 +8036,3 @@ window.SITE_CONFIG['baseUrl'] = 'http://localhost:88/api';
 
 # 谷粒商城-集群篇
 包括k8s集群，CI/CD(持续集成)，DevOps等
-
-
-# 其他
-## 项目架构
-### 架构图
-[](./assets/GuliMall.md/谷粒商城-微服务架构图.jpg)
-### 微服务划分图
-[](./assets/GuliMall.md/谷粒商城-微服务划分图.jpg)
-
-## [基础篇](./GuliMall_base.md)
-[基础篇](./GuliMall_base), 
-
-## [高级篇](./GuliMall_senior.md)
-[高级篇](./GuliMall_senior.md), 
-
-## [集群篇](./GuliMall_cluster.md)
-[集群篇](./GuliMall_cluster.md), 包括k8s集群，CI/CD(持续集成)，DevOps等
-
-## 环境
-### 安装jdk1.8
-``` shell
-#1.下载并解压jdk1.8
-tar  -zxvf  jdk-8u281-linux-x64.tar.gz(检查本机有没有jdk有的话卸载掉。安装上自己的jdk)
-
-# 2.配上环境变量
-vim /etc/profile
-# 添加一下两行代码
-export JAVA_HOME=jdk的位置
-export PATH=$PATH:$JAVA_HOME/bin
-
-# 3.使配置生效
-source  /etc/profile
-```

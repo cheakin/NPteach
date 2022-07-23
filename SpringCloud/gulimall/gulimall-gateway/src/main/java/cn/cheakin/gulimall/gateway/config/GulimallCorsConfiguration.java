@@ -22,7 +22,7 @@ public class GulimallCorsConfiguration {
         corsConfiguration.addAllowedMethod("*");
         // 允许跨域的请求来源
 //        corsConfiguration.addAllowedOrigin("*");
-        corsConfiguration.addAllowedOriginPattern("*");
+        corsConfiguration.addAllowedOriginPattern("*"); // 若有多个跨域允许（如renren-fast也有解决跨域的代码），可以使用这个
         // 是否允许携带cookie跨域
         corsConfiguration.setAllowCredentials(true);
 
