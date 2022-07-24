@@ -8705,7 +8705,86 @@ export default {
     ```
 [](./assets/GuliMall.md/GuliMall_base/1658630144791.jpg)
 官方文档: https://help.aliyun.com/document_detail/31926.html
+参考文档:https://help.aliyun.com/document_detail/91868.htm?spm=a2c4g.11186623.0.0.16073967V6axHk#concept-ahk-rfz-2fb, 我们创建相应的获取policy的接口:
+``` java
+@RestController
+public class OssController {
 
+    @Autowired
+    OSS client;
+    @Value("${spring.cloud.alicloud.oss.endpoint}")
+    String endpoint ;
+
+    @Value("${spring.cloud.alicloud.oss.bucket}")
+    String bucket ;
+
+    @Value("${spring.cloud.alicloud.access-key}")
+    String accessId ;
+    @Value("${spring.cloud.alicloud.secret-key}")
+    String accessKey ;
+
+    @RequestMapping("oss/policy")
+    public Map<String, String> policy() {
+        /*// 阿里云账号AccessKey拥有所有API的访问权限，风险很高。强烈建议您创建并使用RAM用户进行API访问或日常运维，请登录RAM控制台创建RAM用户。
+        String accessId = "yourAccessKeyId";
+        String accessKey = "yourAccessKeySecret";
+        // Endpoint以华东1（杭州）为例，其它Region请按实际情况填写。
+        String endpoint = "oss-cn-hangzhou.aliyuncs.com";*/
+
+        // 填写Bucket名称，例如examplebucket。
+        String bucket = "gulimall-cheakin";
+        // 填写Host地址，格式为https://bucketname.endpoint。
+        String host = "https://cheakin.oss-cn-chengdu.aliyuncs.com";
+        // 设置上传回调URL，即回调服务器地址，用于处理应用服务器与OSS之间的通信。OSS会在文件上传完成后，把文件上传信息通过此回调URL发送给应用服务器。
+        String callbackUrl = "https://192.168.0.0:8888";
+        // 设置上传到OSS文件的前缀，可置空此项。置空后，文件将上传至Bucket的根目录下。
+        String format = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        String dir = format + "/"; // 用户上传文件时指定的前缀。
+
+//        OSSClient client = new OSSClient(endpoint, accessId, accessKey);
+        Map<String, String> respMap = null;
+        try {
+            long expireTime = 30;
+            long expireEndTime = System.currentTimeMillis() + expireTime * 1000;
+            Date expiration = new Date(expireEndTime);
+            PolicyConditions policyConds = new PolicyConditions();
+            policyConds.addConditionItem(PolicyConditions.COND_CONTENT_LENGTH_RANGE, 0, 1048576000);
+            policyConds.addConditionItem(MatchMode.StartWith, PolicyConditions.COND_KEY, dir);
+
+            String postPolicy = client.generatePostPolicy(expiration, policyConds);
+            byte[] binaryData = postPolicy.getBytes("utf-8");
+            String encodedPolicy = BinaryUtil.toBase64String(binaryData);
+            String postSignature = client.calculatePostSignature(postPolicy);
+
+            respMap = new LinkedHashMap<String, String>();
+            respMap.put("accessid", accessId);
+            respMap.put("policy", encodedPolicy);
+            respMap.put("signature", postSignature);
+            respMap.put("dir", dir);
+            respMap.put("host", host);
+            respMap.put("expire", String.valueOf(expireEndTime / 1000));
+            // respMap.put("expire", formatISO8601Date(expiration));
+
+        } catch (Exception e) {
+            // Assert.fail(e.getMessage());
+            System.out.println(e.getMessage());
+        }
+        return respMap;
+    }
+}
+```
+测试: 访问`http://localhost:30000/oss/policy`, 能正常返回json则表示成功
+
+将`gulimall-third-party`的路由加入到gateway中, 在`gulimall-gateway`的`application.yml`中添加(注意顺序, 要再泛匹配前):
+``` yml
+- id: third_party_route
+  uri: lb://gulimall-third-party
+  predicates:
+    - Path=/api/thirdparty/**
+  filters:
+    - RewritePath=/api/thirdparty/(?<segment>.*),/$\{segment}
+```
+测试: 访问`http://localhost:88/api/thirdparty/oss/policy`, 能正常返回json则表示成功
 
 
 
