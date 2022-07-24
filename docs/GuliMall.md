@@ -8704,6 +8704,7 @@ export default {
     }
     ```
 [](./assets/GuliMall.md/GuliMall_base/1658630144791.jpg)
+[](./assets/GuliMall.md/GuliMall_base/p139016.png)
 官方文档: https://help.aliyun.com/document_detail/31926.html
 参考文档:https://help.aliyun.com/document_detail/91868.htm?spm=a2c4g.11186623.0.0.16073967V6axHk#concept-ahk-rfz-2fb, 我们创建相应的获取policy的接口:
 ``` java
