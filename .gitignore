@@ -37,3 +37,6 @@ target/
 **/.mvn
 **/target
 **/node_modules
+
+### 脱敏 ###
+**/application-oss.yml

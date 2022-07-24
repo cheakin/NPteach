@@ -1,4 +1,6 @@
 spring:
+#  profiles:
+#    active: oss
   datasource:
     username: root
     password: root

@@ -8030,6 +8030,686 @@ public R delete(@RequestBody Long[] catIds){
 }
 ```
 
+### 品牌管理
+#### 使用你想工程的前后端代码
+[](./assets/GuliMall.md/GuliMall_base/1658627183766.jpg)
+
+将逆向工程product得到的resources\src\views\modules\product文件拷贝到renren-fast-vue/src/views/modules/product目录下，也就是下面的两个文件
+- `brand.vue` ： 显示的表单
+- `brand-add-or-update.vue`：添加和更改功能
+[](./assets/GuliMall.md/GuliMall_base/1658627610954.jpg)
+
+[](./assets/GuliMall.md/GuliMall_base/1658627866574.jpg)
+但是显示的页面没有新增和删除功能，这是因为权限控制的原因，
+它是在`renren-fast-vue\src\utils\index.js`中定义，暂时将它设置为返回值为true，即可显示添加和删除功能。
+``` js
+/**
+ * 是否有权限
+ * @param {*} key
+ */
+export function isAuth (key) {
+  // return JSON.parse(sessionStorage.getItem('permissions') || '[]').indexOf(key) !== -1 || false
+  return true
+}
+```
+再次刷新页面能够看到，按钮已经出现了：
+[](./assets/GuliMall.md/GuliMall_base/1658628024009.jpg)
+进行添加 测试成功， 进行修改 也会自动回显
+
+#### 效果优化与快速显示开关
+`build/webpack.base.conf.js` 中注释掉`createLintingRule()`函数体，不进行lint语法检查
+``` js
+const createLintingRule = () => ({
+  /* test: /\.(js|vue)$/,
+  loader: 'eslint-loader',
+  enforce: 'pre',
+  include: [resolve('src'), resolve('test')],
+  options: {
+    formatter: require('eslint-friendly-formatter'),
+    emitWarning: !config.dev.showEslintErrorsInOverlay
+  } */
+})
+```
+
+使用ElementUI的开关状态,修改`brand.vue`页面
+``` html
+<template>
+  <div class="mod-config">
+    <el-form
+      :inline="true"
+      :model="dataForm"
+      @keyup.enter.native="getDataList()"
+    >
+      <el-form-item>
+        <el-input
+          v-model="dataForm.key"
+          placeholder="参数名"
+          clearable
+        ></el-input>
+      </el-form-item>
+      <el-form-item>
+        <el-button @click="getDataList()">查询</el-button>
+        <el-button
+          v-if="isAuth('product:brand:save')"
+          type="primary"
+          @click="addOrUpdateHandle()"
+          >新增</el-button
+        >
+        <el-button
+          v-if="isAuth('product:brand:delete')"
+          type="danger"
+          @click="deleteHandle()"
+          :disabled="dataListSelections.length <= 0"
+          >批量删除</el-button
+        >
+      </el-form-item>
+    </el-form>
+    <el-table
+      :data="dataList"
+      border
+      v-loading="dataListLoading"
+      @selection-change="selectionChangeHandle"
+      style="width: 100%"
+    >
+      <el-table-column
+        type="selection"
+        header-align="center"
+        align="center"
+        width="50"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="brandId"
+        header-align="center"
+        align="center"
+        label="品牌id"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="name"
+        header-align="center"
+        align="center"
+        label="品牌名"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="logo"
+        header-align="center"
+        align="center"
+        label="品牌logo地址"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="descript"
+        header-align="center"
+        align="center"
+        label="介绍"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="showStatus"
+        header-align="center"
+        align="center"
+        label="显示状态"
+      >
+        <template slot-scope="scope">
+          <el-switch
+            v-model="scope.row.showStatus"
+            active-color="#13ce66"
+            inactive-color="#ff4949"
+            :active-value="1"
+            :inactive-value="0"
+            @change="updateBrandStatus(scope.row)"
+          >
+          </el-switch>
+        </template>
+      </el-table-column>
+      <el-table-column
+        prop="firstLetter"
+        header-align="center"
+        align="center"
+        label="检索首字母"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="sort"
+        header-align="center"
+        align="center"
+        label="排序"
+      >
+      </el-table-column>
+      <el-table-column
+        fixed="right"
+        header-align="center"
+        align="center"
+        width="150"
+        label="操作"
+      >
+        <template slot-scope="scope">
+          <el-button
+            type="text"
+            size="small"
+            @click="addOrUpdateHandle(scope.row.brandId)"
+            >修改</el-button
+          >
+          <el-button
+            type="text"
+            size="small"
+            @click="deleteHandle(scope.row.brandId)"
+            >删除</el-button
+          >
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-pagination
+      @size-change="sizeChangeHandle"
+      @current-change="currentChangeHandle"
+      :current-page="pageIndex"
+      :page-sizes="[10, 20, 50, 100]"
+      :page-size="pageSize"
+      :total="totalPage"
+      layout="total, sizes, prev, pager, next, jumper"
+    >
+    </el-pagination>
+    <!-- 弹窗, 新增 / 修改 -->
+    <add-or-update
+      v-if="addOrUpdateVisible"
+      ref="addOrUpdate"
+      @refreshDataList="getDataList"
+    ></add-or-update>
+  </div>
+</template>
+
+<script>
+import AddOrUpdate from "./brand-add-or-update";
+export default {
+  data() {
+    return {
+      dataForm: {
+        key: "",
+      },
+      dataList: [],
+      pageIndex: 1,
+      pageSize: 10,
+      totalPage: 0,
+      dataListLoading: false,
+      dataListSelections: [],
+      addOrUpdateVisible: false,
+    };
+  },
+  components: {
+    AddOrUpdate,
+  },
+  activated() {
+    this.getDataList();
+  },
+  methods: {
+    updateBrandStatus(data){
+      console.log("最新信息",data);
+      let {brandId,showStatus} = data;
+       this.$http({
+        url: this.$http.adornUrl("/product/brand/update"),
+        method: "post",
+        data: this.$http.adornData({brandId,showStatus:showStatus},false)
+      }).then(({ data }) => {
+       this.$message({
+         type:"success",
+         message:"状态更新成功"
+       })
+      });
+    },
+    // 获取数据列表
+    getDataList() {
+      this.dataListLoading = true;
+      this.$http({
+        url: this.$http.adornUrl("/product/brand/list"),
+        method: "get",
+        params: this.$http.adornParams({
+          page: this.pageIndex,
+          limit: this.pageSize,
+          key: this.dataForm.key,
+        }),
+      }).then(({ data }) => {
+        if (data && data.code === 0) {
+          this.dataList = data.page.list;
+          this.totalPage = data.page.totalCount;
+        } else {
+          this.dataList = [];
+          this.totalPage = 0;
+        }
+        this.dataListLoading = false;
+      });
+    },
+    // 每页数
+    sizeChangeHandle(val) {
+      this.pageSize = val;
+      this.pageIndex = 1;
+      this.getDataList();
+    },
+    // 当前页
+    currentChangeHandle(val) {
+      this.pageIndex = val;
+      this.getDataList();
+    },
+    // 多选
+    selectionChangeHandle(val) {
+      this.dataListSelections = val;
+    },
+    // 新增 / 修改
+    addOrUpdateHandle(id) {
+      this.addOrUpdateVisible = true;
+      this.$nextTick(() => {
+        this.$refs.addOrUpdate.init(id);
+      });
+    },
+    // 删除
+    deleteHandle(id) {
+      var ids = id
+        ? [id]
+        : this.dataListSelections.map((item) => {
+            return item.brandId;
+          });
+      this.$confirm(
+        `确定对[id=${ids.join(",")}]进行[${id ? "删除" : "批量删除"}]操作?`,
+        "提示",
+        {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        }
+      ).then(() => {
+        this.$http({
+          url: this.$http.adornUrl("/product/brand/delete"),
+          method: "post",
+          data: this.$http.adornData(ids, false),
+        }).then(({ data }) => {
+          if (data && data.code === 0) {
+            this.$message({
+              message: "操作成功",
+              type: "success",
+              duration: 1500,
+              onClose: () => {
+                this.getDataList();
+              },
+            });
+          } else {
+            this.$message.error(data.msg);
+          }
+        });
+      });
+    },
+  },
+};
+</script>
+```
+修改`brand-add-or-update.vue`页面
+``` html
+<template>
+  <el-dialog
+    :title="!dataForm.id ? '新增' : '修改'"
+    :close-on-click-modal="false"
+    :visible.sync="visible"
+  >
+    <el-form
+      :model="dataForm"
+      :rules="dataRule"
+      ref="dataForm"
+      @keyup.enter.native="dataFormSubmit()"
+      label-width="140px"
+    >
+      <el-form-item label="品牌名" prop="name">
+        <el-input v-model="dataForm.name" placeholder="品牌名"></el-input>
+      </el-form-item>
+      <el-form-item label="品牌logo地址" prop="logo">
+        <el-input v-model="dataForm.logo" placeholder="品牌logo地址"></el-input>
+      </el-form-item>
+      <el-form-item label="介绍" prop="descript">
+        <el-input v-model="dataForm.descript" placeholder="介绍"></el-input>
+      </el-form-item>
+      <el-form-item label="显示状态" prop="showStatus">
+        <el-switch
+          v-model="dataForm.showStatus"
+          active-color="#13ce66"
+          inactive-color="#ff4949"
+        >
+        </el-switch>
+      </el-form-item>
+      <el-form-item label="检索首字母" prop="firstLetter">
+        <el-input
+          v-model="dataForm.firstLetter"
+          placeholder="检索首字母"
+        ></el-input>
+      </el-form-item>
+      <el-form-item label="排序" prop="sort">
+        <el-input v-model="dataForm.sort" placeholder="排序"></el-input>
+      </el-form-item>
+    </el-form>
+    <span slot="footer" class="dialog-footer">
+      <el-button @click="visible = false">取消</el-button>
+      <el-button type="primary" @click="dataFormSubmit()">确定</el-button>
+    </span>
+  </el-dialog>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      visible: false,
+      dataForm: {
+        brandId: 0,
+        name: "",
+        logo: "",
+        descript: "",
+        showStatus: "",
+        firstLetter: "",
+        sort: "",
+      },
+      dataRule: {
+        name: [{ required: true, message: "品牌名不能为空", trigger: "blur" }],
+        logo: [
+          { required: true, message: "品牌logo地址不能为空", trigger: "blur" },
+        ],
+        descript: [
+          { required: true, message: "介绍不能为空", trigger: "blur" },
+        ],
+        showStatus: [
+          {
+            required: true,
+            message: "显示状态[0-不显示；1-显示]不能为空",
+            trigger: "blur",
+          },
+        ],
+        firstLetter: [
+          { required: true, message: "检索首字母不能为空", trigger: "blur" },
+        ],
+        sort: [{ required: true, message: "排序不能为空", trigger: "blur" }],
+      },
+    };
+  },
+  methods: {
+    init(id) {
+      this.dataForm.brandId = id || 0;
+      this.visible = true;
+      this.$nextTick(() => {
+        this.$refs["dataForm"].resetFields();
+        if (this.dataForm.brandId) {
+          this.$http({
+            url: this.$http.adornUrl(
+              `/product/brand/info/${this.dataForm.brandId}`
+            ),
+            method: "get",
+            params: this.$http.adornParams(),
+          }).then(({ data }) => {
+            if (data && data.code === 0) {
+              this.dataForm.name = data.brand.name;
+              this.dataForm.logo = data.brand.logo;
+              this.dataForm.descript = data.brand.descript;
+              this.dataForm.showStatus = data.brand.showStatus;
+              this.dataForm.firstLetter = data.brand.firstLetter;
+              this.dataForm.sort = data.brand.sort;
+            }
+          });
+        }
+      });
+    },
+    // 表单提交
+    dataFormSubmit() {
+      this.$refs["dataForm"].validate((valid) => {
+        if (valid) {
+          this.$http({
+            url: this.$http.adornUrl(
+              `/product/brand/${!this.dataForm.brandId ? "save" : "update"}`
+            ),
+            method: "post",
+            data: this.$http.adornData({
+              brandId: this.dataForm.brandId || undefined,
+              name: this.dataForm.name,
+              logo: this.dataForm.logo,
+              descript: this.dataForm.descript,
+              showStatus: this.dataForm.showStatus,
+              firstLetter: this.dataForm.firstLetter,
+              sort: this.dataForm.sort,
+            }),
+          }).then(({ data }) => {
+            if (data && data.code === 0) {
+              this.$message({
+                message: "操作成功",
+                type: "success",
+                duration: 1500,
+                onClose: () => {
+                  this.visible = false;
+                  this.$emit("refreshDataList");
+                },
+              });
+            } else {
+              this.$message.error(data.msg);
+            }
+          });
+        }
+      });
+    },
+  },
+};
+</script>
+```
+
+#### 添加上传
+[](./assets/GuliMall.md/GuliMall_base/1658629845599.jpg)
+这里我们选择将图片放置到阿里云上，使用对象存储。官方文档: https://help.aliyun.com/document_detail/31827.html
+阿里云上使使用对象存储方式：
+[](./assets/GuliMall.md/GuliMall_base/1658629191833.jpg)
+创建Bucket（作为项目）
+[](./assets/GuliMall.md/GuliMall_base/1658629448316.jpg)
+
+实际上我们可以在程序中设置自动上传图片到阿里云对象存储。
+
+上传的账号信息存储在应用服务器
+上传先找应用服务器要一个policy上传策略，生成防伪签名
+使用代码上传, 查看阿里云关于文件上传的帮助： https://help.aliyun.com/document_detail/32009.html?spm=a2c4g.11186623.6.768.549d59aaWuZMGJ
+
+##### 普通方式
+1. 添加依赖包
+    在Maven项目中加入依赖项（推荐方式）
+    在 Maven 工程中使用 OSS Java SDK，只需在 pom.xml 中加入相应依赖即可(`gulimall-product`): 
+    ``` xml
+    <dependency>
+      <groupId>com.aliyun.oss</groupId>
+      <artifactId>aliyun-sdk-oss</artifactId>
+      <version>3.15.0</version>
+    </dependency>
+    ```
+2. 上传文件流
+    以下代码用于上传文件流(敏感信息已失效)：
+    ``` java
+    @Test
+    public void testUpload() throws FileNotFoundException {
+        // Endpoint以杭州为例，其它Region请按实际情况填写。
+        String endpoint = "oss-cn-shanghai.aliyuncs.com";
+        // 云账号AccessKey有所有API访问权限，建议遵循阿里云安全最佳实践，创建并使用RAM子账号进行API访问或日常运维，请登录 https://ram.console.aliyun.com 创建。
+        String accessKeyId = "LTAI4G4W1RA4JXz2QhoDwHhi";
+        String accessKeySecret = "R99lmDOJumF2x43ZBKT259Qpe70Oxw";
+
+        // 创建OSSClient实例。
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+
+        // 上传文件流。
+        InputStream inputStream = new FileInputStream("C:\\Users\\Administrator\\Pictures\\timg.jpg");
+        ossClient.putObject("gulimall-images", "time.jpg", inputStream);
+
+        // 关闭OSSClient。
+        ossClient.shutdown();
+        System.out.println("上传成功.");
+    }
+    ```
+    > 上面代码的信息可以通过如下查找：
+    > endpoint的取值：点击概览就可以看到你的endpoint信息，endpoint在
+    > 这里就是上海等地区，如 oss-cn-qingdao.aliyuncs.com
+    > bucket域名：就是签名加上bucket，如gulimall-fermhan.oss-cn-qingdao.aliyuncs.com
+    > accessKeyId和accessKeySecret需要创建一个RAM账号, 创建用户完毕后，会得到一个`AccessKey ID`和`AccessKeySecret`, 另外还需要添加OSS访问控制权限
+
+##### SpringCloud Alibaba - OSS 配置方式
+  更为简单的使用方式，是使用SpringCloud Alibaba, 官方文档: https://github.com/alibaba/aliyun-spring-boot/tree/master/aliyun-spring-boot-samples/aliyun-oss-spring-boot-sample
+  1. `gulimall-common`中导入maven依赖, 方便其他微服务使用
+      ``` xml
+      <!--阿里云 OSS-->
+      <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alicloud-oss</artifactId>
+        <version>2.2.0.RELEASE</version>    <!--报红的话就加上版本号-->
+      </dependency>
+      ```
+  2. 在`gulimall-product`中配置, 这里为了避免敏感信息, 我将这个配置写到`application-oss.yml`中(并将applicaion-oss.yml从版本控制中排除)
+      `application-oss.yml`配置oss信息
+      ``` yml
+      spring:
+        cloud:
+          alicloud:
+            access-key: xxx
+            secret-key: yyy
+            oss:
+              endpoint: zzz
+      ```
+      在`application.yml`中将`application-oss.yml`添加进来:
+      ``` YML
+      spring:
+        profiles:
+          active: oss
+      ```
+  3. 测试
+      ``` java
+      @Test
+        void testUpload() {
+            String filePath= "D:\图片\girl.jpg";
+            try {
+
+                // 上传文件。
+                ossClient.putObject("gulimall-cheakin", "girl.jpg", new File(filePath));
+
+                System.out.println("上传成功.");
+            } catch (OSSException oe) {
+                System.out.println("Caught an OSSException, which means your request made it to OSS, "
+                        + "but was rejected with an error response for some reason.");
+                System.out.println("Error Message:" + oe.getErrorMessage());
+                System.out.println("Error Code:" + oe.getErrorCode());
+                System.out.println("Request ID:" + oe.getRequestId());
+                System.out.println("Host ID:" + oe.getHostId());
+            } catch (ClientException ce) {
+                System.out.println("Caught an ClientException, which means the client encountered "
+                        + "a serious internal problem while trying to communicate with OSS, "
+                        + "such as not being able to access the network.");
+                System.out.println("Error Message:" + ce.getMessage());
+            } finally {
+                if (ossClient != null) {
+                    ossClient.shutdown();
+                }
+            }
+        } 
+        ```
+
+##### 签名方式
+首先, 先将对象存储迁移到一个新的微服务项目中
+1. 创建`gulimall-third-party`项目
+2. 仍然依赖`gulimall-common`项目, 并将`guilmall-common`中的oss依赖移过来, 且排除mybatis(注意:和视频中有所区别)
+    ``` xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <project xmlns="http://maven.apache.org/POM/4.0.0"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <parent>
+            <artifactId>gulimall</artifactId>
+            <groupId>cn.cheakin</groupId>
+            <version>0.0.1-SNAPSHOT</version>
+        </parent>
+        <groupId>cn.cheakin</groupId>
+        <artifactId>gulimall-third-party</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <name>gulimall-third-party</name>
+        <description>gulimall-third-party</description>
+
+        <dependencies>
+            <dependency>
+                <groupId>cn.cheakin</groupId>
+                <artifactId>gulimall-common</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+                <exclusions>
+                  <exclusion>
+                      <groupId>com.baomidou</groupId>
+                      <artifactId>mybatis-plus-boot-starter</artifactId>
+                  </exclusion>
+                  <exclusion>
+                      <groupId>mysql</groupId>
+                      <artifactId>mysql-connector-java</artifactId>
+                  </exclusion>
+                </exclusions>
+            </dependency>
+
+            <!--阿里云 OSS-->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-starter-alicloud-oss</artifactId>
+                <version>2.2.0.RELEASE</version>    <!--报红的话就加上版本号-->
+            </dependency>
+        </dependencies>
+
+    </project>
+    ```
+3. 注册到注册中心
+   - 先创建命名空间
+    [](./assets/GuliMall.md/GuliMall_base/1658672914357.jpg)
+   - 创建oss配置(**注意选择命名空间**)
+    [](./assets/GuliMall.md/GuliMall_base/1658673360767.jpg)
+   - 创建`bootstrap.properties`配置注册中心信息
+    ``` yml
+    spring.cloud.nacos.config.server-addr=127.0.0.1:8848
+    spring.cloud.nacos.config.namespace=gulimall-third-party
+
+    spring.cloud.nacos.config.extension-configs[0].data-id=oss.yml
+    spring.cloud.nacos.config.extension-configs[0].group=DEFAULT_GROUP
+    spring.cloud.nacos.config.extension-configs[0].refresh=true
+    ```
+   - 在启动类上使用`@EnableDiscoveryClient`注解
+4. 配置项目的其他信息
+   创建`application.yml`
+   ``` yml
+   spring:
+    cloud:
+      nacos:
+        discovery:
+          server-addr: 127.0.0.1:8848
+
+    application:
+      name: gulimall-third-party
+
+   server:
+     port: 30000
+   ```
+5. 测试
+   启动, 测试,查看注册中心是否有`gulimall-third-party`服务
+   在`GulimallTirdPartyTests`中编写单元测试
+   ``` java
+    @Autowired
+    OSSClient ossClient;
+
+    @Test
+    void testUpload() {
+        String filePath= "D:\\图片\\girl.jpg";
+
+        ossClient.putObject("gulimall-cheakin", "girl2.jpg", new File(filePath));
+
+        ossClient.shutdown();
+
+        System.out.println("上传完成...");
+    }
+    ```
+[](./assets/GuliMall.md/GuliMall_base/1658630144791.jpg)
+官方文档: https://help.aliyun.com/document_detail/31926.html
+
+
+
+
+
 # 谷粒商城-高级篇
 围绕商城前端的流程系统. 搜索、结算、登录, 以及周边治理、流控、链路追踪等
 
