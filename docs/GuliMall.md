@@ -3,6 +3,7 @@
 > [从前慢-谷粒商城篇章1](https://blog.csdn.net/unique_perfect/article/details/111392634)
 > [从前慢-谷粒商城篇章2](https://blog.csdn.net/unique_perfect/article/details/113824202)
 > [从前慢-谷粒商城篇章3](https://blog.csdn.net/unique_perfect/article/details/114035775)
+> [从前慢-谷粒商城篇章3(备用)](https://cache.one/read/3811081)
 > [guli-mall](https://www.yuque.com/zhangshuaiyin/guli-mall)
 
 
@@ -8031,7 +8032,7 @@ public R delete(@RequestBody Long[] catIds){
 ```
 
 ### 品牌管理
-#### 使用你想工程的前后端代码
+#### 使用逆向工程的前后端代码
 [](./assets/GuliMall.md/GuliMall_base/1658627183766.jpg)
 
 将逆向工程product得到的resources\src\views\modules\product文件拷贝到renren-fast-vue/src/views/modules/product目录下，也就是下面的两个文件
@@ -8787,6 +8788,261 @@ public class OssController {
 ```
 测试: 访问`http://localhost:88/api/thirdparty/oss/policy`, 能正常返回json则表示成功
 
+**前后端联调测试**
+* upload组件
+  `src/components/upload/multiUpload.vue`文件, 注意替换文件上传的Bucket地址
+  ``` html
+  <template>
+    <div>
+      <el-upload
+        action="http://gulimall.oss-cn-shanghai.aliyuncs.com"
+        :data="dataObj"
+        list-type="picture-card"
+        :file-list="fileList"
+        :before-upload="beforeUpload"
+        :on-remove="handleRemove"
+        :on-success="handleUploadSuccess"
+        :on-preview="handlePreview"
+        :limit="maxCount"
+        :on-exceed="handleExceed"
+      >
+        <i class="el-icon-plus"></i>
+      </el-upload>
+      <el-dialog :visible.sync="dialogVisible">
+        <img width="100%" :src="dialogImageUrl" alt />
+      </el-dialog>
+    </div>
+  </template>
+  <script>
+  import { policy } from "./policy";
+  import { getUUID } from '@/utils'
+  export default {
+    name: "multiUpload",
+    props: {
+      //图片属性数组
+      value: Array,
+      //最大上传图片数量
+      maxCount: {
+        type: Number,
+        default: 30
+      }
+    },
+    data() {
+      return {
+        dataObj: {
+          policy: "",
+          signature: "",
+          key: "",
+          ossaccessKeyId: "",
+          dir: "",
+          host: "",
+          uuid: ""
+        },
+        dialogVisible: false,
+        dialogImageUrl: null
+      };
+    },
+    computed: {
+      fileList() {
+        let fileList = [];
+        for (let i = 0; i < this.value.length; i++) {
+          fileList.push({ url: this.value[i] });
+        }
+
+        return fileList;
+      }
+    },
+    mounted() {},
+    methods: {
+      emitInput(fileList) {
+        let value = [];
+        for (let i = 0; i < fileList.length; i++) {
+          value.push(fileList[i].url);
+        }
+        this.$emit("input", value);
+      },
+      handleRemove(file, fileList) {
+        this.emitInput(fileList);
+      },
+      handlePreview(file) {
+        this.dialogVisible = true;
+        this.dialogImageUrl = file.url;
+      },
+      beforeUpload(file) {
+        let _self = this;
+        return new Promise((resolve, reject) => {
+          policy()
+            .then(response => {
+              console.log("这是什么${filename}");
+              _self.dataObj.policy = response.data.policy;
+              _self.dataObj.signature = response.data.signature;
+              _self.dataObj.ossaccessKeyId = response.data.accessid;
+              _self.dataObj.key = response.data.dir + "/"+getUUID()+"_${filename}";
+              _self.dataObj.dir = response.data.dir;
+              _self.dataObj.host = response.data.host;
+              resolve(true);
+            })
+            .catch(err => {
+              console.log("出错了...",err)
+              reject(false);
+            });
+        });
+      },
+      handleUploadSuccess(res, file) {
+        this.fileList.push({
+          name: file.name,
+          // url: this.dataObj.host + "/" + this.dataObj.dir + "/" + file.name； 替换${filename}为真正的文件名
+          url: this.dataObj.host + "/" + this.dataObj.key.replace("${filename}",file.name)
+        });
+        this.emitInput(this.fileList);
+      },
+      handleExceed(files, fileList) {
+        this.$message({
+          message: "最多只能上传" + this.maxCount + "张图片",
+          type: "warning",
+          duration: 1000
+        });
+      }
+    }
+  };
+  </script>
+  <style>
+  </style>
+  ```
+  `src/components/upload/policy.js`文件, 注意替换获取policy的接口地址
+  ``` html
+  import http from '@/utils/httpRequest.js'
+  export function policy() {
+    return  new Promise((resolve,reject)=>{
+          http({
+              url: http.adornUrl("/thirdparty/oss/policy"),
+              method: "get",
+              params: http.adornParams({})
+          }).then(({ data }) => {
+              resolve(data);
+          })
+      });
+  }
+  ```
+  `src/components/upload/singleUpload.vue`文件, 注意替换文件上传的Bucket地址
+  ``` html
+  <template> 
+    <div>
+      <el-upload
+        action="http://gulimall.oss-cn-shanghai.aliyuncs.com"
+        :data="dataObj"
+        list-type="picture"
+        :multiple="false" :show-file-list="showFileList"
+        :file-list="fileList"
+        :before-upload="beforeUpload"
+        :on-remove="handleRemove"
+        :on-success="handleUploadSuccess"
+        :on-preview="handlePreview">
+        <el-button size="small" type="primary">点击上传</el-button>
+        <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过10MB</div>
+      </el-upload>
+      <el-dialog :visible.sync="dialogVisible">
+        <img width="100%" :src="fileList[0].url" alt="">
+      </el-dialog>
+    </div>
+  </template>
+  <script>
+    import {policy} from './policy'
+    import { getUUID } from '@/utils'
+
+    export default {
+      name: 'singleUpload',
+      props: {
+        value: String
+      },
+      computed: {
+        imageUrl() {
+          return this.value;
+        },
+        imageName() {
+          if (this.value != null && this.value !== '') {
+            return this.value.substr(this.value.lastIndexOf("/") + 1);
+          } else {
+            return null;
+          }
+        },
+        fileList() {
+          return [{
+            name: this.imageName,
+            url: this.imageUrl
+          }]
+        },
+        showFileList: {
+          get: function () {
+            return this.value !== null && this.value !== ''&& this.value!==undefined;
+          },
+          set: function (newValue) {
+          }
+        }
+      },
+      data() {
+        return {
+          dataObj: {
+            policy: '',
+            signature: '',
+            key: '',
+            ossaccessKeyId: '',
+            dir: '',
+            host: '',
+            // callback:'',
+          },
+          dialogVisible: false
+        };
+      },
+      methods: {
+        emitInput(val) {
+          this.$emit('input', val)
+        },
+        handleRemove(file, fileList) {
+          this.emitInput('');
+        },
+        handlePreview(file) {
+          this.dialogVisible = true;
+        },
+        beforeUpload(file) {
+          let _self = this;
+          return new Promise((resolve, reject) => {
+            policy().then(response => {
+              _self.dataObj.policy = response.data.policy;
+              _self.dataObj.signature = response.data.signature;
+              _self.dataObj.ossaccessKeyId = response.data.accessid;
+              _self.dataObj.key = response.data.dir + '/'+getUUID()+'_${filename}';
+              _self.dataObj.dir = response.data.dir;
+              _self.dataObj.host = response.data.host;
+              resolve(true)
+            }).catch(err => {
+              reject(false)
+            })
+          })
+        },
+        handleUploadSuccess(res, file) {
+          console.log("上传成功...")
+          this.showFileList = true;
+          this.fileList.pop();
+          this.fileList.push({name: file.name, url: this.dataObj.host + '/' + this.dataObj.key.replace("${filename}",file.name) });
+          this.emitInput(this.fileList[0].url);
+        }
+      }
+    }
+  </script>
+  <style>
+
+  </style>
+  ```
+
+`brand-add-or-update.vue`中
+修改el-form-item label="品牌logo地址"内容。
+要使用文件上传组件，先导入`import SingleUpload from "@/components/upload/singleUpload";`
+填入<single-upload v-model="dataForm.logo"></single-upload>
+写明要使用的组件`components: { SingleUpload },`
+
+点击一下文件上传，发现发送了两个请求
+localhost:88/api/thirdparty/oss/policy?t=1613300654238
 
 
 
