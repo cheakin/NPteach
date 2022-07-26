@@ -9892,7 +9892,7 @@ private String name;
       * 检索首字母
       */
       @NotEmpty
-      @Pattern(regexp = "/^[a-zA-Z]$", message = "检索首字母必须是一个字母")
+      @Pattern(regexp = "^[a-zA-Z]$", message = "检索首字母必须是一个字母")
       private String firstLetter;
       /**
       * 排序
@@ -9935,7 +9935,7 @@ private String name;
       }
       ```
       测试： `http://localhost:88/api/product/brand/save`, 会返回异常信息
-   * 默认异常处理
+   * 常用异常处理
       ``` java
       @ExceptionHandler(value = Throwable.class)
       public R handleException(Throwable throwable){
@@ -9945,9 +9945,9 @@ private String name;
       ```
    * 错误状态码
       上面代码中，针对于错误状态码，是我们进行随意定义的，然而正规开发过程中，错误状态码有着严格的定义规则，如该在项目中我们的错误状态码定义
-      为了定义这些错误状态码，我们可以单独定义一个常量类，用来存储这些错误状态码
+      为了定义这些错误状态码，我们可以单独定义一个常量类，用来存储这些错误状态码, 在`gulimall-common`的`exception`包下创建
       ``` java
-      /***
+      /**
         * 错误码和错误信息定义类
         * 1. 错误码定义规则为5为数字
         * 2. 前两位表示业务场景，最后三位表示错误码。例如：100001。10:通用 001:系统未知异常
@@ -9984,6 +9984,195 @@ private String name;
        }
       ```
    * 测试： `http://localhost:88/api/product/brand/save`
+
+#### 分组校验功能（完成多场景的复杂校验）
+比如在新增和更新的接口中, 校验规则不一样, 此时就可以使用分组校验功能
+1. groups
+   给校验注解，标注上groups，指定什么情况下才需要进行校验
+   groups里面的内容要以接口的形式显示出来
+   如：指定在更新和添加的时候，都需要进行校验。新增时不需要带id，修改时必须带id, 如
+   ``` java
+   @Data
+   @TableName("pms_brand")
+   public class BrandEntity implements Serializable {
+     private static final long serialVersionUID = 1L;
+ 
+     /**
+     * 品牌id
+     */
+     @NotNull(message="修改必须指定品牌id", groups = {UpdateGroup.class})
+     @Null(message="新增不能指定id", groups = {AddGroup.class})
+     @TableId
+     private Long brandId;
+     /**
+     * 品牌名
+     */
+     @NotBlank(message = "品牌名必须提交", groups = {AddGroup.class, UpdateGroup.class})
+     private String name;
+     /**
+     * 品牌logo地址
+     */
+     @NotBlank(message = "logo必须是一个合法的url地址", groups = {AddGroup.class})
+     @URL(message = "logo必须是一个合法的url地址", groups = {UpdateGroup.class})
+     private String logo;
+     /**
+     * 介绍
+     */
+     private String descript;
+     /**
+     * 显示状态[0-不显示；1-显示]
+     */
+     private Integer showStatus;
+     /**
+     * 检索首字母
+     */
+     @NotEmpty(groups = {AddGroup.class})
+     @Pattern(regexp = "^[a-zA-Z]$", message = "检索首字母必须是一个字母", groups = {AddGroup.class, UpdateGroup.class})
+     private String firstLetter;
+     /**
+     * 排序
+     */
+     @NotNull(groups = {AddGroup.class})
+     @Min(value = 0, message = "排序必须大于0", groups = {AddGroup.class, UpdateGroup.class})
+     private Integer sort;
+ 
+   }
+   ```
+   接口的也增加和指定校验分组
+   ``` java
+   @RequestMapping("/save")
+    public R save(@RequestBody @Validated({AddGroup.class}) BrandEntity brand){
+        brandService.save(brand);
+        return R.ok();
+    }
+
+    @RequestMapping("/update")
+    public R update(@RequestBody @Validated({UpdateGroup.class}) BrandEntity brand){
+		brandService.updateById(brand);
+        return R.ok();
+    }
+    ```
+    在这种情况下，没有指定分组的校验注解，默认是不起作用的。想要起作用就必须要加groups。
+2. @Validated
+3. 分组情况下，校验注解生效问题
+
+#### 自定义校验功能
+要校验showStatus的01状态，可以用正则，但我们可以利用其他方式解决
+复杂场景。比如我们想要下面的场景
+``` java
+/**
+ * 显示状态[0-不显示；1-显示]
+ */
+@NotNull(groups = {AddGroup.class, UpdateStatusGroup.class})
+@ListValue(vals = {0,1}, groups = {AddGroup.class, UpdateGroup.class, UpdateStatusGroup.class})
+private Integer showStatus;
+```
+0. 添加依赖(这个依赖被`spring-boot-starter-validation`集成了)
+   ``` xml
+   <dependency>
+      <groupId>javax.validation</groupId>
+      <artifactId>validation-api</artifactId>
+      <version>2.0.1.Final</version>
+   </dependency>
+   ```
+
+1. 编写自定义的校验注解
+   必须有3个属性
+   message()错误信息
+   groups()分组校验
+   payload()自定义负载信息
+   ``` java
+    @Documented
+    @Constraint(validatedBy = { ListValueConstraintValidator.class})
+    @Target({ METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE })
+    @Retention(RUNTIME)
+    public @interface ListValue {
+        // 使用该属性去Validation.properties中取
+        String message() default "{com.atguigu.common.validator.ListValue.message}";
+
+        Class<?>[] groups() default { };
+
+        Class<? extends Payload>[] payload() default { };
+
+        int[] vals() default {};
+    }
+    ```
+   该属性值取哪里取呢？
+   `gulimall-common`创建文件`ValidationMessages.properties`(注意编码)
+   ``` yml
+   cn.cheakin.common.validator.ListValue.message=必须提交指定的值 [0,1]
+   ```
+
+2. 编写自定义的校验器
+   ``` java
+    public class ListValueConstraintValidator implements ConstraintValidator<ListValue,Integer> {
+        private Set<Integer> set=new HashSet<>();
+
+        // 初始化方法
+        @Override
+        public void initialize(ListValue constraintAnnotation) {
+            int[] value = constraintAnnotation.vals();
+            for (int val : value) {
+                set.add(val);
+            }
+        }
+
+        /**
+        * 判断是否校验成功
+        * @param value 需要校验的值
+        * @param context
+        * @return
+        */
+        @Override
+        public boolean isValid(Integer value, ConstraintValidatorContext context) {
+            return  set.contains(value);
+        }
+    }
+    ```
+
+3. 关联校验器和校验注解  
+  `@Constraint(validatedBy = { ListValueConstraintValidator.class})`
+  一个校验注解可以匹配多个校验器
+
+4. 使用实例
+  ``` java
+  /**
+	 * 显示状态[0-不显示；1-显示]
+	 */
+	@ListValue(value = {0,1},groups ={AddGroup.class})
+	private Integer showStatus;
+  ```
+
+在`brand.vue`中可以直接修改显示状态, 校验和直接更新对象不同, 所以需要再写一个更新status的接口
+`brand.vue`中把`/product/brand/update`修改为`/product/brand/update/status`即可
+后端在`BrandController`中新增接口
+``` javas
+/**
+  * 修改状态
+  */
+@RequestMapping("/update/status")
+//@RequiresPermissions("product:brand:update")
+public R updateStatus(@RequestBody @Validated({UpdateStatusGroup.class}) BrandEntity brand){
+    brandService.updateById(brand);
+
+    return R.ok();
+}
+```
+将对应的实体字段校验加上
+``` java
+/**
+  * 显示状态[0-不显示；1-显示]
+  */
+@NotNull(groups = {AddGroup.class, UpdateStatusGroup.class})
+@ListValue(vals = {0,1}, groups = {AddGroup.class, UpdateStatusGroup.class})
+private Integer showStatus;
+```
+并且在`gulimall-common`中新增`UpdateStatusGroup`类(同上, 内容为空)
+``` java
+public interface UpdateStatusGroup {
+
+}
+```
 
 
 # 谷粒商城-高级篇
