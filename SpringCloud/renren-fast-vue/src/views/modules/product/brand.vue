@@ -63,6 +63,13 @@
         align="center"
         label="品牌logo地址"
       >
+        <template slot-scope="scope">
+          <el-image
+            style="width: 100px; height: 80px"
+            :src="scope.row.logo"
+            fit="fit"
+          ></el-image>
+        </template>
       </el-table-column>
       <el-table-column
         prop="descript"
@@ -169,18 +176,18 @@ export default {
     this.getDataList();
   },
   methods: {
-    updateBrandStatus(data){
-      console.log("最新信息",data);
-      let {brandId,showStatus} = data;
-       this.$http({
+    updateBrandStatus(data) {
+      console.log("最新信息", data);
+      let { brandId, showStatus } = data;
+      this.$http({
         url: this.$http.adornUrl("/product/brand/update"),
         method: "post",
-        data: this.$http.adornData({brandId,showStatus:showStatus},false)
+        data: this.$http.adornData({ brandId, showStatus: showStatus }, false),
       }).then(({ data }) => {
-       this.$message({
-         type:"success",
-         message:"状态更新成功"
-       })
+        this.$message({
+          type: "success",
+          message: "状态更新成功",
+        });
       });
     },
     // 获取数据列表

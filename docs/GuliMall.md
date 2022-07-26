@@ -8726,22 +8726,13 @@ public class OssController {
     String accessKey ;
 
     @RequestMapping("oss/policy")
-    public Map<String, String> policy() {
-        /*// 阿里云账号AccessKey拥有所有API的访问权限，风险很高。强烈建议您创建并使用RAM用户进行API访问或日常运维，请登录RAM控制台创建RAM用户。
-        String accessId = "yourAccessKeyId";
-        String accessKey = "yourAccessKeySecret";
-        // Endpoint以华东1（杭州）为例，其它Region请按实际情况填写。
-        String endpoint = "oss-cn-hangzhou.aliyuncs.com";*/
-
-        // 填写Bucket名称，例如examplebucket。
-        String bucket = "gulimall-cheakin";
+    public R policy() {
         // 填写Host地址，格式为https://bucketname.endpoint。
-        String host = "https://cheakin.oss-cn-chengdu.aliyuncs.com";
-        // 设置上传回调URL，即回调服务器地址，用于处理应用服务器与OSS之间的通信。OSS会在文件上传完成后，把文件上传信息通过此回调URL发送给应用服务器。
-        String callbackUrl = "https://192.168.0.0:8888";
+        String host = "https://" + bucket + "." + endpoint;
+
         // 设置上传到OSS文件的前缀，可置空此项。置空后，文件将上传至Bucket的根目录下。
         String format = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-        String dir = format + "/"; // 用户上传文件时指定的前缀。
+        String dir = format; // 用户上传文件时指定的前缀。
 
 //        OSSClient client = new OSSClient(endpoint, accessId, accessKey);
         Map<String, String> respMap = null;
@@ -8771,7 +8762,7 @@ public class OssController {
             // Assert.fail(e.getMessage());
             System.out.println(e.getMessage());
         }
-        return respMap;
+        return R.ok().put("data", respMap);
     }
 }
 ```
@@ -8877,7 +8868,7 @@ public class OssController {
               _self.dataObj.policy = response.data.policy;
               _self.dataObj.signature = response.data.signature;
               _self.dataObj.ossaccessKeyId = response.data.accessid;
-              _self.dataObj.key = response.data.dir + "/"+getUUID()+"_${filename}";
+              _self.dataObj.key = response.data.dir +getUUID()+"_${filename}";
               _self.dataObj.dir = response.data.dir;
               _self.dataObj.host = response.data.host;
               resolve(true);
@@ -9042,8 +9033,957 @@ public class OssController {
 写明要使用的组件`components: { SingleUpload },`
 
 点击一下文件上传，发现发送了两个请求
-localhost:88/api/thirdparty/oss/policy?t=1613300654238
+`localhost:88/api/thirdparty/oss/policy?t=1613300654238`
+文件上传前调用的方法： `:before-upload="beforeUpload"`
+发现该方法返回了一个new Promise，调用了`policy()`，该方法是`policy.js`中的
+`import { policy } from "./policy";`
 
+java里面改接口返回值为`R`。`return R.ok().put("data”,respMap);`
+
+阿里云开启跨域
+开始执行上传，但是在上传过程中，出现了跨域请求问题：
+`Access to XMLHttpRequest at 'http://gulimall-f.oss-cn-qingdao.aliyuncs.com/' from origin 'http://localhost:8001' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.`
+这又是一个跨域的问题，解决方法就是在阿里云上开启跨域访问：
+[](./assets/GuliMall.md/GuliMall_base/1658750987743.jpg)
+
+此时在测试, 就能够上传成功了
+
+#### 表单校验&自定义校验器
+添加状态开关`<el-switch></el-switch>`以及`表单校验`到`brand-add-or-update.vue`中,修改`brand-add-or-update.vue`如下： 
+``` html
+<template>
+  <el-dialog
+    :title="!dataForm.id ? '新增' : '修改'"
+    :close-on-click-modal="false"
+    :visible.sync="visible"
+  >
+    <el-form
+      :model="dataForm"
+      :rules="dataRule"
+      ref="dataForm"
+      @keyup.enter.native="dataFormSubmit()"
+      label-width="140px"
+    >
+      <el-form-item label="品牌名" prop="name">
+        <el-input v-model="dataForm.name" placeholder="品牌名"></el-input>
+      </el-form-item>
+      <el-form-item label="品牌logo地址" prop="logo">
+        <SingleUpload v-model="dataForm.logo"></SingleUpload>
+      </el-form-item>
+      <el-form-item label="介绍" prop="descript">
+        <el-input v-model="dataForm.descript" placeholder="介绍"></el-input>
+      </el-form-item>
+      <el-form-item label="显示状态" prop="showStatus">
+        <el-switch
+          v-model="dataForm.showStatus"
+          active-color="#13ce66"
+          inactive-color="#ff4949"
+          :active-value="1"
+          :inactive-value="0"
+        >
+        </el-switch>
+      </el-form-item>
+      <el-form-item label="检索首字母" prop="firstLetter">
+        <el-input
+          v-model="dataForm.firstLetter"
+          placeholder="检索首字母"
+        ></el-input>
+      </el-form-item>
+      <el-form-item label="排序" prop="sort">
+        <el-input v-model="dataForm.sort" placeholder="排序"></el-input>
+      </el-form-item>
+    </el-form>
+    <span slot="footer" class="dialog-footer">
+      <el-button @click="visible = false">取消</el-button>
+      <el-button type="primary" @click="dataFormSubmit()">确定</el-button>
+    </span>
+  </el-dialog>
+</template>
+
+<script>
+import SingleUpload from "@/components/upload/singleUpload";
+export default {
+  data() {
+    return {
+      visible: false,
+      dataForm: {
+        brandId: 0,
+        name: "",
+        logo: "",
+        descript: "",
+        showStatus: 1,
+        firstLetter: "",
+        sort: 0,
+      },
+      dataRule: {
+        name: [{ required: true, message: "品牌名不能为空", trigger: "blur" }],
+        logo: [
+          { required: true, message: "品牌logo地址不能为空", trigger: "blur" },
+        ],
+        descript: [
+          { required: true, message: "介绍不能为空", trigger: "blur" },
+        ],
+        showStatus: [
+          {
+            required: true,
+            message: "显示状态[0-不显示；1-显示]不能为空",
+            trigger: "blur",
+          },
+        ],
+        firstLetter: [
+          {
+            validator: (rule, value, callback) => {
+              if (value == "") {
+                callback(new Error("首字母必须填写"));
+              } else if (!/^[a-zA-Z]$/.test(value)) {
+                callback(new Error("首字母必须a-z或者A-Z之间"));
+              } else {
+                callback();
+              }
+            },
+            trigger: "blur",
+          },
+        ],
+        sort: [{validator: (rule, value, callback) => {
+          if (value == "") {
+                callback(new Error("排序字段必须填写"));
+              } else if (!Number.isInteger(parseInt(value)) || parseInt(value) < 0){
+                callback(new Error("排序字段必须是一个整数"));
+              } else {
+                callback();
+              }
+        }, trigger: "blur" }],
+      },
+    };
+  },
+  methods: {
+    init(id) {
+      this.dataForm.brandId = id || 0;
+      this.visible = true;
+      this.$nextTick(() => {
+        this.$refs["dataForm"].resetFields();
+        if (this.dataForm.brandId) {
+          this.$http({
+            url: this.$http.adornUrl(
+              `/product/brand/info/${this.dataForm.brandId}`
+            ),
+            method: "get",
+            params: this.$http.adornParams(),
+          }).then(({ data }) => {
+            if (data && data.code === 0) {
+              this.dataForm.name = data.brand.name;
+              this.dataForm.logo = data.brand.logo;
+              this.dataForm.descript = data.brand.descript;
+              this.dataForm.showStatus = data.brand.showStatus;
+              this.dataForm.firstLetter = data.brand.firstLetter;
+              this.dataForm.sort = data.brand.sort;
+            }
+          });
+        }
+      });
+    },
+    // 表单提交
+    dataFormSubmit() {
+      this.$refs["dataForm"].validate((valid) => {
+        if (valid) {
+          this.$http({
+            url: this.$http.adornUrl(
+              `/product/brand/${!this.dataForm.brandId ? "save" : "update"}`
+            ),
+            method: "post",
+            data: this.$http.adornData({
+              brandId: this.dataForm.brandId || undefined,
+              name: this.dataForm.name,
+              logo: this.dataForm.logo,
+              descript: this.dataForm.descript,
+              showStatus: this.dataForm.showStatus,
+              firstLetter: this.dataForm.firstLetter,
+              sort: this.dataForm.sort,
+            }),
+          }).then(({ data }) => {
+            if (data && data.code === 0) {
+              this.$message({
+                message: "操作成功",
+                type: "success",
+                duration: 1500,
+                onClose: () => {
+                  this.visible = false;
+                  this.$emit("refreshDataList");
+                },
+              });
+            } else {
+              this.$message.error(data.msg);
+            }
+          });
+        }
+      });
+    },
+  },
+  components: {
+    SingleUpload,
+  },
+};
+</script>
+```
+
+添加`<el-image></el-image>`及其他标签,`brand.vue`使用`<el-image>`
+参照[官方文档](), 在`src/components/element-ui/index.js`中导入标签(版本不匹配的可以删掉)
+``` js
+import {
+  Pagination,
+  Dialog,
+  Autocomplete,
+  Dropdown,
+  DropdownMenu,
+  DropdownItem,
+  Menu,
+  Submenu,
+  MenuItem,
+  MenuItemGroup,
+  Input,
+  InputNumber,
+  Radio,
+  RadioGroup,
+  RadioButton,
+  Checkbox,
+  CheckboxButton,
+  CheckboxGroup,
+  Switch,
+  Select,
+  Option,
+  OptionGroup,
+  Button,
+  ButtonGroup,
+  Table,
+  TableColumn,
+  DatePicker,
+  TimeSelect,
+  TimePicker,
+  Popover,
+  Tooltip,
+  Breadcrumb,
+  BreadcrumbItem,
+  Form,
+  FormItem,
+  Tabs,
+  TabPane,
+  Tag,
+  Tree,
+  Alert,
+  Slider,
+  Icon,
+  Row,
+  Col,
+  Upload,
+  Progress,
+  Spinner,
+  Badge,
+  Card,
+  Rate,
+  Steps,
+  Step,
+  Carousel,
+  CarouselItem,
+  Collapse,
+  CollapseItem,
+  Cascader,
+  ColorPicker,
+  Transfer,
+  Container,
+  Header,
+  Aside,
+  Main,
+  Footer,
+  Timeline,
+  TimelineItem,
+  Link,
+  Divider,
+  Image,
+  Calendar,
+  Loading,
+  MessageBox,
+  Message,
+  Notification
+} from 'element-ui';
+
+Vue.use(Pagination);
+Vue.use(Dialog);
+Vue.use(Autocomplete);
+Vue.use(Dropdown);
+Vue.use(DropdownMenu);
+Vue.use(DropdownItem);
+Vue.use(Menu);
+Vue.use(Submenu);
+Vue.use(MenuItem);
+Vue.use(MenuItemGroup);
+Vue.use(Input);
+Vue.use(InputNumber);
+Vue.use(Radio);
+Vue.use(RadioGroup);
+Vue.use(RadioButton);
+Vue.use(Checkbox);
+Vue.use(CheckboxButton);
+Vue.use(CheckboxGroup);
+Vue.use(Switch);
+Vue.use(Select);
+Vue.use(Option);
+Vue.use(OptionGroup);
+Vue.use(Button);
+Vue.use(ButtonGroup);
+Vue.use(Table);
+Vue.use(TableColumn);
+Vue.use(DatePicker);
+Vue.use(TimeSelect);
+Vue.use(TimePicker);
+Vue.use(Popover);
+Vue.use(Tooltip);
+Vue.use(Breadcrumb);
+Vue.use(BreadcrumbItem);
+Vue.use(Form);
+Vue.use(FormItem);
+Vue.use(Tabs);
+Vue.use(TabPane);
+Vue.use(Tag);
+Vue.use(Tree);
+Vue.use(Alert);
+Vue.use(Slider);
+Vue.use(Icon);
+Vue.use(Row);
+Vue.use(Col);
+Vue.use(Upload);
+Vue.use(Progress);
+Vue.use(Spinner);
+Vue.use(Badge);
+Vue.use(Card);
+Vue.use(Rate);
+Vue.use(Steps);
+Vue.use(Step);
+Vue.use(Carousel);
+Vue.use(CarouselItem);
+Vue.use(Collapse);
+Vue.use(CollapseItem);
+Vue.use(Cascader);
+Vue.use(ColorPicker);
+Vue.use(Transfer);
+Vue.use(Container);
+Vue.use(Header);
+Vue.use(Aside);
+Vue.use(Main);
+Vue.use(Footer);
+Vue.use(Timeline);
+Vue.use(TimelineItem);
+Vue.use(Link);
+Vue.use(Divider);
+Vue.use(Image);
+Vue.use(Calendar);
+```
+`brand.vue`页面如下(图片出不来,是由于地址失效了,暂且忽略):
+``` html
+<template>
+  <div class="mod-config">
+    <el-form
+      :inline="true"
+      :model="dataForm"
+      @keyup.enter.native="getDataList()"
+    >
+      <el-form-item>
+        <el-input
+          v-model="dataForm.key"
+          placeholder="参数名"
+          clearable
+        ></el-input>
+      </el-form-item>
+      <el-form-item>
+        <el-button @click="getDataList()">查询</el-button>
+        <el-button
+          v-if="isAuth('product:brand:save')"
+          type="primary"
+          @click="addOrUpdateHandle()"
+          >新增</el-button
+        >
+        <el-button
+          v-if="isAuth('product:brand:delete')"
+          type="danger"
+          @click="deleteHandle()"
+          :disabled="dataListSelections.length <= 0"
+          >批量删除</el-button
+        >
+      </el-form-item>
+    </el-form>
+    <el-table
+      :data="dataList"
+      border
+      v-loading="dataListLoading"
+      @selection-change="selectionChangeHandle"
+      style="width: 100%"
+    >
+      <el-table-column
+        type="selection"
+        header-align="center"
+        align="center"
+        width="50"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="brandId"
+        header-align="center"
+        align="center"
+        label="品牌id"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="name"
+        header-align="center"
+        align="center"
+        label="品牌名"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="logo"
+        header-align="center"
+        align="center"
+        label="品牌logo地址"
+      >
+      <template slot-scope="scope" >
+        <el-image 
+          style="width: 100px; height: 80px"
+          :src="scope.row.logo"
+          fit="fit"></el-image>
+      </template>
+      </el-table-column>
+      <el-table-column
+        prop="descript"
+        header-align="center"
+        align="center"
+        label="介绍"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="showStatus"
+        header-align="center"
+        align="center"
+        label="显示状态"
+      >
+        <template slot-scope="scope">
+          <el-switch
+            v-model="scope.row.showStatus"
+            active-color="#13ce66"
+            inactive-color="#ff4949"
+            :active-value="1"
+            :inactive-value="0"
+            @change="updateBrandStatus(scope.row)"
+          >
+          </el-switch>
+        </template>
+      </el-table-column>
+      <el-table-column
+        prop="firstLetter"
+        header-align="center"
+        align="center"
+        label="检索首字母"
+      >
+      </el-table-column>
+      <el-table-column
+        prop="sort"
+        header-align="center"
+        align="center"
+        label="排序"
+      >
+      </el-table-column>
+      <el-table-column
+        fixed="right"
+        header-align="center"
+        align="center"
+        width="150"
+        label="操作"
+      >
+        <template slot-scope="scope">
+          <el-button
+            type="text"
+            size="small"
+            @click="addOrUpdateHandle(scope.row.brandId)"
+            >修改</el-button
+          >
+          <el-button
+            type="text"
+            size="small"
+            @click="deleteHandle(scope.row.brandId)"
+            >删除</el-button
+          >
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-pagination
+      @size-change="sizeChangeHandle"
+      @current-change="currentChangeHandle"
+      :current-page="pageIndex"
+      :page-sizes="[10, 20, 50, 100]"
+      :page-size="pageSize"
+      :total="totalPage"
+      layout="total, sizes, prev, pager, next, jumper"
+    >
+    </el-pagination>
+    <!-- 弹窗, 新增 / 修改 -->
+    <add-or-update
+      v-if="addOrUpdateVisible"
+      ref="addOrUpdate"
+      @refreshDataList="getDataList"
+    ></add-or-update>
+  </div>
+</template>
+
+<script>
+import AddOrUpdate from "./brand-add-or-update";
+export default {
+  data() {
+    return {
+      dataForm: {
+        key: "",
+      },
+      dataList: [],
+      pageIndex: 1,
+      pageSize: 10,
+      totalPage: 0,
+      dataListLoading: false,
+      dataListSelections: [],
+      addOrUpdateVisible: false,
+    };
+  },
+  components: {
+    AddOrUpdate,
+  },
+  activated() {
+    this.getDataList();
+  },
+  methods: {
+    updateBrandStatus(data){
+      console.log("最新信息",data);
+      let {brandId,showStatus} = data;
+       this.$http({
+        url: this.$http.adornUrl("/product/brand/update"),
+        method: "post",
+        data: this.$http.adornData({brandId,showStatus:showStatus},false)
+      }).then(({ data }) => {
+       this.$message({
+         type:"success",
+         message:"状态更新成功"
+       })
+      });
+    },
+    // 获取数据列表
+    getDataList() {
+      this.dataListLoading = true;
+      this.$http({
+        url: this.$http.adornUrl("/product/brand/list"),
+        method: "get",
+        params: this.$http.adornParams({
+          page: this.pageIndex,
+          limit: this.pageSize,
+          key: this.dataForm.key,
+        }),
+      }).then(({ data }) => {
+        if (data && data.code === 0) {
+          this.dataList = data.page.list;
+          this.totalPage = data.page.totalCount;
+        } else {
+          this.dataList = [];
+          this.totalPage = 0;
+        }
+        this.dataListLoading = false;
+      });
+    },
+    // 每页数
+    sizeChangeHandle(val) {
+      this.pageSize = val;
+      this.pageIndex = 1;
+      this.getDataList();
+    },
+    // 当前页
+    currentChangeHandle(val) {
+      this.pageIndex = val;
+      this.getDataList();
+    },
+    // 多选
+    selectionChangeHandle(val) {
+      this.dataListSelections = val;
+    },
+    // 新增 / 修改
+    addOrUpdateHandle(id) {
+      this.addOrUpdateVisible = true;
+      this.$nextTick(() => {
+        this.$refs.addOrUpdate.init(id);
+      });
+    },
+    // 删除
+    deleteHandle(id) {
+      var ids = id
+        ? [id]
+        : this.dataListSelections.map((item) => {
+            return item.brandId;
+          });
+      this.$confirm(
+        `确定对[id=${ids.join(",")}]进行[${id ? "删除" : "批量删除"}]操作?`,
+        "提示",
+        {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        }
+      ).then(() => {
+        this.$http({
+          url: this.$http.adornUrl("/product/brand/delete"),
+          method: "post",
+          data: this.$http.adornData(ids, false),
+        }).then(({ data }) => {
+          if (data && data.code === 0) {
+            this.$message({
+              message: "操作成功",
+              type: "success",
+              duration: 1500,
+              onClose: () => {
+                this.getDataList();
+              },
+            });
+          } else {
+            this.$message.error(data.msg);
+          }
+        });
+      });
+    },
+  },
+};
+</script>
+```
+
+#### JSR303数据校验
+填写form时应该有前端校验，后端也应该有校验
+**前端:**
+前端的校验是element-ui表单验证. Form 组件提供了表单验证的功能，只需要通过 rules 属性传入约定的验证规则，并将 Form-Item 的 prop 属性设置为需校验的字段名即可。
+
+**后端:**
+1. 使用校验注解
+   在Java中提供了一系列的校验方式，它这些校验方式在“javax.validation.constraints”包中，提供了如`@Email`，`@NotNull`等注解。
+   ``` xml
+   <!--jsr3参数校验器-->
+   <dependency>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-validation</artifactId>
+   </dependency>
+   ```
+   里面依赖了hibernate-validator
+   在非空处理方式上提供了`@NotNull`，`@NotBlank`和`@NotEmpty`
+   - @NotNull
+    The annotated element must not be null. Accepts any type.
+    注解元素禁止为null，能够接收任何类型
+   - @NotEmpty
+    the annotated element must not be null nor empty.
+    该注解修饰的字段不能为null或""
+    Supported types are:
+    支持以下几种类型
+    CharSequence (length of character sequence is evaluated) 字符序列（字符序列长度的计算）
+    Collection (collection size is evaluated) 集合长度的计算
+    Map (map size is evaluated) map长度的计算
+    Array (array length is evaluated) 数组长度的计算
+   - @NotBlank
+    The annotated element must not be null and must contain at least one non-whitespace character. Accepts CharSequence. 该注解不能为null，并且至少包含一个非空格字符。接收字符序列。
+   - @Valid
+2. controller中加校验注解`@Valid`，开启校验
+   ``` java
+    @RequestMapping("/save")
+    public R save(@Valid @RequestBody BrandEntity brand){
+      brandService.save(brand);
+
+      return R.ok();
+    }
+    ```
+    实体类中加上字段
+    测试：
+    ``` JSON
+    POST http://localhost:88/api/product/brand/save
+    {
+        "timestamp": "2020-04-29T09:20:46.383+0000",
+        "status": 400,
+        "error": "Bad Request",
+        "errors": [
+            {
+                "codes": [
+                    "NotBlank.brandEntity.name",
+                    "NotBlank.name",
+                    "NotBlank.java.lang.String",
+                    "NotBlank"
+                ],
+                "arguments": [
+                    {
+                        "codes": [
+                            "brandEntity.name",
+                            "name"
+                        ],
+                        "arguments": null,
+                        "defaultMessage": "name",
+                        "code": "name"
+                    }
+                ],
+                "defaultMessage": "不能为空",
+                "objectName": "brandEntity",
+                "field": "name",
+                "rejectedValue": "",
+                "bindingFailure": false,
+                "code": "NotBlank"
+            }
+        ],
+        "message": "Validation failed for object='brandEntity'. Error count: 1",
+        "path": "/product/brand/save"
+    }
+    ```
+    能够看到`"defaultMessage": “不能为空”`，这些错误消息定义在`hibernate-validator``的`\org\hibernate\validator\ValidationMessages_zh_CN.properties`文件中。在该文件中定义了很多的错误规则：
+
+``` yml
+javax.validation.constraints.AssertFalse.message     = 只能为false
+javax.validation.constraints.AssertTrue.message      = 只能为true
+javax.validation.constraints.DecimalMax.message      = 必须小于或等于{value}
+javax.validation.constraints.DecimalMin.message      = 必须大于或等于{value}
+javax.validation.constraints.Digits.message          = 数字的值超出了允许范围(只允许在{integer}位整数和{fraction}位小数范围内)
+javax.validation.constraints.Email.message           = 不是一个合法的电子邮件地址
+javax.validation.constraints.Future.message          = 需要是一个将来的时间
+javax.validation.constraints.FutureOrPresent.message = 需要是一个将来或现在的时间
+javax.validation.constraints.Max.message             = 最大不能超过{value}
+javax.validation.constraints.Min.message             = 最小不能小于{value}
+javax.validation.constraints.Negative.message        = 必须是负数
+javax.validation.constraints.NegativeOrZero.message  = 必须是负数或零
+javax.validation.constraints.NotBlank.message        = 不能为空
+javax.validation.constraints.NotEmpty.message        = 不能为空
+javax.validation.constraints.NotNull.message         = 不能为null
+javax.validation.constraints.Null.message            = 必须为null
+javax.validation.constraints.Past.message            = 需要是一个过去的时间
+javax.validation.constraints.PastOrPresent.message   = 需要是一个过去或现在的时间
+javax.validation.constraints.Pattern.message         = 需要匹配正则表达式"{regexp}"
+javax.validation.constraints.Positive.message        = 必须是正数
+javax.validation.constraints.PositiveOrZero.message  = 必须是正数或零
+javax.validation.constraints.Size.message            = 个数必须在{min}和{max}之间
+
+org.hibernate.validator.constraints.CreditCardNumber.message        = 不合法的信用卡号码
+org.hibernate.validator.constraints.Currency.message                = 不合法的货币 (必须是{value}其中之一)
+org.hibernate.validator.constraints.EAN.message                     = 不合法的{type}条形码
+org.hibernate.validator.constraints.Email.message                   = 不是一个合法的电子邮件地址
+org.hibernate.validator.constraints.Length.message                  = 长度需要在{min}和{max}之间
+org.hibernate.validator.constraints.CodePointLength.message         = 长度需要在{min}和{max}之间
+org.hibernate.validator.constraints.LuhnCheck.message               = ${validatedValue}的校验码不合法, Luhn模10校验和不匹配
+org.hibernate.validator.constraints.Mod10Check.message              = ${validatedValue}的校验码不合法, 模10校验和不匹配
+org.hibernate.validator.constraints.Mod11Check.message              = ${validatedValue}的校验码不合法, 模11校验和不匹配
+org.hibernate.validator.constraints.ModCheck.message                = ${validatedValue}的校验码不合法, ${modType}校验和不匹配
+org.hibernate.validator.constraints.NotBlank.message                = 不能为空
+org.hibernate.validator.constraints.NotEmpty.message                = 不能为空
+org.hibernate.validator.constraints.ParametersScriptAssert.message  = 执行脚本表达式"{script}"没有返回期望结果
+org.hibernate.validator.constraints.Range.message                   = 需要在{min}和{max}之间
+org.hibernate.validator.constraints.SafeHtml.message                = 可能有不安全的HTML内容
+org.hibernate.validator.constraints.ScriptAssert.message            = 执行脚本表达式"{script}"没有返回期望结果
+org.hibernate.validator.constraints.URL.message                     = 需要是一个合法的URL
+
+org.hibernate.validator.constraints.time.DurationMax.message        = 必须小于${inclusive == true ? '或等于' : ''}${days == 0 ? '' : days += '天'}${hours == 0 ? '' : hours += '小时'}${minutes == 0 ? '' : minutes += '分钟'}${seconds == 0 ? '' : seconds += '秒'}${millis == 0 ? '' : millis += '毫秒'}${nanos == 0 ? '' : nanos += '纳秒'}
+org.hibernate.validator.constraints.time.DurationMin.message        = 必须大于${inclusive == true ? '或等于' : ''}${days == 0 ? '' : days += '天'}${hours == 0 ? '' : hours += '小时'}${minutes == 0 ? '' : minutes += '分钟'}${seconds == 0 ? '' : seconds += '秒'}${millis == 0 ? '' : millis += '毫秒'}${nanos == 0 ? '' : nanos += '纳秒'}
+```
+
+想要自定义错误消息，可以覆盖默认的错误提示信息，如`@NotBlank`的默认message是
+``` java
+public @interface NotBlank {
+	String message() default "{javax.validation.constraints.NotBlank.message}";
+}
+```
+
+可以在添加注解的时候，修改message：
+``` java
+@NotBlank(message = "品牌名必须非空")
+private String name;
+```
+
+当再次发送请求时，得到的错误提示信息：
+``` json
+{
+    "timestamp": "2020-04-29T09:36:04.125+0000",
+    "status": 400,
+    "error": "Bad Request",
+    "errors": [
+        {
+            "codes": [
+                "NotBlank.brandEntity.name",
+                "NotBlank.name",
+                "NotBlank.java.lang.String",
+                "NotBlank"
+            ],
+            "arguments": [
+                {
+                    "codes": [
+                        "brandEntity.name",
+                        "name"
+                    ],
+                    "arguments": null,
+                    "defaultMessage": "name",
+                    "code": "name"
+                }
+            ],
+            "defaultMessage": "品牌名必须非空",
+            "objectName": "brandEntity",
+            "field": "name",
+            "rejectedValue": "",
+            "bindingFailure": false,
+            "code": "NotBlank"
+        }
+    ],
+    "message": "Validation failed for object='brandEntity'. Error count: 1",
+    "path": "/product/brand/save"
+}
+```
+但是这种返回的错误结果并不符合我们的业务需要。
+
+
+3. `BindResult`, 给校验的Bean后，紧跟一个`BindResult`，就可以获取到校验的结果。拿到校验的结果，就可以自定义的封装。
+    ``` java
+    @RequestMapping("/save")
+    public R save(@Valid @RequestBody BrandEntity brand, BindingResult result){
+        if( result.hasErrors()){
+            Map<String,String> map=new HashMap<>();
+            //1.获取错误的校验结果
+            result.getFieldErrors().forEach((item)->{
+                //获取发生错误时的message
+                String message = item.getDefaultMessage();
+                //获取发生错误的字段
+                String field = item.getField();
+                map.put(field,message);
+            });
+            return R.error(400,"提交的数据不合法").put("data",map);
+        }else {
+            brandService.save(brand);
+        }
+        return R.ok();
+    }
+    ```
+    实体类`BrandEntity`中增加字段校验注解
+    ``` java
+    @Data
+    @TableName("pms_brand")
+    public class BrandEntity implements Serializable {
+      private static final long serialVersionUID = 1L;
+
+      /**
+      * 品牌id
+      */
+      @TableId
+      private Long brandId;
+      /**
+      * 品牌名
+      */
+      @NotBlank(message = "品牌名必须提交")
+      private String name;
+      /**
+      * 品牌logo地址
+      */
+      @NotEmpty
+      @URL(message = "logo必须是一个合法的url地址")
+      private String logo;
+      /**
+      * 介绍
+      */
+      private String descript;
+      /**
+      * 显示状态[0-不显示；1-显示]
+      */
+      private Integer showStatus;
+      /**
+      * 检索首字母
+      */
+      @NotEmpty
+      @Pattern(regexp = "/^[a-zA-Z]$", message = "检索首字母必须是一个字母")
+      private String firstLetter;
+      /**
+      * 排序
+      */
+      @NotNull
+      @Min(value = 0, message = "排序必须大于0")
+      private Integer sort;
+
+    }
+    ```
+    
+    这种是针对于该请求设置了一个内容校验，如果针对于每个请求都单独进行配置，显然不是太合适，实际上可以统一的对于异常进行处理。
+
+4. 统一异常处理`@ControllerAdvice`, 统一异常处理
+   可以使用SpringMvc所提供的`@ControllerAdvice`，通过`basePackages`能够说明处理哪些路径下的异常。
+   * 抽取一个异常处理类
+      ``` java
+      /**
+       * 集中处理所有异常
+       */
+      @Slf4j
+      @RestControllerAdvice(basePackages = "cn.cheakin.gulimall.product.controller")
+      public class GulimallExceptionControllerAdvice {
+
+          @ExceptionHandler(value = Exception.class) // 也可以返回ModelAndView
+          public R handleValidException(MethodArgumentNotValidException exception){
+              Map<String,String> map=new HashMap<>();
+              // 获取数据校验的错误结果
+              BindingResult bindingResult = exception.getBindingResult();
+              bindingResult.getFieldErrors().forEach(fieldError -> {
+                  String message = fieldError.getDefaultMessage();
+                  String field = fieldError.getField();
+                  map.put(field, message);
+              });
+
+              log.error("数据校验出现问题{},异常类型{}", exception.getMessage(),exception.getClass());
+
+              return R.error(400,"数据校验出现问题").put("data",map);
+          }
+      }
+      ```
+      测试： `http://localhost:88/api/product/brand/save`, 会返回异常信息
+   * 默认异常处理
+      ``` java
+      @ExceptionHandler(value = Throwable.class)
+      public R handleException(Throwable throwable){
+          log.error("未知异常{},异常类型{}", throwable.getMessage(), throwable.getClass());
+          return R.error(400,"数据校验出现问题");
+      }
+      ```
+   * 错误状态码
+      上面代码中，针对于错误状态码，是我们进行随意定义的，然而正规开发过程中，错误状态码有着严格的定义规则，如该在项目中我们的错误状态码定义
+      为了定义这些错误状态码，我们可以单独定义一个常量类，用来存储这些错误状态码
+      ``` java
+      /***
+        * 错误码和错误信息定义类
+        * 1. 错误码定义规则为5为数字
+        * 2. 前两位表示业务场景，最后三位表示错误码。例如：100001。10:通用 001:系统未知异常
+        * 3. 维护错误码后需要维护错误描述，将他们定义为枚举形式
+        * 错误码列表：
+        *  10: 通用
+        *      001：参数格式校验
+        *  11: 商品
+        *  12: 订单
+        *  13: 购物车
+        *  14: 物流
+        */
+       public enum BizCodeEnum {
+
+           UNKNOW_EXEPTION(10000,"系统未知异常"),
+
+           VALID_EXCEPTION( 10001,"参数格式校验失败");
+
+           private int code;
+           private String msg;
+
+           BizCodeEnum(int code, String msg) {
+               this.code = code;
+               this.msg = msg;
+           }
+
+           public int getCode() {
+               return code;
+           }
+
+           public String getMsg() {
+               return msg;
+           }
+       }
+      ```
+   * 测试： `http://localhost:88/api/product/brand/save`
 
 
 # 谷粒商城-高级篇
