@@ -10234,9 +10234,9 @@ MySQL - 5.7.27 : Database - gulimall_admin
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-CREATE DATABASE /*!32312 IF NOT EXISTS*/`mall_admin` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/`gulimall_admin` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
 
-USE `mall_admin`;
+USE `gulimall_admin`;
 
 /*Table structure for table `sys_menu` */
 
@@ -10311,57 +10311,304 @@ insert  into `sys_menu`(`menu_id`,`parent_id`,`name`,`url`,`perms`,`type`,`icon`
     </el-col>
 
 
-2 右侧表格内容：
+2. 右侧表格内容：
+    开始填写属性分组页面右侧的表格
 
-开始填写属性分组页面右侧的表格
+    复制`\modules\product\attrgroup.vue`中的部分内
+    容div到`attrgroup.vue`
+    批量删除是弹窗add-or-update
+    导入data、结合components
 
-复制gulimall-product\src\main\resources\src\views\modules\product\attrgroup.vue中的部分内
-容div到attrgroup.vue
+    **父子组件**
+    要实现功能：点击左侧，右侧表格对应内容显示。
 
-批量删除是弹窗add-or-update
+    父子组件传递数据：category.vue点击时，引用它的attgroup.vue能感知到， 然后
+    通知到add-or-update
 
-导入data、结合components
+    比如嵌套div，里层div有事件后冒泡到外层div（是指一次点击调用了两个div的点
+    击函数）
 
+    子组件（category）给父组件（attrgroup）传递数据，事件机制；
 
-父子组件
-要实现功能：点击左侧，右侧表格对应内容显示。
+    去element-ui的tree部分找event事件，看node-click()
 
-父子组件传递数据：category.vue点击时，引用它的attgroup.vue能感知到， 然后
-通知到add-or-update
+    在category中绑定node-click事件，
+    ``` html
+    <el-tree :data="menus" :props="defaultProps" node-key="catId" ref="menuTree" @node-click="nodeClick"	></el-tree>
+    ```
 
-比如嵌套div，里层div有事件后冒泡到外层div（是指一次点击调用了两个div的点
-击函数）
+    this.$emit()
+    子组件给父组件发送一个事件，携带上数据；
+    ``` js
+    nodeClick(data,Node,component){
+        console.log("子组件被点击",data,Node,component);
+        this.$emit("tree-node-click",data,Node,component);
+    }, 
+    ```
+    第一个参数事件名字随便写，
+    后面可以写任意多的东西，事件发生时都会传出去
+    `this.$emit(事件名,"...携带的数据");`
+    父组件中的获取发送的事件
+    在attr-group中写
+    `<category @tree-node-click="treeNodeClick"></category>`
+    表明他的子组件可能会传递过来点击事件，用自定义的函数接收传递过来的参数
 
-子组件（category）给父组件（attrgroup）传递数据，事件机制；
-
-去element-ui的tree部分找event事件，看node-click()
-
-在category中绑定node-click事件，
-<el-tree :data="menus" :props="defaultProps" node-key="catId" ref="menuTree" @node-click="nodeClick"	>
-</el-tree>
-
-this.$emit()
-子组件给父组件发送一个事件，携带上数据；
-nodeClick(data,Node,component){
-    console.log("子组件被点击",data,Node,component);
-    this.$emit("tree-node-click",data,Node,component);
-}, 
-第一个参数事件名字随便写，
-后面可以写任意多的东西，事件发生时都会传出去
-
-this.$emit(事件名,“携带的数据”);
-
-父组件中的获取发送的事件
-在attr-group中写
-<category @tree-node-click="treeNodeClick"></category>
-表明他的子组件可能会传递过来点击事件，用自定义的函数接收传递过来的参数
-
- 父组件中进行处理
-//获取发送的事件数据
+    父组件中进行处理
+    ``` js
+    //获取发送的事件数据
     treeNodeClick(data,Node,component){
-     console.log("attgroup感知到的category的节点被点击",data,Node,component);
-     console.log("刚才被点击的菜单ID",data.catId);
+        console.log("attgroup感知到的category的节点被点击",data,Node,component);
+        console.log("刚才被点击的菜单ID",data.catId);
+    },
+    ```
+
+#### 按接口文档开发
+https://easydoc.xyz/s/78237135/ZUqEdvA4/OXTgKobR
+
+##### 查询功能
+`GET /product/attrgroup/list/{catelogId}`
+
+按照这个url，在`gulimall-product`项目下的`AttrgroupController`里修改
+``` java
+/**
+ * 列表
+ * @param  catelogId 0的话查所有
+ */
+@RequestMapping("/list/{catelogId}")
+public R list(@RequestParam Map<String, Object> params,@PathVariable Long catelogId){
+    //        PageUtils page = attrGroupService.queryPage(params);
+    PageUtils page = attrGroupService.queryPage(params,catelogId);
+    return R.ok().put("page", page);
+}
+```
+增加接口与实现
+``` java
+@Override // AttrGroupServiceImpl.java
+public PageUtils queryPage(Map<String, Object> params, Long catelogId) {
+    String key = (String) params.get("key");
+    QueryWrapper<AttrGroupEntity> wrapper = new QueryWrapper<>();
+    // key不为空
+    if (!StringUtils.isEmpty(key)) {
+        wrapper.and((obj) ->
+                    obj.eq("attr_group_id", key).or().like("attr_group_name", key)
+                   );
+    }
+    if (catelogId == 0) {
+        // Query可以把map封装为IPage
+        IPage<AttrGroupEntity> page =
+            this.page(new Query<AttrGroupEntity>().getPage(params),
+                      wrapper);
+        return new PageUtils(page);
+    } else {
+        // 增加id信息
+        wrapper.eq("catelog_id", catelogId);
+
+        IPage<AttrGroupEntity> page =
+            this.page(new Query<AttrGroupEntity>().getPage(params),
+                      wrapper);
+        return new PageUtils(page);
+    }
+}
+```
+
+测试:
+``` json
+localhost:88/api/product/attrgroup/list/1
+localhost:88/api/product/attrgroup/list/1?page=1&key=aa
+{
+    "msg": "success",
+    "code": 0,
+    "page": {
+        "totalCount": 0,
+        "pageSize": 10,
+        "totalPage": 0,
+        "currPage": 1,
+        "list": []
+    }
+}
+```
+
+然后调整前端
+发送请求时url携带id信息，`${this.catId}`，get参数携带page信息
+打击第3级分类时才查，修改`attr-group.vue`中的函数即可
+``` js
+//感知树节点被点击
+treenodeclick(data, node, component) {
+    if (node.level == 3) {
+        this.catId = data.catId;
+        this.getDataList(); //重新查询
+    }
 },
+    
+// 获取数据列表
+getDataList() {
+    this.dataListLoading = true;
+    this.$http({
+        url: this.$http.adornUrl(`/product/attrgroup/list/${this.catId}`),
+        method: "get",
+        params: this.$http.adornParams({
+            page: this.pageIndex,
+            limit: this.pageSize,
+            key: this.dataForm.key
+        })
+    }).then(({ data }) => {
+        if (data && data.code === 0) {
+            this.dataList = data.page.list;
+            this.totalPage = data.page.totalCount;
+        } else {
+            this.dataList = [];
+            this.totalPage = 0;
+        }
+        this.dataListLoading = false;
+    });
+},
+```
+
+##### 新增功能
+上面演示了查询功能，下面写insert分类
+但是想要下面这个效果：
+下拉菜单应该是手机一级分类的，这个功能是级联选择器<el-cascader>
+级联选择的下拉同样是个options数组，多级的话用children属性即可,只需为 `Cascader` 的options属性指定选项数组即可渲染出一个级联选择器。通过props.expandTrigger可以定义展开子级菜单的触发方式。
+
+去`renren-fast-vue`里找`src\views\modules\product\attrgroup-add-or-update.vue`
+修改对应的位置为<el-cascader ...>
+把data()里的数组categorys绑定到options上即可，更详细的设置可以用props绑定
+
+@JsonInclude去空字段
+优化：没有下级菜单时不要有下一级空菜单，在java端把children属性空值去掉，
+空集合时去掉字段，
+可以用@`JsonInclude(Inlcude.NON_EMPTY)`注解标注在实体类的属性上，
+``` java
+@TableField(exist =false)
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
+private List<CategoryEntity> children;
+```
+提交完后返回页面也刷新了，是用到了父子组件。在$message弹窗结束回调$this.emit
+
+接下来要解决的问题是，修改了该vue后，新增是可以用，修改回显就有问题
+了，应该回显3级
+``` html
+<el-button
+  type="text"
+  size="small"
+  @click="addOrUpdateHandle(scope.row.attrGroupId)"
+  >修改</el-button>
+
+<script>
+  // 新增 / 修改
+  addOrUpdateHandle(id) {
+    // 先显示弹窗
+    this.addOrUpdateVisible = true;
+    // .$nextTick(代表渲染结束后再接着执行
+    this.$nextTick(() => {
+      // this是attrgroup.vue
+      // $refs是它里面的所有组件。在本vue里使用的时候，标签里会些ref=""
+      // addOrUpdate这个组件
+      // 组件的init(id);方法
+      this.$refs.addOrUpdate.init(id);
+    });
+  },
+</script>
+```
+在init方法里进行回显,但是分类的id还是不对，应该是用数组封装的路径
+``` js
+init(id) {
+  this.dataForm.attrGroupId = id || 0;
+  this.visible = true;
+  this.$nextTick(() => {
+    this.$refs["dataForm"].resetFields();
+    if (this.dataForm.attrGroupId) {
+      this.$http({
+        url: this.$http.adornUrl(
+          `/product/attrgroup/info/${this.dataForm.attrGroupId}`
+        ),
+        method: "get",
+        params: this.$http.adornParams()
+      }).then(({ data }) => {
+        if (data && data.code === 0) {
+          this.dataForm.attrGroupName = data.attrGroup.attrGroupName;
+          this.dataForm.sort = data.attrGroup.sort;
+          this.dataForm.descript = data.attrGroup.descript;
+          this.dataForm.icon = data.attrGroup.icon;
+          this.dataForm.catelogId = data.attrGroup.catelogId;
+          //查出catelogId的完整路径
+          this.catelogPath =  data.attrGroup.catelogPath;
+        }
+      });
+    }
+  });
+```
+
+修改AttrGroupEntity
+``` java
+/**
+* 三级分类修改的时候回显路径
+*/
+@TableField(exist = false)
+private Long[] catelogPath;
+```
+修改controller
+``` java
+@Autowired
+private CategoryService categoryService;
+
+/**
+ * 信息
+ */
+@RequestMapping("/info/{attrGroupId}")
+//@RequiresPermissions("product:attrgroup:info")
+public R info(@PathVariable("attrGroupId") Long attrGroupId){
+    AttrGroupEntity attrGroup = attrGroupService.getById(attrGroupId);
+    // 用当前当前分类id查询完整路径并写入 attrGroup
+    attrGroup.setCatelogPath(categoryService.findCateLogPath(attrGroup.getCatelogId()));
+    return R.ok().put("attrGroup", attrGroup);
+}
+```
+添加service
+``` java
+@Override // CategoryServiceImpl
+public Long[] findCateLogPath(Long catelogId) {
+    List<Long> paths = new ArrayList<>();
+    paths = findParentPath(catelogId, paths);
+    // 收集的时候是顺序 前端是逆序显示的 所以用集合工具类给它逆序一下
+    Collections.reverse(paths);
+    return paths.toArray(new Long[paths.size()]);
+}
+/**
+  * 递归收集所有父节点
+  */
+private List<Long> findParentPath(Long catlogId, List<Long> paths) {
+    // 1、收集当前节点id
+    paths.add(catlogId);
+    CategoryEntity byId = this.getById(catlogId);
+    if (byId.getParentCid() != 0) {
+        findParentPath(byId.getParentCid(), paths);
+    }
+    return paths;
+}
+```
+
+优化：会话关闭时清空内容，防止下次开启还遗留数据; 级联选择器可以搜索;
+``` html
+<el-dialog
+    :title="!dataForm.id ? '新增' : '修改'"
+    :close-on-click-modal="false"
+    :visible.sync="visible"
+    @closed="dialogClose"
+  >...</el-dialog>
+  ...
+  <el-cascader filterable placeholder="试试搜索：手机" v-model="catelogPath" :options="categorys"  :props="props"></el-cascader>
+
+<script>
+...
+dialogClose(){
+  this.catelogPath = [];
+},
+...
+</script>
+
+
+
 
 # 谷粒商城-高级篇
 围绕商城前端的流程系统. 搜索、结算、登录, 以及周边治理、流控、链路追踪等
