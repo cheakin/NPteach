@@ -2345,7 +2345,7 @@ git clone https://gitee.com/renrenio/renren-generator.git
               <dependency>
                   <groupId>com.baomidou</groupId>
                   <artifactId>mybatis-plus-boot-starter</artifactId>
-                  <version>3.5.1 </version>
+                  <version>3.3.1 </version>
               </dependency>
 
               <!--lombok-->
@@ -2378,7 +2378,7 @@ git clone https://gitee.com/renrenio/renren-generator.git
            <dependency>
                <groupId>com.baomidou</groupId>
                <artifactId>mybatis-plus-boot-starter</artifactId>
-               <version>3.5.1 </version>
+               <version>3.3.1 </version>
            </dependency>
            ```
          2. 导入MySQL数据库的驱动, 官方提示: 5.1或8.0(推荐)的依赖是兼容5.7的
@@ -10175,7 +10175,200 @@ public interface UpdateStatusGroup {
 ```
 
 #### 品牌分类级联管理
+此处对应视频P75
+##### 品牌管理分页
+我们发现品牌管理页面的分页是错的，原因是还没有使用分页去查询
+MyBatis Plus 官网： https://baomidou.com/pages/97710a/
 
+在`gulimall-common`的`pom.xml`中导入插件依赖(注意版本)
+``` xml
+<dependency>
+    <groupId>com.baomidou</groupId>
+    <artifactId>mybatis-plus-extension</artifactId>
+    <version>3.3.1</version>
+</dependency>
+```
+在`gulimall-product`中的config包下新建立`MyBatisConfig`类
+``` java
+@Configuration
+@EnableTransactionManagement    // 开启事务
+@MapperScan("cn.cheakin.gulimall.product.dao")
+public class MybatisConfig {
+
+    // 引入分页插件
+    @Bean
+    public PaginationInterceptor paginationInterceptor() {
+        PaginationInterceptor paginationInterceptor = new PaginationInterceptor();
+        // 设置请求的页面大于最大页后操作， true调回到首页，false 继续请求  默认false
+        paginationInterceptor.setOverflow(true);
+        // 设置最大单页限制数量，默认 500 条，-1 不受限制
+        paginationInterceptor.setLimit(1000);
+        return paginationInterceptor;
+    }
+}
+```
+修改`gulimall-product`中`BrandServiceImpl`的`queryPage()`方法
+``` java
+@Override
+    public PageUtils queryPage(Map<String, Object> params) {
+        //1、获取key
+        String key = (String) params.get("key");
+        QueryWrapper<BrandEntity> queryWrapper = new QueryWrapper<>();
+        if (!StringUtils.isEmpty(key)) {
+            queryWrapper.eq("brand_id", key).or().like("name", key);
+        }
+
+        IPage<BrandEntity> page = this.page(
+                new Query<BrandEntity>().getPage(params),
+                queryWrapper
+
+        );
+
+        return new PageUtils(page);
+    }
+```
+[](./assets/GuliMall.md/GuliMall_base/1659015135646.jpg)
+
+##### 品牌关联分类
+代码需要先拷贝**前端**项目的common和peoduct
+
+接下来写后端接口
+`CategoryBrandRelationController`新增和修改接口
+``` java
+/**
+  * 获取当前品牌关联的所有分类列表
+  */
+@GetMapping("/catelog/list")
+//@RequiresPermissions("product:categorybrandrelation:list")
+public R cateloglist(@RequestParam("brandId")Long brandId){
+    List<CategoryBrandRelationEntity> data = categoryBrandRelationService.list(
+            new QueryWrapper<CategoryBrandRelationEntity>().eq("brand_id",brandId)
+    );
+
+    return R.ok().put("data", data);
+}
+
+/**
+  * 保存
+  */
+@RequestMapping("/save")
+//@RequiresPermissions("product:categorybrandrelation:save")
+public R save(@RequestBody CategoryBrandRelationEntity categoryBrandRelation){
+//		categoryBrandRelationService.save(categoryBrandRelation);
+    categoryBrandRelationService.saveDetail(categoryBrandRelation);
+    return R.ok();
+}
+```
+`CategoryBrandRelationServiceImpl`中新增
+``` java
+@Autowired
+BrandDao brandDao;
+@Autowired
+CategoryDao categoryDao;
+
+@Override
+public void saveDetail(CategoryBrandRelationEntity categoryBrandRelation) {
+    Long brandId = categoryBrandRelation.getBrandId();
+    Long catelogId = categoryBrandRelation.getCatelogId();
+    //1、查询详细名字
+    BrandEntity brandEntity = brandDao.selectById(brandId);
+    CategoryEntity categoryEntity = categoryDao.selectById(catelogId);
+
+    categoryBrandRelation.setBrandName(brandEntity.getName());
+    categoryBrandRelation.setCatelogName(categoryEntity.getName());
+
+    this.save(categoryBrandRelation);
+}
+```
+关联表是直接插入了分类名, 当分类名称被修改时, 也需要同步修改关联表
+`BrandController`类
+``` java
+/**
+ * 保存
+ */
+@RequestMapping("/save")
+//@RequiresPermissions("product:brand:save")
+public R save(@RequestBody @Validated({AddGroup.class}) BrandEntity brand){
+    brandService.updateDetail(brand);
+    return R.ok();
+}
+```
+`BrandServiceImpl`类
+``` java
+@Autowired
+CategoryBrandRelationService categoryBrandRelationService;
+
+@Transactional
+@Override
+public void updateDetail(BrandEntity brand) {
+    //保证冗余字段的数据一致
+    this.updateById(brand);
+    if (!StringUtils.isEmpty(brand.getName())) {
+        //同步更新其他关联表中的数据
+        categoryBrandRelationService.updateBrand(brand.getBrandId(), brand.getName());
+
+        //TODO 更新其他关联
+    }
+}
+```
+`CategoryBrandRelationServiceImpl`类
+``` java
+@Override
+public void updateBrand(Long brandId, String name) {
+    CategoryBrandRelationEntity relationEntity = new CategoryBrandRelationEntity();
+    relationEntity.setBrandId(brandId);
+    relationEntity.setBrandName(name);
+    this.update(relationEntity,new UpdateWrapper<CategoryBrandRelationEntity>().eq("brand_id",brandId));
+}
+```
+
+接下来修改分类的更新
+`CategoryController`
+``` java
+/**
+ * 修改
+ */
+@RequestMapping("/update")
+//@RequiresPermissions("product:category:update")
+public R update(@RequestBody CategoryEntity category){
+//		categoryService.updateById(category);
+  categoryService.updateCascade(category);
+  return R.ok();
+}
+```
+`CategoryServiceImpl`
+``` java
+@Autowired
+CategoryBrandRelationService categoryBrandRelationService;
+
+/**
+ * 级联更新所有关联的数据
+ * @param category
+ */
+@Transactional
+@Override
+public void updateCascade(CategoryEntity category) {
+  this.updateById(category);
+  categoryBrandRelationService.updateCategory(category.getCatId(), category.getName());
+}
+```
+`CategoryBrandRelationServiceImpl`
+``` java
+@Override
+public void updateCategory(Long catId, String name) {
+    this.baseMapper.updateCategory(catId,name);
+}
+```
+`CategoryBrandRelationDao`
+``` java
+void updateCategory(@Param("catId") Long catId, @Param("name") String name);
+```
+`CategoryBrandRelationDao.xml`
+``` xml
+<update id="updateCategory">
+    UPDATE `pms_category_brand_relation` SET catelog_name=#{name} WHERE catelog_id=#{catId}
+</update>
+```
 
 ### 属性分组, SPU和SKU管理
 #### SPU&SKU&规格参数&销售属性
@@ -10612,6 +10805,9 @@ dialogClose(){
 
 
 
+
+#### 品牌关联分类
+参考: 品牌管理->品牌关联分类
 
 ### PO、DO、TO、DTO
 

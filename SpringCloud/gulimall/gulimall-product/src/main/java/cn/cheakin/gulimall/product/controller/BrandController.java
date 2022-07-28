@@ -80,7 +80,7 @@ public class BrandController {
             });
             return R.error(400,"提交的数据不合法").put("data",map);
         }*/
-        brandService.save(brand);
+        brandService.updateDetail(brand);
         return R.ok();
     }
 

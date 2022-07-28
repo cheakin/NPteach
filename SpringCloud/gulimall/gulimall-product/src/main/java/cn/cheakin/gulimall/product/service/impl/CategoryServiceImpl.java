@@ -1,5 +1,7 @@
 package cn.cheakin.gulimall.product.service.impl;
 
+import cn.cheakin.gulimall.product.service.CategoryBrandRelationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,10 +19,13 @@ import cn.cheakin.common.utils.Query;
 import cn.cheakin.gulimall.product.dao.CategoryDao;
 import cn.cheakin.gulimall.product.entity.CategoryEntity;
 import cn.cheakin.gulimall.product.service.CategoryService;
+import org.springframework.transaction.annotation.Transactional;
 
 
 @Service("categoryService")
 public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity> implements CategoryService {
+    @Autowired
+    CategoryBrandRelationService categoryBrandRelationService;
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
@@ -81,6 +86,17 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
         // 收集的时候是顺序 前端是逆序显示的 所以用集合工具类给它逆序一下
         Collections.reverse(paths);
         return paths.toArray(new Long[paths.size()]);
+    }
+
+    /**
+     * 级联更新所有关联的数据
+     * @param category
+     */
+    @Transactional
+    @Override
+    public void updateCascade(CategoryEntity category) {
+        this.updateById(category);
+        categoryBrandRelationService.updateCategory(category.getCatId(), category.getName());
     }
 
 
