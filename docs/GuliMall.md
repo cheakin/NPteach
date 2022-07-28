@@ -10174,8 +10174,10 @@ public interface UpdateStatusGroup {
 }
 ```
 
+#### 品牌分类级联管理
 
-### SPU和SKU管理
+
+### 属性分组, SPU和SKU管理
 #### SPU&SKU&规格参数&销售属性
 SPU：standard product unit(标准化产品单元)：是商品信息聚合的最小单位，是
 一组可复用、易检索的标准化信息的集合，该集合描述了一个产品的特性。
@@ -10606,9 +10608,12 @@ dialogClose(){
 },
 ...
 </script>
+```
 
 
 
+
+### PO、DO、TO、DTO
 
 # 谷粒商城-高级篇
 围绕商城前端的流程系统. 搜索、结算、登录, 以及周边治理、流控、链路追踪等
