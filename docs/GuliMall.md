@@ -10809,7 +10809,142 @@ dialogClose(){
 #### 品牌关联分类
 参考: 品牌管理->品牌关联分类
 
-### PO、DO、TO、DTO
+### 平台属性
+#### 属性的分页查询使用模糊匹配
+*前面的代码已经修改过了, 这里还是演示一次. * `AttrGroupServiceImp`
+``` java
+@Override
+public PageUtils queryPage(Map<String, Object> params, Long catelogId) {
+    String key = (String) params.get("key");
+    QueryWrapper<AttrGroupEntity> wrapper = new QueryWrapper<>();
+    // key不为空
+    if (StringUtils.isNotEmpty(key)) {
+        wrapper.and((obj) ->
+                obj.eq("attr_group_id", key).or().like("attr_group_name", key)
+        );
+    }
+    if (catelogId == 0) {
+        // Query可以把map封装为IPage
+        IPage<AttrGroupEntity> page =
+                this.page(new Query<AttrGroupEntity>().getPage(params),
+                        wrapper);
+        return new PageUtils(page);
+    } else {
+        // 增加id信息
+        wrapper.eq("catelog_id", catelogId);
+
+        IPage<AttrGroupEntity> page =
+                this.page(new Query<AttrGroupEntity>().getPage(params),
+                        wrapper);
+        return new PageUtils(page);
+    }
+}
+```
+
+#### PO、DO、TO、DTO
+1. PO持久对象
+   PO就是对应数据库中某个表中的一条记录，多个记录可以用PO的集合。PO中应该不包含任何对数据的操作。
+2. DO（Domain 0bject)领域对象
+   就是从现实世界中推象出来的有形或无形的业务实体。
+3. TO(Transfer 0bject)，数据传输对象传输的对象
+   不同的应用程序之间传输的对象。微服务
+4. DTO(Data Transfer Obiect)数据传输对象
+   这个概念来源于J2EE的设汁模式，原来的目的是为了EJB的分布式应用握供粗粒度的数据实体，以减少分布式调用的次数，从而握分布式调用的性能和降低网络负载，但在这里，泛指用于示层与服务层之间的数据传输对象。
+5. **VO(value object)值对象**
+   通常用干业务层之闾的数据传递，和PO一样也是仅仅包含数据而已。但应是抽象出的业务对象，可以和表对应，也可以不，这根据业务的需要。用new关韃字创建，由GC回收的
+   Viewobject：视图对象
+   接受页面传递来的对象，封装对象
+   将业务处理完成的对象，封装成页面要用的数据
+6. BO(business object)业务对象
+   从业务模型的度看．见IJML元#领嵫模型的领嵫对象。封装业务逻辑的java对象，通过用DAO方法，结合PO,VO进行业务操作。businessobject:业务对象主要作用是把业务逻辑封装为一个对苤。这个对象可以包括一个或多个其它的对彖。比如一个简历，有教育经历、工怍经历、社会关系等等。我们可以把教育经历对应一个PO工作经历
+7. POJO简单无规则java对象
+   传统意义的 java 对象。就是说在一些 Object/Relation Mapping 工具中，能够做到维护数据库表记录的perslsent object 完全是一个符合 Java Bean 规范的纯 Java 对象，没有增加别的居性和方法。我的理解就是最基本的 java Bean ，只有属性字段及 setter 和 getter方法！。
+   POIO是 DO/DTO/BO/VO 的统称。
+8. DAO(data access object)数据访问对象
+   是一个sun的一个标准 j2ee 设计模式， 这个模式中有个接口就是 DAO ， 它负持人层的操作。为业务层提供接口。此对象用于访问数据库。通常和 PO 结合使用，DAO 中包含了各种数据库的操作方法。通过它写据库进行相关的操作。夹在业务逻辑与数据库资源中间。配合 VO，提供数据库的 CRUD 操作.
+
+创建`AttrVo`类
+``` java
+@Data
+public class AttrVo {
+    /**
+     * 属性id
+     */
+    private Long attrId;
+    /**
+     * 属性名
+     */
+    private String attrName;
+    /**
+     * 是否需要检索[0-不需要，1-需要]
+     */
+    private Integer searchType;
+    /**
+     * 值类型[0-为单个值，1-可以选择多个值]
+     */
+    private Integer valueType;
+    /**
+     * 属性图标
+     */
+    private String icon;
+    /**
+     * 可选值列表[用逗号分隔]
+     */
+    private String valueSelect;
+    /**
+     * 属性类型[0-销售属性，1-基本属性，2-既是销售属性又是基本属性]
+     */
+    private Integer attrType;
+    /**
+     * 启用状态[0 - 禁用，1 - 启用]
+     */
+    private Long enable;
+    /**
+     * 所属分类
+     */
+    private Long catelogId;
+    /**
+     * 快速展示【是否展示在介绍上；0-否 1-是】，在sku中仍然可以调整
+     */
+    private Integer showDesc;
+
+    private Long attrGroupId;
+}
+```
+`AttrController`
+``` java
+/**
+* 保存
+*/
+@RequestMapping("/save")
+//@RequiresPermissions("product:attr:save")
+public R save(@RequestBody AttrVo attr){
+attrService.saveAttr(attr);
+
+  return R.ok();
+}
+```
+`AttrServiceImpl `
+``` java
+@Transactional
+@Override
+public void saveAttr(AttrVo attr) {
+    AttrEntity attrEntity = new AttrEntity();
+//        attrEntity.setAttrName(attr.getAttrName());
+    BeanUtils.copyProperties(attr,attrEntity);
+    //1、保存基本数据
+    this.save(attrEntity);
+    //2、保存关联关系
+    if(attr.getAttrType() == ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode() && attr.getAttrGroupId()!=null){
+        AttrAttrgroupRelationEntity relationEntity = new AttrAttrgroupRelationEntity();
+        relationEntity.setAttrGroupId(attr.getAttrGroupId());
+        relationEntity.setAttrId(attrEntity.getAttrId());
+        relationDao.insert(relationEntity);
+    }
+}
+```
+
+
 
 # 谷粒商城-高级篇
 围绕商城前端的流程系统. 搜索、结算、登录, 以及周边治理、流控、链路追踪等
