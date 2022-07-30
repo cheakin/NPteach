@@ -10841,7 +10841,8 @@ public PageUtils queryPage(Map<String, Object> params, Long catelogId) {
 }
 ```
 
-#### PO、DO、TO、DTO
+#### 规格参数新增与VO
+**PO、DO、TO、DTO、VO、BO、POJO、DA0**
 1. PO持久对象
    PO就是对应数据库中某个表中的一条记录，多个记录可以用PO的集合。PO中应该不包含任何对数据的操作。
 2. DO（Domain 0bject)领域对象
@@ -10926,6 +10927,9 @@ attrService.saveAttr(attr);
 ```
 `AttrServiceImpl `
 ``` java
+@Autowired
+    AttrAttrgroupRelationDao relationDao;
+
 @Transactional
 @Override
 public void saveAttr(AttrVo attr) {
@@ -10935,14 +10939,185 @@ public void saveAttr(AttrVo attr) {
     //1、保存基本数据
     this.save(attrEntity);
     //2、保存关联关系
-    if(attr.getAttrType() == ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode() && attr.getAttrGroupId()!=null){
-        AttrAttrgroupRelationEntity relationEntity = new AttrAttrgroupRelationEntity();
-        relationEntity.setAttrGroupId(attr.getAttrGroupId());
-        relationEntity.setAttrId(attrEntity.getAttrId());
-        relationDao.insert(relationEntity);
-    }
+    AttrAttrgroupRelationEntity relationEntity = new AttrAttrgroupRelationEntity();
+    relationEntity.setAttrGroupId(attr.getAttrGroupId());
+    relationEntity.setAttrId(attrEntity.getAttrId());
+    relationDao.insert(relationEntity);
 }
 ```
+
+#### 规格参数列表
+`AttrController`
+``` java
+///product/attr/base/list/{catelogId}
+@GetMapping("/{attrType}/list/{catelogId}")
+public R baseAttrList(@RequestParam Map<String, Object> params,
+                      @PathVariable("catelogId") Long catelogId,
+                      @PathVariable("attrType")String type){
+
+    PageUtils page = attrService.queryBaseAttrPage(params,catelogId,type);
+    return R.ok().put("page", page);
+}
+```
+`AttrServiceImpl`
+``` java
+@Autowired
+AttrGroupDao attrGroupDao;
+@Autowired
+CategoryDao categoryDao;
+
+@Override
+public PageUtils queryBaseAttrPage(Map<String, Object> params, Long catelogId, String type) {
+    QueryWrapper<AttrEntity> queryWrapper = new QueryWrapper<>();
+
+//    QueryWrapper<AttrEntity> queryWrapper = new QueryWrapper<AttrEntity>().eq("attr_type","base".equalsIgnoreCase(type)?ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode():ProductConstant.AttrEnum.ATTR_TYPE_SALE.getCode());
+
+    if(catelogId != 0){
+        queryWrapper.eq("catelog_id",catelogId);
+    }
+
+    String key = (String) params.get("key");
+    if(!StringUtils.isEmpty(key)){
+        //attr_id  attr_name
+        queryWrapper.and((wrapper)->{
+            wrapper.eq("attr_id",key).or().like("attr_name",key);
+        });
+    }
+
+    IPage<AttrEntity> page = this.page(
+            new Query<AttrEntity>().getPage(params),
+            queryWrapper
+    );
+
+    PageUtils pageUtils = new PageUtils(page);
+    List<AttrEntity> records = page.getRecords();
+    List<AttrRespVo> respVos = records.stream().map((attrEntity) -> {
+        AttrRespVo attrRespVo = new AttrRespVo();
+        BeanUtils.copyProperties(attrEntity, attrRespVo);
+
+        //1、设置分类和分组的名字
+        if("base".equalsIgnoreCase(type)){
+            AttrAttrgroupRelationEntity attrId = relationDao.selectOne(new QueryWrapper<AttrAttrgroupRelationEntity>().eq("attr_id", attrEntity.getAttrId()));
+            if (attrId != null && attrId.getAttrGroupId()!=null) {
+                AttrGroupEntity attrGroupEntity = attrGroupDao.selectById(attrId.getAttrGroupId());
+                attrRespVo.setGroupName(attrGroupEntity.getAttrGroupName());
+            }
+
+        }
+
+
+        CategoryEntity categoryEntity = categoryDao.selectById(attrEntity.getCatelogId());
+        if (categoryEntity != null) {
+            attrRespVo.setCatelogName(categoryEntity.getName());
+        }
+        return attrRespVo;
+    }).collect(Collectors.toList());
+
+    pageUtils.setList(respVos);
+    return pageUtils;
+}
+```
+`AttrRespVo`
+``` java
+@Data
+public class AttrRespVo extends AttrVo {
+    /**
+     * 			"catelogName": "手机/数码/手机", //所属分类名字
+     * 			"groupName": "主体", //所属分组名字
+     */
+    private String catelogName;
+    private String groupName;
+
+    private Long[] catelogPath;
+}
+```
+
+#### 规格修改
+
+#### 设置日期数据规则
+``` YML
+spring:
+	jackson:
+		date-format: yyyy-MM-dd HH:mm:ss
+```
+
+#### debug调试技巧
+debug时，mysql默认的隔离级别为读已提交，为了能够在调试过程中，获取到数
+据库中的数据信息，可以调整隔离级别为读未提交：
+SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+#### 采购简要流程
+#### bug解决
+84 pubsub、publish报错
+解决如下：
+1 npm install --save pubsub-js
+2 在src下的main.js中引用：
+import PubSub from 'pubsub-js'
+Vue.prototype.PubSub = PubSub
+
+85 数据库里少了value_type字段
+解决如下：
+在数据库的 pms_attr 表加上value_type字段，类型为tinyint就行；
+在代码中，AttyEntity.java、AttrVo.java中各添加：private Integer valueType，
+在AttrDao.xml中添加：<result property="valueType" column="value_type"/>
+
+85 规格参数显示不出来页面，原因是要在每个分组属性上至少关联一个属性。控制台foreach报错null
+解决如下：
+在spuadd.vue的showBaseAttrs()方法中在 //先对表单的baseAttrs进行初始化加上非空判断 if (item.attrs != null)就可以了
+          data.data.forEach(item => {
+            let attrArray = [];
+            if (item.attrs != null) {
+              item.attrs.forEach(attr => {
+              attrArray.push({
+                attrId: attr.attrId,
+                attrValues: "",
+                showDesc: attr.showDesc
+              });
+            });
+            }
+            
+            this.dataResp.baseAttrs.push(attrArray);
+          });
+
+
+92 feign超时异常导致读取失败
+解决如下：
+在gulimall-product的application.yml添加如下即可解决(时间设置长点就行了)
+ribbon:
+  ReadTimeout: 30000
+  ConnectTimeout: 30000
+
+100 点击规格找不到页面，以及规格回显问题解决
+1 点击规格找不到页面,解决如下：
+INSERT INTO sys_menu (menu_id, parent_id, name, url, perms, type, icon, order_num) VALUES (76, 37, '规格维护', 'product/attrupdate', '', 2, 'log', 0);
+
+2 规格回显问题不出来
+原因：
+因为那个属性的值类型是多选而pms_product_attr_value这个表里面的属性值存的单个值。前端展示将这个值用；切割成数组来展示的。切完数组里面只有一个值就转成字符串。所以在多选下拉就赋不了值
+解决如下：
+将页面attrupdate.vue中showBaseAttrs这个方法里面的代码
+if (v.length == 1) {
+      v = v[0] +  ''
+ }
+换成下面这个
+if (v.length == 1 && attr.valueType == 0) {
+     v = v[0] + ''
+}
+
+#### 总结
+分布式基础篇总结
+1 分布式基附概念
+微服务、注册中心、配置中心、远程调用、 Feign、网关
+
+2 基础开发
+springboot2.0、 SpringCloud、 Mybatis-Plus、Vue组件化、阿里云对象存储
+3 环境
+Vmware、 Linux、 Docker、 MYSQL、 Redis、逆向工程&人人开源
+4 开发规范
+数据校验JSR303、全局异常处理、全局统一返回、全局跨域处理
+枚举状态，业务状态码、VO与TO与PO划分，逻组删除
+Lombok @Data  @Slf4j
+
 
 
 
