@@ -80,7 +80,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
     }
 
     @Override
-    public Long[] findCateLogPath(Long catelogId) {
+    public Long[] findCatelogPath(Long catelogId) {
         List<Long> paths = new ArrayList<>();
         paths = findParentPath(catelogId, paths);
         // 收集的时候是顺序 前端是逆序显示的 所以用集合工具类给它逆序一下

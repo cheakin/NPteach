@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 import cn.cheakin.gulimall.product.entity.ProductAttrValueEntity;
+import cn.cheakin.gulimall.product.vo.AttrGroupRelationVo;
+import cn.cheakin.gulimall.product.vo.AttrRespVo;
 import cn.cheakin.gulimall.product.vo.AttrVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -58,9 +60,9 @@ public class AttrController {
     @RequestMapping("/info/{attrId}")
     //@RequiresPermissions("product:attr:info")
     public R info(@PathVariable("attrId") Long attrId){
-		AttrEntity attr = attrService.getById(attrId);
+		AttrRespVo respVo = attrService.getAttrInfo(attrId);
 
-        return R.ok().put("attr", attr);
+        return R.ok().put("attr", respVo);
     }
 
     /**
@@ -74,13 +76,21 @@ public class AttrController {
         return R.ok();
     }
 
+    ///product/attrgroup/attr/relation/delete
+    @PostMapping("/attr/relation/delete")
+    public R deleteRelation(@RequestBody AttrGroupRelationVo[] vos) {
+        attrService.deleteRelation(vos);
+
+        return R.ok();
+    }
+
     /**
      * 修改
      */
     @RequestMapping("/update")
     //@RequiresPermissions("product:attr:update")
-    public R update(@RequestBody AttrEntity attr){
-		attrService.updateById(attr);
+    public R update(@RequestBody AttrVo attr){
+		attrService.updateAttr(attr);
 
         return R.ok();
     }

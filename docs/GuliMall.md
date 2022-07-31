@@ -10755,14 +10755,14 @@ private CategoryService categoryService;
 public R info(@PathVariable("attrGroupId") Long attrGroupId){
     AttrGroupEntity attrGroup = attrGroupService.getById(attrGroupId);
     // 用当前当前分类id查询完整路径并写入 attrGroup
-    attrGroup.setCatelogPath(categoryService.findCateLogPath(attrGroup.getCatelogId()));
+    attrGroup.setCatelogPath(categoryService.findCatelogPath(attrGroup.getCatelogId()));
     return R.ok().put("attrGroup", attrGroup);
 }
 ```
 添加service
 ``` java
 @Override // CategoryServiceImpl
-public Long[] findCateLogPath(Long catelogId) {
+public Long[] findCatelogPath(Long catelogId) {
     List<Long> paths = new ArrayList<>();
     paths = findParentPath(catelogId, paths);
     // 收集的时候是顺序 前端是逆序显示的 所以用集合工具类给它逆序一下
@@ -10810,6 +10810,55 @@ dialogClose(){
 参考: 品牌管理->品牌关联分类
 
 ### 平台属性
+提前先在`gulimall-common`的`constant`包中新建常量(对应视频P79)
+``` java
+public class ProductConstant {
+
+    public enum AttrEnum {
+        ATTR_TYPE_BASE(1, "基本属性"), ATTR_TYPE_SALE(0, "销售属性");
+        private int code;
+        private String msg;
+
+        AttrEnum(int code, String msg) {
+            this.code = code;
+            this.msg = msg;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getMsg() {
+            return msg;
+        }
+    }
+
+    public enum ProductStatusEnum {
+        NEW_SPU(0, "新建"),
+        SPU_UP(1, "商品上架"),
+        SPU_DOWN(2, "商品下架"),
+        ;
+
+        private int code;
+
+        private String msg;
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getMsg() {
+            return msg;
+        }
+
+        ProductStatusEnum(int code, String msg) {
+            this.code = code;
+            this.msg = msg;
+        }
+    }
+}
+```
+
 #### 属性的分页查询使用模糊匹配
 *前面的代码已经修改过了, 这里还是演示一次. * `AttrGroupServiceImp`
 ``` java
@@ -10968,9 +11017,7 @@ CategoryDao categoryDao;
 
 @Override
 public PageUtils queryBaseAttrPage(Map<String, Object> params, Long catelogId, String type) {
-    QueryWrapper<AttrEntity> queryWrapper = new QueryWrapper<>();
-
-//    QueryWrapper<AttrEntity> queryWrapper = new QueryWrapper<AttrEntity>().eq("attr_type","base".equalsIgnoreCase(type)?ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode():ProductConstant.AttrEnum.ATTR_TYPE_SALE.getCode());
+   QueryWrapper<AttrEntity> queryWrapper = new QueryWrapper<AttrEntity>().eq("attr_type","base".equalsIgnoreCase(type)?ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode():ProductConstant.AttrEnum.ATTR_TYPE_SALE.getCode());
 
     if(catelogId != 0){
         queryWrapper.eq("catelog_id",catelogId);
@@ -11033,8 +11080,324 @@ public class AttrRespVo extends AttrVo {
 ```
 
 #### 规格修改
+`AttrController`
+``` java
+/**
+  * 信息
+  */
+@RequestMapping("/info/{attrId}")
+//@RequiresPermissions("product:attr:info")
+public R info(@PathVariable("attrId") Long attrId){
+AttrRespVo respVo = attrService.getAttrInfo(attrId);
 
-#### 设置日期数据规则
+    return R.ok().put("attr", respVo);
+}
+
+/**
+  * 修改
+  */
+@RequestMapping("/update")
+//@RequiresPermissions("product:attr:update")
+public R update(@RequestBody AttrVo attr){
+attrService.updateAttr(attr);
+
+    return R.ok();
+}
+```
+`AttrServiceImpl`
+``` java
+@Autowired
+CategoryService categoryService;
+
+@Override
+public AttrRespVo getAttrInfo(Long attrId) {
+    AttrRespVo respVo = new AttrRespVo();
+    AttrEntity attrEntity = this.getById(attrId);
+    BeanUtils.copyProperties(attrEntity,respVo);
+
+    if(attrEntity.getAttrType() == ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode()){
+        //1、设置分组信息
+        AttrAttrgroupRelationEntity attrgroupRelation = relationDao.selectOne(new QueryWrapper<AttrAttrgroupRelationEntity>().eq("attr_id", attrId));
+        if(attrgroupRelation!=null){
+            respVo.setAttrGroupId(attrgroupRelation.getAttrGroupId());
+            AttrGroupEntity attrGroupEntity = attrGroupDao.selectById(attrgroupRelation.getAttrGroupId());
+            if(attrGroupEntity!=null){
+                respVo.setGroupName(attrGroupEntity.getAttrGroupName());
+            }
+        }
+    }
+
+    //2、设置分类信息
+    Long catelogId = attrEntity.getCatelogId();
+    Long[] catelogPath = categoryService.findCatelogPath(catelogId);
+
+    respVo.setCatelogPath(catelogPath);
+
+    CategoryEntity categoryEntity = categoryDao.selectById(catelogId);
+    if(categoryEntity!=null){
+        respVo.setCatelogName(categoryEntity.getName());
+    }
+
+    return respVo;
+}
+
+@Transactional
+@Override
+public void updateAttr(AttrVo attr) {
+    AttrEntity attrEntity = new AttrEntity();
+    BeanUtils.copyProperties(attr,attrEntity);
+    this.updateById(attrEntity);
+
+    if(attrEntity.getAttrType() == ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode()){
+        //1、修改分组关联
+        AttrAttrgroupRelationEntity relationEntity = new AttrAttrgroupRelationEntity();
+
+        relationEntity.setAttrGroupId(attr.getAttrGroupId());
+        relationEntity.setAttrId(attr.getAttrId());
+
+        Integer count = relationDao.selectCount(new QueryWrapper<AttrAttrgroupRelationEntity>().eq("attr_id", attr.getAttrId()));
+        if(count>0){
+
+            relationDao.update(relationEntity,new UpdateWrapper<AttrAttrgroupRelationEntity>().eq("attr_id",attr.getAttrId()));
+
+        }else{
+            relationDao.insert(relationEntity);
+        }
+    }
+}
+```
+
+#### 销售属性维护
+**设置常量**
+在`gulimall-common`的`constant`包中新建常量(重复)
+``` java
+public class ProductConstant {
+
+    public enum AttrEnum {
+        ATTR_TYPE_BASE(1, "基本属性"), ATTR_TYPE_SALE(0, "销售属性");
+        private int code;
+        private String msg;
+
+        AttrEnum(int code, String msg) {
+            this.code = code;
+            this.msg = msg;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getMsg() {
+            return msg;
+        }
+    }
+
+    public enum ProductStatusEnum {
+        NEW_SPU(0, "新建"),
+        SPU_UP(1, "商品上架"),
+        SPU_DOWN(2, "商品下架"),
+        ;
+
+        private int code;
+
+        private String msg;
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getMsg() {
+            return msg;
+        }
+
+        ProductStatusEnum(int code, String msg) {
+            this.code = code;
+            this.msg = msg;
+        }
+    }
+}
+```
+
+**修改之前的类型判断**
+略
+
+#### 查询分组关联属性&删除关联
+`AttrGroupController`
+``` java
+@Autowired
+AttrService attrService;
+
+///product/attrgroup/{attrgroupId}/attr/relation
+@GetMapping("/{attrgroupId}/attr/relation")
+public R attrRelation(@PathVariable("attrgroupId") Long attrgroupId) {
+    List<AttrEntity> entities = attrService.getRelationAttr(attrgroupId);
+    return R.ok().put("data", entities);
+}
+```
+`AttrServiceImpl`
+``` java
+/**
+  * 根据分组id查找关联的所有基本属性
+  * @param attrgroupId
+  * @return
+  */
+@Override
+public List<AttrEntity> getRelationAttr(Long attrgroupId) {
+    List<AttrAttrgroupRelationEntity> entities = relationDao.selectList(new QueryWrapper<AttrAttrgroupRelationEntity>().eq("attr_group_id", attrgroupId));
+
+    List<Long> attrIds = entities.stream().map((attr) -> {
+        return attr.getAttrId();
+    }).collect(Collectors.toList());
+
+    if(attrIds == null || attrIds.size() == 0){
+        return null;
+    }
+    Collection<AttrEntity> attrEntities = this.listByIds(attrIds);
+    return (List<AttrEntity>) attrEntities;
+}
+```
+`AttrGroupRelationVo`
+``` java
+@Data
+public class AttrGroupRelationVo {
+
+    //"attrId":1,"attrGroupId":2
+    private Long attrId;
+    private Long attrGroupId;
+}
+```
+`AttrController`
+```java
+///product/attrgroup/attr/relation/delete
+@PostMapping("/attr/relation/delete")
+public R deleteRelation(@RequestBody AttrGroupRelationVo[] vos) {
+    attrService.deleteRelation(vos);
+
+    return R.ok();
+}
+```
+`AttrServiceImpl`
+``` java
+ @Override
+public void deleteRelation(AttrGroupRelationVo[] vos) {
+    //relationDao.delete(new QueryWrapper<>().eq("attr_id",1L).eq("attr_group_id",1L));
+
+    List<AttrAttrgroupRelationEntity> entities = Arrays.asList(vos).stream().map((item) -> {
+        AttrAttrgroupRelationEntity relationEntity = new AttrAttrgroupRelationEntity();
+        BeanUtils.copyProperties(item, relationEntity);
+        return relationEntity;
+    }).collect(Collectors.toList());
+    relationDao.deleteBatchRelation(entities);
+}
+```
+`AttrAttrgroupRelationDao`
+``` java
+void deleteBatchRelation(@Param("entities") List<AttrAttrgroupRelationEntity> entities);
+```
+`AttrAttrgroupRelationDao.xml`
+``` xml
+<delete id="deleteBatchRelation">
+    DELETE FROM `pms_attr_attrgroup_relation` WHERE
+    <foreach collection="entities" item="item" separator="Or">
+        (attr_id=#{item.attrId}) AND attr_group_id=${item.attrGroupId})
+    </foreach>
+</delete>
+```
+
+#### 查询分组未关联的属性
+**修改查询关联**
+之前的代码以处理, 略
+
+**查询分组未关联的属性**
+`AttrGroupController`
+``` java
+///product/attrgroup/{attrgroupId}/noattr/relation
+@GetMapping("/{attrgroupId}/noattr/relation")
+public R attrNoRelation(@PathVariable("attrgroupId") Long attrgroupId,
+                        @RequestParam Map<String, Object> params) {
+    PageUtils page = attrService.getNoRelationAttr(params, attrgroupId);
+    return R.ok().put("page", page);
+}
+```
+`AttrServiceImpl`
+``` java
+/**
+  * 获取当前分组没有关联的所有属性
+  * @param params
+  * @param attrgroupId
+  * @return
+  */
+@Override
+public PageUtils getNoRelationAttr(Map<String, Object> params, Long attrgroupId) {
+    //1、当前分组只能关联自己所属的分类里面的所有属性
+    AttrGroupEntity attrGroupEntity = attrGroupDao.selectById(attrgroupId);
+    Long catelogId = attrGroupEntity.getCatelogId();
+    //2、当前分组只能关联别的分组没有引用的属性
+    //2.1)、当前分类下的其他分组
+    List<AttrGroupEntity> group = attrGroupDao.selectList(new QueryWrapper<AttrGroupEntity>().eq("catelog_id", catelogId));
+    List<Long> collect = group.stream().map(item -> {
+        return item.getAttrGroupId();
+    }).collect(Collectors.toList());
+
+    //2.2)、这些分组关联的属性
+    List<AttrAttrgroupRelationEntity> groupId = relationDao.selectList(new QueryWrapper<AttrAttrgroupRelationEntity>().in("attr_group_id", collect));
+    List<Long> attrIds = groupId.stream().map(item -> {
+        return item.getAttrId();
+    }).collect(Collectors.toList());
+
+    //2.3)、从当前分类的所有属性中移除这些属性；
+    QueryWrapper<AttrEntity> wrapper = new QueryWrapper<AttrEntity>().eq("catelog_id", catelogId).eq("attr_type",ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode());
+    if(attrIds!=null && attrIds.size()>0){
+        wrapper.notIn("attr_id", attrIds);
+    }
+    String key = (String) params.get("key");
+    if(!StringUtils.isEmpty(key)){
+        wrapper.and((w)->{
+            w.eq("attr_id",key).or().like("attr_name",key);
+        });
+    }
+    IPage<AttrEntity> page = this.page(new Query<AttrEntity>().getPage(params), wrapper);
+
+    PageUtils pageUtils = new PageUtils(page);
+
+    return pageUtils;
+}
+```
+
+#### 新增分组与属性关联
+`AttrGroupController`
+``` java
+@Autowired
+AttrAttrgroupRelationService relationService;
+
+///product/attrgroup/attr/relation
+@PostMapping("/attr/relation")
+public R addRelation(@RequestBody List<AttrGroupRelationVo> vos) {
+
+    relationService.saveBatch(vos);
+    return R.ok();
+}
+```
+`AttrAttrgroupRelationServiceImpl`
+``` java
+@Override
+public void saveBatch(List<AttrGroupRelationVo> vos) {
+    List<AttrAttrgroupRelationEntity> collect = vos.stream().map(item -> {
+        AttrAttrgroupRelationEntity relationEntity = new AttrAttrgroupRelationEntity();
+        BeanUtils.copyProperties(item, relationEntity);
+        return relationEntity;
+    }).collect(Collectors.toList());
+    this.saveBatch(collect);
+}
+```
+
+
+
+
+### 新增商品
+#### 
+
+### 设置日期数据规则
 ``` YML
 spring:
 	jackson:
@@ -11046,8 +11409,8 @@ debug时，mysql默认的隔离级别为读已提交，为了能够在调试过�
 据库中的数据信息，可以调整隔离级别为读未提交：
 SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
-#### 采购简要流程
-#### bug解决
+## 采购简要流程
+### bug解决
 84 pubsub、publish报错
 解决如下：
 1 npm install --save pubsub-js
@@ -11104,7 +11467,7 @@ if (v.length == 1 && attr.valueType == 0) {
      v = v[0] + ''
 }
 
-#### 总结
+## 总结
 分布式基础篇总结
 1 分布式基附概念
 微服务、注册中心、配置中心、远程调用、 Feign、网关

@@ -1,15 +1,16 @@
 package cn.cheakin.gulimall.product.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
+import cn.cheakin.gulimall.product.entity.AttrEntity;
+import cn.cheakin.gulimall.product.service.AttrAttrgroupRelationService;
+import cn.cheakin.gulimall.product.service.AttrService;
 import cn.cheakin.gulimall.product.service.CategoryService;
+import cn.cheakin.gulimall.product.vo.AttrGroupRelationVo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import cn.cheakin.gulimall.product.entity.AttrGroupEntity;
 import cn.cheakin.gulimall.product.service.AttrGroupService;
@@ -32,6 +33,34 @@ public class AttrGroupController {
     private AttrGroupService attrGroupService;
     @Autowired
     private CategoryService categoryService;
+    @Autowired
+    AttrService attrService;
+    @Autowired
+    AttrAttrgroupRelationService relationService;
+
+    ///product/attrgroup/attr/relation
+    @PostMapping("/attr/relation")
+    public R addRelation(@RequestBody List<AttrGroupRelationVo> vos) {
+
+        relationService.saveBatch(vos);
+        return R.ok();
+    }
+
+
+    ///product/attrgroup/{attrgroupId}/attr/relation
+    @GetMapping("/{attrgroupId}/attr/relation")
+    public R attrRelation(@PathVariable("attrgroupId") Long attrgroupId) {
+        List<AttrEntity> entities = attrService.getRelationAttr(attrgroupId);
+        return R.ok().put("data", entities);
+    }
+
+    ///product/attrgroup/{attrgroupId}/noattr/relation
+    @GetMapping("/{attrgroupId}/noattr/relation")
+    public R attrNoRelation(@PathVariable("attrgroupId") Long attrgroupId,
+                            @RequestParam Map<String, Object> params) {
+        PageUtils page = attrService.getNoRelationAttr(params, attrgroupId);
+        return R.ok().put("page", page);
+    }
 
     /**
      * 列表
@@ -53,7 +82,7 @@ public class AttrGroupController {
     public R info(@PathVariable("attrGroupId") Long attrGroupId){
 		AttrGroupEntity attrGroup = attrGroupService.getById(attrGroupId);
         // 用当前当前分类id查询完整路径并写入 attrGroup
-        attrGroup.setCatelogPath(categoryService.findCateLogPath(attrGroup.getCatelogId()));
+        attrGroup.setCatelogPath(categoryService.findCatelogPath(attrGroup.getCatelogId()));
         return R.ok().put("attrGroup", attrGroup);
     }
 
