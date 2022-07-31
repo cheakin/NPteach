@@ -3,6 +3,7 @@ package cn.cheakin.gulimall.product.controller;
 import java.util.Arrays;
 import java.util.Map;
 
+import cn.cheakin.gulimall.product.vo.SpuSaveVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -69,8 +70,9 @@ public class SpuInfoController {
      */
     @RequestMapping("/update")
     //@RequiresPermissions("product:spuinfo:update")
-    public R update(@RequestBody SpuInfoEntity spuInfo){
-		spuInfoService.updateById(spuInfo);
+    public R update(@RequestBody SpuSaveVo vo){
+		// spuInfoService.updateById(spuInfo);
+        spuInfoService.saveSpuInfo(vo);
 
         return R.ok();
     }

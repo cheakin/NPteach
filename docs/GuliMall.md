@@ -11395,9 +11395,633 @@ public void saveBatch(List<AttrGroupRelationVo> vos) {
 
 
 ### 新增商品
-#### 
+接口文档地址: `https://easydoc.xyz/s/78237135`
+#### 调试会员等级相关接口
+**后端**
+检查`gulimall-member`的配置以及开启服务注册(@EnableDiscoveryClient)
 
-### 设置日期数据规则
+在`gulimall-gateway`的`application.yml`中为`gulimall-member`添加路由规则(注意顺序, 需要在admin之前)
+``` yml
+- id: member_route
+  uri: lb://mall-member
+  predicates:
+    - Path=/api/member/**
+  filters:
+    - RewritePath=/api/(?<segment>.*),/$\{segment}
+```
+
+**前端**
+将前端的`common`, `coupon`, `member`, `order`, `product`, `ware`模块的代码拷贝到`renren-fast-vue\src\views\modules`中
+
+#### 获取分类关联的品牌
+* 前端pubsub、publish报错
+  视频p84 关于pubsub、publish报错，无法发送查询品牌信息的请求：
+  1. `npm install --save pubsub-js`
+  2. 在src下的main.js中引用：
+    - `import PubSub from 'pubsub-js'`
+    - `Vue.prototype.PubSub = PubSub`
+* 后端启动报循环依赖的问题
+  - 可以在配置文件中配置: `spring.main.allow-circular-references=true`
+  - 或是在循环依赖的地方使用`@Lazy`注解
+
+`CategoryBrandRelationController`
+``` java
+/**
+  *  /product/categorybrandrelation/brands/list
+  *
+  *  1、Controller：处理请求，接受和校验数据
+  *  2、Service接受controller传来的数据，进行业务处理
+  *  3、Controller接受Service处理完的数据，封装页面指定的vo
+  */
+@GetMapping("/brands/list")
+public R relationBrandsList(@RequestParam(value = "catId",required = true)Long catId){
+    List<BrandEntity> vos = categoryBrandRelationService.getBrandsByCatId(catId);
+
+    List<BrandVo> collect = vos.stream().map(item -> {
+        BrandVo brandVo = new BrandVo();
+        brandVo.setBrandId(item.getBrandId());
+        brandVo.setBrandName(item.getName());
+
+        return brandVo;
+    }).collect(Collectors.toList());
+
+    return R.ok().put("data",collect);
+
+}
+```
+`BrandVo`
+``` java
+@Data
+public class BrandVo {
+
+    /**
+     * "brandId": 0,
+     * "brandName": "string",
+     */
+    private Long brandId;
+    private String  brandName;
+}
+```
+`CategoryBrandRelationServiceImpl`
+``` java
+@Autowired
+CategoryBrandRelationDao relationDao;
+@Autowired
+BrandService brandService;
+
+@Override
+public List<BrandEntity> getBrandsByCatId(Long catId) {
+    List<CategoryBrandRelationEntity> catelogId = relationDao.selectList(new QueryWrapper<CategoryBrandRelationEntity>().eq("catelog_id", catId));
+    List<BrandEntity> collect = catelogId.stream().map(item -> {
+        Long brandId = item.getBrandId();
+        BrandEntity byId = brandService.getById(brandId);
+        return byId;
+    }).collect(Collectors.toList());
+    return collect;
+}
+```
+
+#### 获取分类下所有分组以及属性
+`AttrGroupController`
+``` java
+///product/attrgroup/{catelogId}/withattr
+@GetMapping("/{catelogId}/withattr")
+public R getAttrGroupWithAttrs(@PathVariable("catelogId") Long catelogId) {
+
+    //1、查出当前分类下的所有属性分组，
+    //2、查出每个属性分组的所有属性
+    List<AttrGroupWithAttrsVo> vos = attrGroupService.getAttrGroupWithAttrsByCatelogId(catelogId);
+    return R.ok().put("data", vos);
+}
+```
+`AttrGroupWithAttrsVo`
+``` java
+@Data
+public class AttrGroupWithAttrsVo {
+
+    /**
+     * 分组id
+     */
+    private Long attrGroupId;
+    /**
+     * 组名
+     */
+    private String attrGroupName;
+    /**
+     * 排序
+     */
+    private Integer sort;
+    /**
+     * 描述
+     */
+    private String descript;
+    /**
+     * 组图标
+     */
+    private String icon;
+    /**
+     * 所属分类id
+     */
+    private Long catelogId;
+
+    private List<AttrEntity> attrs;
+}
+```
+`AttrGroupServiceImpl`
+``` java
+@Autowired
+AttrService attrService;
+
+@Override
+public List<AttrGroupWithAttrsVo> getAttrGroupWithAttrsByCatelogId(Long catelogId) {
+    //1、查询分组信息
+    List<AttrGroupEntity> attrGroupEntities = this.list(new QueryWrapper<AttrGroupEntity>().eq("catelog_id", catelogId));
+
+    //2、查询所有属性
+    return attrGroupEntities.stream().map(group -> {
+        AttrGroupWithAttrsVo attrsVo = new AttrGroupWithAttrsVo();
+        BeanUtils.copyProperties(group, attrsVo);
+        List<AttrEntity> attrs = attrService.getRelationAttr(attrsVo.getAttrGroupId());
+        attrsVo.setAttrs(attrs);
+        return attrsVo;
+    }).collect(Collectors.toList());
+}
+```
+
+#### 商品新增vo抽取
+参照视频生成以下这些vo:
+1. 其中价格和小数字段需要换为`BigDecimal`类型;
+2. 使用`@Data`替换get和set方法;
+3. 主键id更换为`Long`类型;
+`Attr`
+``` java
+@Data
+public class Attr {
+
+    private Long attrId;
+    private String attrName;
+    private String attrValue;
+
+}
+```
+`BaseAttrs `
+``` java
+@Data
+public class BaseAttrs {
+
+    private Long attrId;
+    private String attrValues;
+    private int showDesc;
+}
+```
+`Bounds `
+``` java
+@Data
+public class Bounds {
+
+    private BigDecimal buyBounds;
+    private BigDecimal growBounds;
+
+}
+```
+`Images`
+``` java
+@Data
+public class Images {
+
+    private String imgUrl;
+    private int defaultImg;
+
+}
+```
+`MemberPrice`
+``` java
+@Data
+public class MemberPrice {
+
+    private Long id;
+    private String name;
+    private BigDecimal price;
+
+}
+```
+`Skus`
+``` java
+@Data
+public class Skus {
+
+    private List<Attr> attr;
+    private String skuName;
+    private BigDecimal price;
+    private String skuTitle;
+    private String skuSubtitle;
+    private List<Images> images;
+    private List<String> descar;
+    private int fullCount;
+    private BigDecimal discount;
+    private int countStatus;
+    private BigDecimal fullPrice;
+    private BigDecimal reducePrice;
+    private int priceStatus;
+    private List<MemberPrice> memberPrice;
+
+}
+```
+`SpuSaveVo`
+``` java
+@Data
+public class SpuSaveVo {
+
+    private String spuName;
+    private String spuDescription;
+    private Long catalogId;
+    private Long brandId;
+    private BigDecimal weight;
+    private int publishStatus;
+    private List<String> decript;
+    private List<String> images;
+    private Bounds bounds;
+    private List<BaseAttrs> baseAttrs;
+    private List<Skus> skus;
+
+}
+```
+
+#### 商品新增业务流程
+**接下来写产品对应的接口**
+保存的业务流程涉及到了远程服务调用, 那么远程服务就需要保证以下几点(视频P90)
+1. 远程服务必须上线(配置注册中心地址)
+2. 一定要开启服务注册与发现功能(@EnableDiscoveryClient)
+3. 一定要开启远程调用功能(@EnableFeignClients(basePackages = "xxx")), 且需要声明可远程调用的接口(FeignClient)
+以后就不一一列举了
+`SpuInfoController`
+``` java
+/**
+  * 修改
+  */
+@RequestMapping("/update")
+//@RequiresPermissions("product:spuinfo:update")
+public R update(@RequestBody SpuSaveVo vo){
+// spuInfoService.updateById(spuInfo);
+    spuInfoService.saveSpuInfo(vo);
+
+    return R.ok();
+}
+```
+`SpuInfoServiceImpl`
+``` java
+@Autowired
+SpuInfoDescService spuInfoDescService;
+@Autowired
+SpuImagesService imagesService;
+@Autowired
+AttrService attrService;
+@Autowired
+ProductAttrValueService attrValueService;
+@Autowired
+SkuInfoService skuInfoService;
+@Autowired
+SkuImagesService skuImagesService;
+@Autowired
+SkuSaleAttrValueService skuSaleAttrValueService;
+
+/**
+  * //TODO 高级部分完善
+  * @param vo
+  */
+@Transactional
+@Override
+public void saveSpuInfo(SpuSaveVo vo) {
+    //1、保存spu基本信息 pms_spu_info
+    SpuInfoEntity infoEntity = new SpuInfoEntity();
+    BeanUtils.copyProperties(vo, infoEntity);
+    infoEntity.setCreateTime(new Date());
+    infoEntity.setUpdateTime(new Date());
+    this.saveBaseSpuInfo(infoEntity);
+
+    //2、保存Spu的描述图片 pms_spu_info_desc
+    List<String> decript = vo.getDecript();
+    SpuInfoDescEntity descEntity = new SpuInfoDescEntity();
+    descEntity.setSpuId(infoEntity.getId());
+    descEntity.setDecript(String.join(",", decript));
+    spuInfoDescService.saveSpuInfoDesc(descEntity);
+
+    //3、保存spu的图片集 pms_spu_images
+    List<String> images = vo.getImages();
+    imagesService.saveImages(infoEntity.getId(), images);
+
+    //4、保存spu的规格参数;pms_product_attr_value
+    List<BaseAttrs> baseAttrs = vo.getBaseAttrs();
+    List<ProductAttrValueEntity> collect = baseAttrs.stream().map(attr -> {
+        ProductAttrValueEntity valueEntity = new ProductAttrValueEntity();
+        valueEntity.setAttrId(attr.getAttrId());
+        AttrEntity id = attrService.getById(attr.getAttrId());
+        valueEntity.setAttrName(id.getAttrName());
+        valueEntity.setAttrValue(attr.getAttrValues());
+        valueEntity.setQuickShow(attr.getShowDesc());
+        valueEntity.setSpuId(infoEntity.getId());
+
+        return valueEntity;
+    }).collect(Collectors.toList());
+    attrValueService.saveProductAttr(collect);
+
+    //5、保存spu的积分信息；gulimall_sms->sms_spu_bounds
+    Bounds bounds = vo.getBounds();
+    SpuBoundTo spuBoundTo = new SpuBoundTo();
+    BeanUtils.copyProperties(bounds, spuBoundTo);
+    spuBoundTo.setSpuId(infoEntity.getId());
+    R r = couponFeignService.saveSpuBounds(spuBoundTo);
+    if (r.getCode() != 0) {
+        log.error("远程保存spu积分信息失败");
+    }
+
+    //5、保存当前spu对应的所有sku信息；
+    List<Skus> skus = vo.getSkus();
+    if (skus != null && skus.size() > 0) {
+        skus.forEach(item -> {
+            String defaultImg = "";
+            for (Images image : item.getImages()) {
+                if (image.getDefaultImg() == 1) {
+                    defaultImg = image.getImgUrl();
+                }
+            }
+            //    private String skuName;
+            //    private BigDecimal price;
+            //    private String skuTitle;
+            //    private String skuSubtitle;
+            SkuInfoEntity skuInfoEntity = new SkuInfoEntity();
+            BeanUtils.copyProperties(item, skuInfoEntity);
+            skuInfoEntity.setBrandId(infoEntity.getBrandId());
+            skuInfoEntity.setCatalogId(infoEntity.getCatalogId());
+            skuInfoEntity.setSaleCount(0L);
+            skuInfoEntity.setSpuId(infoEntity.getId());
+            skuInfoEntity.setSkuDefaultImg(defaultImg);
+            //5.1）、sku的基本信息；pms_sku_info
+            skuInfoService.saveSkuInfo(skuInfoEntity);
+
+            Long skuId = skuInfoEntity.getSkuId();
+
+            List<SkuImagesEntity> imagesEntities = item.getImages().stream().map(img -> {
+                SkuImagesEntity skuImagesEntity = new SkuImagesEntity();
+                skuImagesEntity.setSkuId(skuId);
+                skuImagesEntity.setImgUrl(img.getImgUrl());
+                skuImagesEntity.setDefaultImg(img.getDefaultImg());
+                return skuImagesEntity;
+            }).filter(entity -> {
+                //返回true就是需要，false就是剔除
+                return !StringUtils.isEmpty(entity.getImgUrl());
+            }).collect(Collectors.toList());
+            //5.2）、sku的图片信息；pms_sku_image
+            skuImagesService.saveBatch(imagesEntities);
+
+            List<Attr> attr = item.getAttr();
+            List<SkuSaleAttrValueEntity> skuSaleAttrValueEntities = attr.stream().map(a -> {
+                SkuSaleAttrValueEntity attrValueEntity = new SkuSaleAttrValueEntity();
+                BeanUtils.copyProperties(a, attrValueEntity);
+                attrValueEntity.setSkuId(skuId);
+
+                return attrValueEntity;
+            }).collect(Collectors.toList());
+            //5.3）、sku的销售属性信息：pms_sku_sale_attr_value
+            skuSaleAttrValueService.saveBatch(skuSaleAttrValueEntities);
+
+            // //5.4）、sku的优惠、满减等信息；gulimall_sms->sms_sku_ladder\sms_sku_full_reduction\sms_member_price
+            SkuReductionTo skuReductionTo = new SkuReductionTo();
+            BeanUtils.copyProperties(item, skuReductionTo);
+            skuReductionTo.setSkuId(skuId);
+            if (skuReductionTo.getFullCount() > 0 || skuReductionTo.getFullPrice().compareTo(new BigDecimal("0")) == 1) {
+                R r1 = couponFeignService.saveSkuReduction(skuReductionTo);
+                if (r1.getCode() != 0) {
+                    log.error("远程保存sku优惠信息失败");
+                }
+            }
+        });
+    }
+}
+
+@Override
+public void saveBaseSpuInfo(SpuInfoEntity infoEntity) {
+    this.baseMapper.insert(infoEntity);
+}
+```
+`SpuInfoDescServiceImpl`
+``` java
+@Override
+public void saveSpuInfoDesc(SpuInfoDescEntity descEntity) {
+    this.baseMapper.insert(descEntity);
+}
+```
+`SpuImagesServiceImpl`
+``` java
+@Override
+public void saveImages(Long id, List<String> images) {
+    if(images == null || images.size() == 0){
+
+    }else{
+        List<SpuImagesEntity> collect = images.stream().map(img -> {
+            SpuImagesEntity spuImagesEntity = new SpuImagesEntity();
+            spuImagesEntity.setSpuId(id);
+            spuImagesEntity.setImgUrl(img);
+
+            return spuImagesEntity;
+        }).collect(Collectors.toList());
+
+        this.saveBatch(collect);
+    }
+}
+```
+`ProductAttrValueServiceImpl`
+``` java
+@Override
+public void saveProductAttr(List<ProductAttrValueEntity> collect) {
+    this.saveBatch(collect);
+}
+```
+`SkuInfoServiceImpl`
+``` java
+@Override
+public void saveSkuInfo(SkuInfoEntity skuInfoEntity) {
+    this.baseMapper.insert(skuInfoEntity);
+}
+```
+涉及远程调用, 在启动类上添加`@EnableFeignClients`注解
+新建`CouponFeignService`接口
+``` java
+@FeignClient("mall-coupon")
+public interface CouponFeignService {
+
+    /**
+     * 1、CouponFeignService.saveSpuBounds(spuBoundTo);
+     * 1）、@RequestBody将这个对象转为json。
+     * 2）、找到gulimall-coupon服务，给/coupon/spubounds/save发送请求。
+     * 将上一步转的json放在请求体位置，发送请求；
+     * 3）、对方服务收到请求。请求体里有json数据。
+     * (@RequestBody SpuBoundsEntity spuBounds)；将请求体的json转为SpuBoundsEntity；
+     * 只要json数据模型是兼容的。双方服务无需使用同一个to
+     *
+     * @param spuBoundTo
+     * @return
+     */
+    @PostMapping("/coupon/spubounds/save")
+    R saveSpuBounds(@RequestBody SpuBoundTo spuBoundTo);
+
+    @PostMapping("/coupon/skufullreduction/saveinfo")
+    R saveSkuReduction(@RequestBody SkuReductionTo skuReductionTo);
+}
+```
+to一般都是服务间调用, 所以不指定的话都是在`gulimall-common`中
+`gulimall-common`中`SpuBoundTo`
+``` java
+@Data
+public class SpuBoundTo {
+
+    private Long spuId;
+    private BigDecimal buyBounds;
+    private BigDecimal growBounds;
+
+}
+```
+`gulimall-coupon`中`SpuBoundsController`
+``` java
+/**
+  * 保存
+  */
+@PostMapping("/save")
+//@RequiresPermissions("coupon:spubounds:save")
+public R save(@RequestBody SpuBoundsEntity spuBounds){
+spuBoundsService.save(spuBounds);
+
+    return R.ok();
+}
+```
+`gulimall-common`中`SkuReductionTo`
+``` java
+@Data
+public class SkuReductionTo {
+
+    private Long skuId;
+    private int fullCount;
+    private BigDecimal discount;
+    private int countStatus;
+    private BigDecimal fullPrice;
+    private BigDecimal reducePrice;
+    private int priceStatus;
+    private List<MemberPrice> memberPrice;
+
+}
+```
+同样的, `SkuReductionTo`中也需要`MemberPrice`, 直接从`gulimall-product`拷贝到`gulimall-common`里即可
+``` java
+@Data
+public class MemberPrice {
+
+    private Long id;
+    private String name;
+    private BigDecimal price;
+
+}
+```
+`gulimall-coupon`中`SkuFullReductionController`
+``` java
+@PostMapping("/saveinfo")
+public R saveInfo(@RequestBody SkuReductionTo reductionTo){
+
+    skuFullReductionService.saveSkuReduction(reductionTo);
+    return R.ok();
+}
+```
+`gulimall-coupon`中`SkuFullReductionServiceImpl`
+``` java
+@Autowired
+SkuLadderService skuLadderService;
+@Autowired
+MemberPriceService memberPriceService;
+
+@Override
+public void saveSkuReduction(SkuReductionTo reductionTo) {
+    //1、// //5.4）、sku的优惠、满减等信息；gulimall_sms->sms_sku_ladder\sms_sku_full_reduction\sms_member_price
+    //sms_sku_ladder
+    SkuLadderEntity skuLadderEntity = new SkuLadderEntity();
+    skuLadderEntity.setSkuId(reductionTo.getSkuId());
+    skuLadderEntity.setFullCount(reductionTo.getFullCount());
+    skuLadderEntity.setDiscount(reductionTo.getDiscount());
+    skuLadderEntity.setAddOther(reductionTo.getCountStatus());
+    if(reductionTo.getFullCount() > 0){
+        skuLadderService.save(skuLadderEntity);
+    }
+
+    //2、sms_sku_full_reduction
+    SkuFullReductionEntity reductionEntity = new SkuFullReductionEntity();
+    BeanUtils.copyProperties(reductionTo,reductionEntity);
+    if(reductionEntity.getFullPrice().compareTo(new BigDecimal("0"))==1){
+        this.save(reductionEntity);
+    }
+
+    //3、sms_member_price
+    List<MemberPrice> memberPrice = reductionTo.getMemberPrice();
+
+    List<MemberPriceEntity> collect = memberPrice.stream().map(item -> {
+        MemberPriceEntity priceEntity = new MemberPriceEntity();
+        priceEntity.setSkuId(reductionTo.getSkuId());
+        priceEntity.setMemberLevelId(item.getId());
+        priceEntity.setMemberLevelName(item.getName());
+        priceEntity.setMemberPrice(item.getPrice());
+        priceEntity.setAddOther(1);
+        return priceEntity;
+    }).filter(item->{
+        return item.getMemberPrice().compareTo(new BigDecimal("0")) == 1;
+    }).collect(Collectors.toList());
+
+    memberPriceService.saveBatch(collect);
+}
+```
+由于使用远程调用, 以后可能会经常使用到`R::getCode()`, 所以在`gulimall-common`的`R`类中新增
+``` java
+public Integer getCode() {
+
+    return (Integer) this.get("code");
+}
+```
+
+**debug**
+由于服务启的较多, 我们可以为每个应用都限制内存占用, 新版IDEA如: 
+[](./assets/GuliMall.md/GuliMall_base/1659279776189.jpg)
+为方便一次启动多个服务, 可以船舰一个复合应用, 以后直接启动创建的复合应用即可: 
+[](./assets/GuliMall.md/GuliMall_base/1659280330784.jpg)
+
+debug时，mysql默认的隔离级别为读已提交，为了能够在调试过程中，获取到数据库中的数据信息，可以调整隔离级别为读未提交：
+``` sql
+SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+```
+
+修改`guliamll-product`中`SpuInfoDescEntity`的id插入方式
+``` java
+@Data
+@TableName("pms_spu_info_desc")
+public class SpuInfoDescEntity implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	/**
+	 * 商品id
+	 */
+	@TableId(type = IdType.INPUT)
+	private Long spuId;
+	/**
+	 * 商品介绍
+	 */
+	private String decript;
+
+}
+```
+`gulimall-common`的`R`类
+``` java
+public Integer getCode() {
+
+    return (Integer) this.get("code");
+}
+```
+
+## 设置日期数据规则
 ``` YML
 spring:
 	jackson:

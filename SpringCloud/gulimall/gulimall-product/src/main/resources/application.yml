@@ -1,5 +1,8 @@
 spring:
-#  profiles:
+  main:
+    allow-circular-references: true # 解决升级 Spring Boot 2.6后，因循环引用导致启动时报告的问题
+
+  #  profiles:
 #    active: oss
   datasource:
     username: root
