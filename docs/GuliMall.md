@@ -12209,7 +12209,7 @@ spring:
         server-addr: 127.0.0.1:8848
 ```
 并在启动类上使用`@EnableDiscoveryClient`注解开启服务注册与发现功能
-同时启动类上使用`@MapperScan("cn.cheakin.gulimall.ware.dao")`开启mybatis-plus的包扫描(配置文件中配置了也可以忽略), 使用`@EnableTransactionManagement`开启事务功能(同样的, 配置文件中配置了也可以忽略)
+同时启动类上使用`@MapperScan("cn.cheakin.gulimall.ware.dao")`开启mybatis-plus的包扫描(配置文件或配置类中配置了也可以忽略), 使用`@EnableTransactionManagement`开启事务功能(同样的, 配置文件或配置类中配置了也可以忽略)
 *在启动设置中设置jvm的内存占用`-Xmx100m`(之前设置过了就可以忽略了)*
 
 **配置网关**
@@ -12341,6 +12341,360 @@ public PageUtils queryPageUnreceivePurchase(Map<String, Object> params) {
 }
 ```
 
+**合并采购需求**
+`PurchaseController`
+``` java
+///ware/purchase/unreceive/list
+///ware/purchase/merge
+@PostMapping("/merge")
+public R merge(@RequestBody MergeVo mergeVo){
+
+    purchaseService.mergePurchase(mergeVo);
+    return R.ok();
+}
+```
+创建`MergeVo`
+```java
+@Data
+public class MergeVo {
+
+    private Long purchaseId; //整单id
+    private List<Long> items;//[1,2,3,4] //合并项集合
+    
+}
+```
+`PurchaseServiceImpl`
+``` java
+@Autowired
+PurchaseDetailService detailService;
+
+@Transactional
+@Override
+public void mergePurchase(MergeVo mergeVo) {
+    Long purchaseId = mergeVo.getPurchaseId();
+    if(purchaseId == null){
+        //1、新建一个
+        PurchaseEntity purchaseEntity = new PurchaseEntity();
+
+        purchaseEntity.setStatus(WareConstant.PurchaseStatusEnum.CREATED.getCode());
+        purchaseEntity.setCreateTime(new Date());
+        purchaseEntity.setUpdateTime(new Date());
+        this.save(purchaseEntity);
+        purchaseId = purchaseEntity.getId();
+    }
+
+    //TODO 确认采购单状态是0,1才可以合并
+
+    List<Long> items = mergeVo.getItems();
+    Long finalPurchaseId = purchaseId;
+    List<PurchaseDetailEntity> collect = items.stream().map(i -> {
+        PurchaseDetailEntity detailEntity = new PurchaseDetailEntity();
+
+        detailEntity.setId(i);
+        detailEntity.setPurchaseId(finalPurchaseId);
+        detailEntity.setStatus(WareConstant.PurchaseDetailStatusEnum.ASSIGNED.getCode());
+        return detailEntity;
+    }).collect(Collectors.toList());
+
+    detailService.updateBatchById(collect);
+
+    PurchaseEntity purchaseEntity = new PurchaseEntity();
+    purchaseEntity.setId(purchaseId);
+    purchaseEntity.setUpdateTime(new Date());
+    this.updateById(purchaseEntity);
+}
+```
+在`gulimall-common`中创建`WareConstant`常量类
+``` java
+public class WareConstant {
+
+    public enum  PurchaseStatusEnum{
+        CREATED(0,"新建"),ASSIGNED(1,"已分配"),
+        RECEIVE(2,"已领取"),FINISH(3,"已完成"),
+        HASERROR(4,"有异常");
+        private int code;
+        private String msg;
+
+        PurchaseStatusEnum(int code,String msg){
+            this.code = code;
+            this.msg = msg;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getMsg() {
+            return msg;
+        }
+    }
+
+
+    public enum  PurchaseDetailStatusEnum{
+        CREATED(0,"新建"),ASSIGNED(1,"已分配"),
+        BUYING(2,"正在采购"),FINISH(3,"已完成"),
+        HASERROR(4,"采购失败");
+        private int code;
+        private String msg;
+
+        PurchaseDetailStatusEnum(int code,String msg){
+            this.code = code;
+            this.msg = msg;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public String getMsg() {
+            return msg;
+        }
+    }
+}
+```
+
+**设置日期数据规则**
+在对应项目的`application.yml`文件中
+``` YML
+spring:
+	jackson:
+		date-format: yyyy-MM-dd HH:mm:ss
+```
+
+#### 领取采购单
+这里不属于仓库模块中的内容, 所以直接使用接口调用的方式测试
+`PurchaseController`
+``` java
+/**
+  * 领取采购单
+  * @return
+  */
+@PostMapping("/received")
+public R received(@RequestBody List<Long> ids){
+
+    purchaseService.received(ids);
+
+    return R.ok();
+}
+```
+`PurchaseServiceImpl`
+``` java
+/**
+  *
+  * @param ids 采购单id
+  */
+@Override
+public void received(List<Long> ids) {
+    //1、确认当前采购单是新建或者已分配状态
+    List<PurchaseEntity> collect = ids.stream().map(id -> {
+        PurchaseEntity byId = this.getById(id);
+        return byId;
+    }).filter(item -> {
+        if (item.getStatus() == WareConstant.PurchaseStatusEnum.CREATED.getCode() ||
+                item.getStatus() == WareConstant.PurchaseStatusEnum.ASSIGNED.getCode()) {
+            return true;
+        }
+        return false;
+    }).map(item->{
+        item.setStatus(WareConstant.PurchaseStatusEnum.RECEIVE.getCode());
+        item.setUpdateTime(new Date());
+        return item;
+    }).collect(Collectors.toList());
+
+    //2、改变采购单的状态
+    this.updateBatchById(collect);
+
+    //3、改变采购项的状态
+    collect.forEach((item)->{
+        List<PurchaseDetailEntity> entities = detailService.listDetailByPurchaseId(item.getId());
+        List<PurchaseDetailEntity> detailEntities = entities.stream().map(entity -> {
+            PurchaseDetailEntity entity1 = new PurchaseDetailEntity();
+            entity1.setId(entity.getId());
+            entity1.setStatus(WareConstant.PurchaseDetailStatusEnum.BUYING.getCode());
+            return entity1;
+        }).collect(Collectors.toList());
+        detailService.updateBatchById(detailEntities);
+    });
+}
+```
+`PurchaseDetailServiceImpl`
+``` java
+@Override
+public List<PurchaseDetailEntity> listDetailByPurchaseId(Long id) {
+    List<PurchaseDetailEntity> purchaseId = this.list(new QueryWrapper<PurchaseDetailEntity>().eq("purchase_id", id));
+
+    return purchaseId;
+}
+```
+
+#### 完成采购
+同样的, 这里不属于仓库模块中的内容, 所以直接使用接口调用的方式测试
+`PurchaseController`
+``` java
+///ware/purchase/done
+@PostMapping("/done")
+public R finish(@RequestBody PurchaseDoneVo doneVo){
+
+    purchaseService.done(doneVo);
+
+    return R.ok();
+}
+```
+创建`PurchaseDoneVo`
+``` java
+@Data
+public class PurchaseDoneVo {
+
+    @NotNull
+    private Long id;//采购单id
+
+    private List<PurchaseItemDoneVo> items;
+
+}
+```
+创建`PurchaseItemDoneVo`
+``` java
+@Data
+public class PurchaseItemDoneVo {
+
+    //{itemId:1,status:4,reason:""}
+    private Long itemId;
+    private Integer status;
+    private String reason;
+
+}
+```
+`PurchaseServiceImpl`
+``` java
+@Autowired
+WareSkuService wareSkuService;
+
+@Autowired
+ProductFeignService productFeignService;
+
+@Transactional
+@Override
+public void done(PurchaseDoneVo doneVo) {
+    Long id = doneVo.getId();
+
+    //2、改变采购项的状态
+    Boolean flag = true;
+    List<PurchaseItemDoneVo> items = doneVo.getItems();
+
+    List<PurchaseDetailEntity> updates = new ArrayList<>();
+    for (PurchaseItemDoneVo item : items) {
+        PurchaseDetailEntity detailEntity = new PurchaseDetailEntity();
+        if(item.getStatus() == WareConstant.PurchaseDetailStatusEnum.HASERROR.getCode()){
+            flag = false;
+            detailEntity.setStatus(item.getStatus());
+        }else{
+            detailEntity.setStatus(WareConstant.PurchaseDetailStatusEnum.FINISH.getCode());
+            ////3、将成功采购的进行入库
+            PurchaseDetailEntity entity = detailService.getById(item.getItemId());
+            wareSkuService.addStock(entity.getSkuId(),entity.getWareId(),entity.getSkuNum());
+        }
+        detailEntity.setId(item.getItemId());
+        updates.add(detailEntity);
+    }
+
+    detailService.updateBatchById(updates);
+
+    //1、改变采购单状态
+    PurchaseEntity purchaseEntity = new PurchaseEntity();
+    purchaseEntity.setId(id);
+    purchaseEntity.setStatus(flag?WareConstant.PurchaseStatusEnum.FINISH.getCode():WareConstant.PurchaseStatusEnum.HASERROR.getCode());
+    purchaseEntity.setUpdateTime(new Date());
+    this.updateById(purchaseEntity);
+}
+```
+`WareSkuServiceImpl`
+``` java
+@Autowired
+WareSkuDao wareSkuDao;
+
+@Override
+public void addStock(Long skuId, Long wareId, Integer skuNum) {
+    //1、判断如果还没有这个库存记录新增
+    List<WareSkuEntity> entities = wareSkuDao.selectList(new QueryWrapper<WareSkuEntity>().eq("sku_id", skuId).eq("ware_id", wareId));
+    if(entities == null || entities.size() == 0){
+        WareSkuEntity skuEntity = new WareSkuEntity();
+        skuEntity.setSkuId(skuId);
+        skuEntity.setStock(skuNum);
+        skuEntity.setWareId(wareId);
+        skuEntity.setStockLocked(0);
+        //TODO 远程查询sku的名字，如果失败，整个事务无需回滚
+        //1、自己catch异常
+        //TODO 还可以用什么办法让异常出现以后不回滚？高级
+        try {
+            R info = productFeignService.info(skuId);
+            Map<String,Object> data = (Map<String, Object>) info.get("skuInfo");
+
+            if(info.getCode() == 0){
+                skuEntity.setSkuName((String) data.get("skuName"));
+            }
+        }catch (Exception e){
+
+        }
+
+        wareSkuDao.insert(skuEntity);
+    }else{
+        wareSkuDao.addStock(skuId,wareId,skuNum);
+    }
+}
+```
+`WareSkuDao`
+``` java
+void addStock(@Param("skuId") Long skuId, @Param("wareId") Long wareId, @Param("skuNum") Integer skuNum);
+```
+`WareSkuDao.xml`
+``` xml
+<update id="addStock">
+    UPDATE `wms_ware_sku` Set stock=stock+#{skuNum} WHERE sku_id=#{skuId} AND ware_id=#{wareId}
+</update>
+```
+远程获取sku信息
+**启动类上使用`@EnableFeignClients`注解**, 创建`ProductFeignService`
+``` java
+@FeignClient("mall-product")
+public interface ProductFeignService {
+
+    /**
+     * /product/skuinfo/info/{skuId}
+     * <p>
+     * 1)、让所有请求过网关；
+     * 1、@FeignClient("gulimall-gateway")：给gulimall-gateway所在的机器发请求
+     * 2、/api/product/skuinfo/info/{skuId}
+     * 2）、直接让后台指定服务处理
+     * 1、@FeignClient("gulimall-gateway")
+     * 2、/product/skuinfo/info/{skuId}
+     *
+     * @return R
+     */
+    @RequestMapping("/product/skuinfo/info/{skuId}")
+    R info(@PathVariable("skuId") Long skuId);
+}
+```
+
+**开启分页功能**
+`WareMyBatisConfig`
+``` java
+@EnableTransactionManagement
+@MapperScan("cn.cheakin.gulimall.ware.dao") // 注意切换包名
+@Configuration
+public class WareMyBatisConfig {
+
+    //引入分页插件
+    @Bean
+    public PaginationInterceptor paginationInterceptor() {
+        PaginationInterceptor paginationInterceptor = new PaginationInterceptor();
+        // 设置请求的页面大于最大页后操作， true调回到首页，false 继续请求  默认false
+//        paginationInterceptor.setOverflow(true);
+//        // 设置最大单页限制数量，默认 500 条，-1 不受限制
+//        paginationInterceptor.setLimit(1000);
+        return paginationInterceptor;
+    }
+}
+```
 
 
 ### bug解决
