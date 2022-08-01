@@ -11415,7 +11415,7 @@ public void saveBatch(List<AttrGroupRelationVo> vos) {
 
 #### 获取分类关联的品牌
 * 前端pubsub、publish报错
-  视频p84 关于pubsub、publish报错，无法发送查询品牌信息的请求：
+  视频 p84 关于pubsub、publish报错，无法发送查询品牌信息的请求：
   1. `npm install --save pubsub-js`, (无法安装的话可以尝试`npm install --save pubsub-js`)
   2. 在src下的main.js中引用：
     - `import PubSub from 'pubsub-js'`
@@ -11546,6 +11546,30 @@ public List<AttrGroupWithAttrsVo> getAttrGroupWithAttrsByCatelogId(Long catelogI
         return attrsVo;
     }).collect(Collectors.toList());
 }
+```
+
+视频 p85 数据库里少了`value_type`字段, 解决如下(用笔记中的sql创建的话就没有问题, 可以忽略)：
+在数据库的`pms_attr`表加上`value_type`字段，类型为`tinyint`就行；
+在代码中，`AttyEntity.java`、`AttrVo.java`中各添加：`private Integer valueType`，
+在`AttrDao.xml`中添加：`<result property="valueType" column="value_type"/>`
+
+视频 p85 规格参数显示不出来页面，原因是要在每个分组属性上至少关联一个属性。控制台foreach报错null. 解决如下：
+在`spuadd.vue`的`showBaseAttrs()`方法中在 //先对表单的baseAttrs进行初始化加上非空判断 `if (item.attrs != null)`就可以了
+``` js
+data.data.forEach(item => {
+  let attrArray = [];
+  if (item.attrs != null) {
+    item.attrs.forEach(attr => {
+    attrArray.push({
+      attrId: attr.attrId,
+      attrValues: "",
+      showDesc: attr.showDesc
+    });
+  });
+  }
+  
+  this.dataResp.baseAttrs.push(attrArray);
+});
 ```
 
 #### 商品新增vo抽取
@@ -12021,52 +12045,305 @@ public Integer getCode() {
 }
 ```
 
-## 设置日期数据规则
+### 商品管理
+接口文档地址: `https://easydoc.xyz/s/78237135`
+#### SPU检索
+`SpuInfoController`
+``` java
+/**
+  * 列表
+  */
+@RequestMapping("/list")
+//@RequiresPermissions("product:spuinfo:list")
+public R list(@RequestParam Map<String, Object> params) {
+    // PageUtils page = spuInfoService.queryPage(params);
+    PageUtils page = spuInfoService.queryPageByCondition(params);
+
+    return R.ok().put("page", page);
+}
+```
+`SpuInfoServiceImpl`
+``` java
+@Override
+public PageUtils queryPageByCondition(Map<String, Object> params) {
+    QueryWrapper<SpuInfoEntity> wrapper = new QueryWrapper<>();
+
+    String key = (String) params.get("key");
+    if (!StringUtils.isEmpty(key)) {
+        wrapper.and((w) -> {
+            w.eq("id", key).or().like("spu_name", key);
+        });
+    }
+    // status=1 and (id=1 or spu_name like xxx)
+    String status = (String) params.get("status");
+    if (!StringUtils.isEmpty(status)) {
+        wrapper.eq("publish_status", status);
+    }
+
+    String brandId = (String) params.get("brandId");
+    if (!StringUtils.isEmpty(brandId) && !"0".equalsIgnoreCase(brandId)) {
+        wrapper.eq("brand_id", brandId);
+    }
+
+    String catelogId = (String) params.get("catelogId");
+    if (!StringUtils.isEmpty(catelogId) && !"0".equalsIgnoreCase(catelogId)) {
+        wrapper.eq("catalog_id", catelogId);
+    }
+
+    /**
+      * status: 2
+      * key:
+      * brandId: 9
+      * catelogId: 225
+      */
+
+    IPage<SpuInfoEntity> page = this.page(
+            new Query<SpuInfoEntity>().getPage(params),
+            wrapper
+    );
+
+    return new PageUtils(page);
+}
+```
+发现前端字段映射错误, 修改`spu.vue`的状态映射
+``` html
+<el-select style="width:160px" v-model="dataForm.status" clearable>
+  <el-option label="新建" :value="0"></el-option>
+  <el-option label="上架" :value="1"></el-option>
+  <el-option label="下架" :value="2"></el-option>
+</el-select>
+```
+
+**设置日期数据规则**
+在对应项目的`application.yml`文件中
 ``` YML
 spring:
 	jackson:
 		date-format: yyyy-MM-dd HH:mm:ss
 ```
+这样返回时间的时候就是被格式化过的了
 
-#### debug调试技巧
-debug时，mysql默认的隔离级别为读已提交，为了能够在调试过程中，获取到数
-据库中的数据信息，可以调整隔离级别为读未提交：
-SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+#### SKU检索
+`SkuInfoController`
+``` java
+@RequestMapping("/list")
+//@RequiresPermissions("product:skuinfo:list")
+public R list(@RequestParam Map<String, Object> params){
+    // PageUtils page = skuInfoService.queryPage(params);
+    PageUtils page = skuInfoService.queryPageByCondition(params);
 
-## 采购简要流程
-### bug解决
-84 pubsub、publish报错
-解决如下：
-1 npm install --save pubsub-js
-2 在src下的main.js中引用：
-import PubSub from 'pubsub-js'
-Vue.prototype.PubSub = PubSub
+    return R.ok().put("page", page);
+}
+```
+`SkuInfoServiceImpl`
+``` java
+@Override
+public PageUtils queryPageByCondition(Map<String, Object> params) {
+    QueryWrapper<SkuInfoEntity> queryWrapper = new QueryWrapper<>();
+    /**
+      * key:
+      * catelogId: 0
+      * brandId: 0
+      * min: 0
+      * max: 0
+      */
+    String key = (String) params.get("key");
+    if (!StringUtils.isEmpty(key)) {
+        queryWrapper.and((wrapper) -> {
+            wrapper.eq("sku_id", key).or().like("sku_name", key);
+        });
+    }
 
-85 数据库里少了value_type字段
-解决如下：
-在数据库的 pms_attr 表加上value_type字段，类型为tinyint就行；
-在代码中，AttyEntity.java、AttrVo.java中各添加：private Integer valueType，
-在AttrDao.xml中添加：<result property="valueType" column="value_type"/>
+    String catelogId = (String) params.get("catelogId");
+    if (!StringUtils.isEmpty(catelogId) && !"0".equalsIgnoreCase(catelogId)) {
 
-85 规格参数显示不出来页面，原因是要在每个分组属性上至少关联一个属性。控制台foreach报错null
-解决如下：
-在spuadd.vue的showBaseAttrs()方法中在 //先对表单的baseAttrs进行初始化加上非空判断 if (item.attrs != null)就可以了
-          data.data.forEach(item => {
-            let attrArray = [];
-            if (item.attrs != null) {
-              item.attrs.forEach(attr => {
-              attrArray.push({
-                attrId: attr.attrId,
-                attrValues: "",
-                showDesc: attr.showDesc
-              });
-            });
+        queryWrapper.eq("catalog_id", catelogId);
+    }
+
+    String brandId = (String) params.get("brandId");
+    if (!StringUtils.isEmpty(brandId) && !"0".equalsIgnoreCase(catelogId)) {
+        queryWrapper.eq("brand_id", brandId);
+    }
+
+    String min = (String) params.get("min");
+    if (!StringUtils.isEmpty(min)) {
+        queryWrapper.ge("price", min);
+    }
+
+    String max = (String) params.get("max");
+
+    if (!StringUtils.isEmpty(max)) {
+        try {
+            BigDecimal bigDecimal = new BigDecimal(max);
+
+            if (bigDecimal.compareTo(new BigDecimal("0")) == 1) {
+                queryWrapper.le("price", max);
             }
-            
-            this.dataResp.baseAttrs.push(attrArray);
-          });
+        } catch (Exception e) {
+
+        }
+    }
+
+    IPage<SkuInfoEntity> page = this.page(
+            new Query<SkuInfoEntity>().getPage(params),
+            queryWrapper
+    );
+
+    return new PageUtils(page);
+}
+```
 
 
+
+### 仓库管理
+接口文档地址: `https://easydoc.xyz/s/78237135`
+#### 整合ware服务 & 获取仓库列表
+**整合gulimall-ware**
+仓库管理在`gulimall-ware`中, 所以需要将`gulimall-ware`注册到注册中心
+`gulimall-ware`的`application.yml`中指定注册中心地址, 顺便指定以下服务名字
+``` yml
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+```
+并在启动类上使用`@EnableDiscoveryClient`注解开启服务注册与发现功能
+同时启动类上使用`@MapperScan("cn.cheakin.gulimall.ware.dao")`开启mybatis-plus的包扫描(配置文件中配置了也可以忽略), 使用`@EnableTransactionManagement`开启事务功能(同样的, 配置文件中配置了也可以忽略)
+*在启动设置中设置jvm的内存占用`-Xmx100m`(之前设置过了就可以忽略了)*
+
+**配置网关**
+在`gulimall-gateway`的`application.yml`中配置仓库服务的路由规则(注意顺序, 要在admin的路由之前)
+``` yml
+- id: ware_route
+  uri: lb://mall-ware
+  predicates:
+    - Path=/api/ware/**
+  filters:
+    - RewritePath=/api/(?<segment>.*),/$\{segment}
+```
+
+**获取仓库列表**
+`gulimall-ware`的`WareInfoServiceImpl`
+``` java
+@Override
+public PageUtils queryPage(Map<String, Object> params) {
+    QueryWrapper<WareInfoEntity> wareInfoEntityQueryWrapper = new QueryWrapper<>();
+    String key = (String) params.get("key");
+    if(!StringUtils.isEmpty(key)){
+        wareInfoEntityQueryWrapper.eq("id",key).or()
+                .like("name",key)
+                .or().like("address",key)
+                .or().like("areacode",key);
+    }
+
+    IPage<WareInfoEntity> page = this.page(
+            new Query<WareInfoEntity>().getPage(params),
+            wareInfoEntityQueryWrapper
+    );
+
+    return new PageUtils(page);
+}
+```
+
+为方便调试我们设置一下日志打印级别, 在`application.yml`中
+``` yml
+logging:
+  level:
+    cn.cheakin: debug # 注意更换包名
+```
+
+#### 查询库存 & 创建采购需求
+**查询库存**
+`WareSkuServiceImpl`
+``` java
+@Override
+public PageUtils queryPage(Map<String, Object> params) {
+    /**
+      * skuId: 1
+      * wareId: 2
+      */
+    QueryWrapper<WareSkuEntity> queryWrapper = new QueryWrapper<>();
+    String skuId = (String) params.get("skuId");
+    if(!StringUtils.isEmpty(skuId)){
+        queryWrapper.eq("sku_id",skuId);
+    }
+
+    String wareId = (String) params.get("wareId");
+    if(!StringUtils.isEmpty(wareId)){
+        queryWrapper.eq("ware_id",wareId);
+    }
+
+
+    IPage<WareSkuEntity> page = this.page(
+            new Query<WareSkuEntity>().getPage(params),
+            queryWrapper
+    );
+
+    return new PageUtils(page);
+}
+```
+
+**创建采购需求(查询)**
+`PurchaseDetailServiceImpl`
+``` java
+@Override
+public PageUtils queryPage(Map<String, Object> params) {
+    /**
+      * status: 0,//状态
+      *    wareId: 1,//仓库id
+      */
+
+    QueryWrapper<PurchaseDetailEntity> queryWrapper = new QueryWrapper<PurchaseDetailEntity>();
+
+    String key = (String) params.get("key");
+    if(!StringUtils.isEmpty(key)){
+        //purchase_id  sku_id
+        queryWrapper.and(w->{
+            w.eq("purchase_id",key).or().eq("sku_id",key);
+        });
+    }
+
+    String status = (String) params.get("status");
+    if(!StringUtils.isEmpty(status)){
+        //purchase_id  sku_id
+        queryWrapper.eq("status",status);
+    }
+
+    String wareId = (String) params.get("wareId");
+    if(!StringUtils.isEmpty(wareId)){
+        //purchase_id  sku_id
+        queryWrapper.eq("ware_id",wareId);
+    }
+
+    IPage<PurchaseDetailEntity> page = this.page(
+            new Query<PurchaseDetailEntity>().getPage(params),
+            queryWrapper
+    );
+
+    return new PageUtils(page);
+}
+```
+
+#### 合并采购需求
+[](./assets/GuliMall.md/GuliMall_base/1659368290028.jpg)
+**查询未领取的采购单**
+`PurchaseServiceImpl`
+``` java
+@Override
+public PageUtils queryPageUnreceivePurchase(Map<String, Object> params) {
+    IPage<PurchaseEntity> page = this.page(
+            new Query<PurchaseEntity>().getPage(params),
+            new QueryWrapper<PurchaseEntity>().eq("status",0).or().eq("status",1)
+    );
+
+    return new PageUtils(page);
+}
+```
+
+
+
+### bug解决
 92 feign超时异常导致读取失败
 解决如下：
 在gulimall-product的application.yml添加如下即可解决(时间设置长点就行了)

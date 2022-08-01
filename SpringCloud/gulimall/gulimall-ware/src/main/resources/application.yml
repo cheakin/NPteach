@@ -20,5 +20,9 @@ mybatis-plus:
     db-config:
       id-type: auto
 
+logging:
+  level:
+    cn.cheakin: debug
+
 server:
   port: 11000

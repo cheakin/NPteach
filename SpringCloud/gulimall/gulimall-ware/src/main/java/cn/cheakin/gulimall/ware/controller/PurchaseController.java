@@ -30,6 +30,14 @@ public class PurchaseController {
     @Autowired
     private PurchaseService purchaseService;
 
+    @RequestMapping("/unreceive/list")
+    //@RequiresPermissions("ware:purchase:list")
+    public R unreceivelist(@RequestParam Map<String, Object> params){
+        PageUtils page = purchaseService.queryPageUnreceivePurchase(params);
+
+        return R.ok().put("page", page);
+    }
+
     /**
      * 列表
      */
