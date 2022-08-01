@@ -11416,7 +11416,7 @@ public void saveBatch(List<AttrGroupRelationVo> vos) {
 #### 获取分类关联的品牌
 * 前端pubsub、publish报错
   视频p84 关于pubsub、publish报错，无法发送查询品牌信息的请求：
-  1. `npm install --save pubsub-js`
+  1. `npm install --save pubsub-js`, (无法安装的话可以尝试`npm install --save pubsub-js`)
   2. 在src下的main.js中引用：
     - `import PubSub from 'pubsub-js'`
     - `Vue.prototype.PubSub = PubSub`
@@ -11983,7 +11983,7 @@ public Integer getCode() {
 }
 ```
 
-**debug**
+#### debug
 由于服务启的较多, 我们可以为每个应用都限制内存占用, 新版IDEA如: 
 [](./assets/GuliMall.md/GuliMall_base/1659279776189.jpg)
 为方便一次启动多个服务, 可以船舰一个复合应用, 以后直接启动创建的复合应用即可: 
