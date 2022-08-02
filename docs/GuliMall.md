@@ -12786,28 +12786,82 @@ public void updateSpuAttr(Long spuId, List<ProductAttrValueEntity> entities) {
 
 
 ### bug解决
-92 feign超时异常导致读取失败
-解决如下：
-在gulimall-product的application.yml添加如下即可解决(时间设置长点就行了)
+视频p84 pubsub、publish报错, 解决如下：
+* 前端pubsub、publish报错
+  视频 p84 关于pubsub、publish报错，无法发送查询品牌信息的请求：
+  1. `npm install --save pubsub-js`, (无法安装的话可以尝试`npm install --save pubsub-js`)
+  2. 在src下的main.js中引用：
+    - `import PubSub from 'pubsub-js'`
+    - `Vue.prototype.PubSub = PubSub`
+* 后端启动报循环依赖的问题
+  - 可以在配置文件中配置: `spring.main.allow-circular-references=true`
+  - 或是在循环依赖的地方使用`@Lazy`注解
+
+视频 p85 数据库里少了`value_type`字段, 解决如下(用笔记中的sql创建的话就没有问题, 可以忽略)：
+在数据库的`pms_attr`表加上`value_type`字段，类型为`tinyint`就行；
+在代码中，`AttyEntity.java`、`AttrVo.java`中各添加：`private Integer valueType`，
+在`AttrDao.xml`中添加：`<result property="valueType" column="value_type"/>`
+
+视频p85 规格参数显示不出来页面，原因是要在每个分组属性上至少关联一个属性。控制台foreach报错null. 解决如下：
+在`spuadd.vue`的`showBaseAttrs()`方法中在 //先对表单的baseAttrs进行初始化加上非空判断 `if (item.attrs != null)`就可以了
+``` js
+data.data.forEach(item => {
+  let attrArray = [];
+  if (item.attrs != null) {
+    item.attrs.forEach(attr => {
+    attrArray.push({
+      attrId: attr.attrId,
+      attrValues: "",
+      showDesc: attr.showDesc
+    });
+  });
+  }
+  
+  this.dataResp.baseAttrs.push(attrArray);
+});
+```
+
+视频p92 feign超时异常导致读取失败, 解决如下：
+在`gulimall-product`的`application.yml`添加如下即可解决(时间设置长点就行了)
+``` yml
 ribbon:
   ReadTimeout: 30000
   ConnectTimeout: 30000
+```
+
+视频p100 页面有问题
+1. 点击规格找不到页面，以及规格回显问题
+   原因是因为没有菜单, 解决如下：
+   ``` sql
+   INSERT INTO sys_menu (menu_id, parent_id, name, url, perms, type, icon, order_num) VALUES (76, 37, '规格维护', 'product/attrupdate', '', 2, 'log', 0);
+   ```
+2. 规格回显问题不出来
+   因为那个属性的值类型是多选而pms_product_attr_value这个表里面的属性值存的单个值。前端展示将这个值用；切割成数组来展示的。切完数组里面只有一个值就转成字符串。所以在多选下拉就赋不了值, 解决如下：
+   将页面`attrupdate.vue`中`showBaseAttrs()`这个方法里面的代码
+   ``` js
+   if (v.length == 1) {
+        v = v[0] +  ''
+   }
+   // 换成下面这个
+   if (v.length == 1 && attr.valueType == 0) {
+      v = v[0] + ''
+   }
+   ```
 
 
 
 ## 总结
 分布式基础篇总结
-1 分布式基附概念
-微服务、注册中心、配置中心、远程调用、 Feign、网关
-
-2 基础开发
-springboot2.0、 SpringCloud、 Mybatis-Plus、Vue组件化、阿里云对象存储
-3 环境
-Vmware、 Linux、 Docker、 MYSQL、 Redis、逆向工程&人人开源
-4 开发规范
-数据校验JSR303、全局异常处理、全局统一返回、全局跨域处理
-枚举状态，业务状态码、VO与TO与PO划分，逻组删除
-Lombok @Data  @Slf4j
+1. 分布式基附概念
+   微服务、注册中心、配置中心、远程调用、 Feign、网关
+2. 基础开发
+   springboot2.0、 SpringCloud、 Mybatis-Plus、Vue组件化、阿里云对象存储
+3. 环境
+   Vmware、 Linux、 Docker、 MYSQL、 Redis、逆向工程&人人开源
+4. 开发规范
+   数据校验JSR303、全局异常处理、全局统一返回、全局跨域处理
+   枚举状态，业务状态码、VO与TO与PO划分，逻组删除
+   Lombok @Data  @Slf4j
 
 
 
