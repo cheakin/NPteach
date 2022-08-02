@@ -12018,6 +12018,15 @@ debug时，mysql默认的隔离级别为读已提交，为了能够在调试过�
 SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 ```
 
+视频p92 feign超时异常导致读取失败, 解决如下：
+在`gulimall-product`的`application.yml`添加如下即可解决(时间设置长点就行了)
+``` yml
+ribbon:
+  ReadTimeout: 30000
+  ConnectTimeout: 30000
+```
+
+
 修改`guliamll-product`中`SpuInfoDescEntity`的id插入方式
 ``` java
 @Data
@@ -12697,6 +12706,85 @@ public class WareMyBatisConfig {
 ```
 
 
+
+
+
+#### SPU规格维护
+**BUG解决**
+视频p100 页面有问题
+1. 点击规格找不到页面，以及规格回显问题
+   原因是因为没有菜单, 解决如下：
+   ``` sql
+   INSERT INTO sys_menu (menu_id, parent_id, name, url, perms, type, icon, order_num) VALUES (76, 37, '规格维护', 'product/attrupdate', '', 2, 'log', 0);
+   ```
+2. 规格回显问题不出来
+   因为那个属性的值类型是多选而pms_product_attr_value这个表里面的属性值存的单个值。前端展示将这个值用；切割成数组来展示的。切完数组里面只有一个值就转成字符串。所以在多选下拉就赋不了值, 解决如下：
+   将页面`attrupdate.vue`中`showBaseAttrs()`这个方法里面的代码
+   ``` js
+   if (v.length == 1) {
+        v = v[0] +  ''
+   }
+   // 换成下面这个
+   if (v.length == 1 && attr.valueType == 0) {
+      v = v[0] + ''
+   }
+   ```
+
+**SPU规格维护**
+`guliamll-product`的`AttrController`
+``` java
+@Autowired
+ProductAttrValueService productAttrValueService;
+
+// /product/attr/base/listforspu/{spuId}
+@GetMapping("/base/listforspu/{spuId}")
+public R baseAttrlistforspu(@PathVariable("spuId") Long spuId){
+
+    List<ProductAttrValueEntity> entities = productAttrValueService.baseAttrListforspu(spuId);
+
+    return R.ok().put("data",entities);
+}
+```
+`guliamll-product`的`ProductAttrValueServiceImpl`
+``` java
+@Override
+public List<ProductAttrValueEntity> baseAttrListforspu(Long spuId) {
+    List<ProductAttrValueEntity> entities = this.baseMapper.selectList(new QueryWrapper<ProductAttrValueEntity>().eq("spu_id", spuId));
+    return entities;
+}
+```
+
+**修改商品规格**
+`guliamll-product`的`AttrController`
+``` java
+///product/attr/update/{spuId}
+@PostMapping("/update/{spuId}")
+public R updateSpuAttr(@PathVariable("spuId") Long spuId,
+                        @RequestBody List<ProductAttrValueEntity> entities){
+
+    productAttrValueService.updateSpuAttr(spuId,entities);
+
+    return R.ok();
+}
+```
+`guliamll-product`的`ProductAttrValueServiceImpl`
+``` java
+@Transactional
+@Override
+public void updateSpuAttr(Long spuId, List<ProductAttrValueEntity> entities) {
+    //1、删除这个spuId之前对应的所有属性
+    this.baseMapper.delete(new QueryWrapper<ProductAttrValueEntity>().eq("spu_id",spuId));
+
+
+    List<ProductAttrValueEntity> collect = entities.stream().map(item -> {
+        item.setSpuId(spuId);
+        return item;
+    }).collect(Collectors.toList());
+    this.saveBatch(collect);
+}
+```
+
+
 ### bug解决
 92 feign超时异常导致读取失败
 解决如下：
@@ -12705,22 +12793,7 @@ ribbon:
   ReadTimeout: 30000
   ConnectTimeout: 30000
 
-100 点击规格找不到页面，以及规格回显问题解决
-1 点击规格找不到页面,解决如下：
-INSERT INTO sys_menu (menu_id, parent_id, name, url, perms, type, icon, order_num) VALUES (76, 37, '规格维护', 'product/attrupdate', '', 2, 'log', 0);
 
-2 规格回显问题不出来
-原因：
-因为那个属性的值类型是多选而pms_product_attr_value这个表里面的属性值存的单个值。前端展示将这个值用；切割成数组来展示的。切完数组里面只有一个值就转成字符串。所以在多选下拉就赋不了值
-解决如下：
-将页面attrupdate.vue中showBaseAttrs这个方法里面的代码
-if (v.length == 1) {
-      v = v[0] +  ''
- }
-换成下面这个
-if (v.length == 1 && attr.valueType == 0) {
-     v = v[0] + ''
-}
 
 ## 总结
 分布式基础篇总结

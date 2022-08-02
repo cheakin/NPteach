@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import cn.cheakin.gulimall.product.entity.ProductAttrValueEntity;
+import cn.cheakin.gulimall.product.service.ProductAttrValueService;
 import cn.cheakin.gulimall.product.vo.AttrGroupRelationVo;
 import cn.cheakin.gulimall.product.vo.AttrRespVo;
 import cn.cheakin.gulimall.product.vo.AttrVo;
@@ -30,6 +31,17 @@ import cn.cheakin.common.utils.R;
 public class AttrController {
     @Autowired
     private AttrService attrService;
+    @Autowired
+    ProductAttrValueService productAttrValueService;
+
+    // /product/attr/base/listforspu/{spuId}
+    @GetMapping("/base/listforspu/{spuId}")
+    public R baseAttrlistforspu(@PathVariable("spuId") Long spuId){
+
+        List<ProductAttrValueEntity> entities = productAttrValueService.baseAttrListforspu(spuId);
+
+        return R.ok().put("data",entities);
+    }
 
     ///product/attr/base/list/{catelogId}
     @GetMapping("/{attrType}/list/{catelogId}")
@@ -94,6 +106,17 @@ public class AttrController {
 
         return R.ok();
     }
+
+    ///product/attr/update/{spuId}
+    @PostMapping("/update/{spuId}")
+    public R updateSpuAttr(@PathVariable("spuId") Long spuId,
+                           @RequestBody List<ProductAttrValueEntity> entities){
+
+        productAttrValueService.updateSpuAttr(spuId,entities);
+
+        return R.ok();
+    }
+
 
     /**
      * 删除
