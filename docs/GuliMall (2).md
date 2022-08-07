@@ -4138,91 +4138,15 @@ PUT /my_index/_mapping
 
 **不能更新映射**, 对于已经存在的字段映射，我们不能更新。更新必须创建新的索引，进行数据迁移。
 
-##### 数据迁移
-先创建new_twitter的正确映射。
-略
-
-然后使用如下方式进行数据迁移。
-6.0以后写法, eg:
+##### 修改映射
+查询原索引
 ``` json
-POST _reindex
-{
-  "source":{
-      "index":"twitter"
-   },
-  "dest":{
-      "index":"new_twitters"
-   }
-}
-```
-
-老版本写法, eg:
-``` json
-POST _reindex
-{
-  "source":{
-      "index":"twitter",
-      "twitter":"twitter"
-   },
-  "dest":{
-      "index":"new_twitters"
-   }
-}
-```
-
-案例：原来类型为account，新版本没有类型了，所以我们把他去掉
-``` json
-// 查询映射
 GET /bank/_search
-{
-  "took" : 0,
-  "timed_out" : false,
-  "_shards" : {
-    "total" : 1,
-    "successful" : 1,
-    "skipped" : 0,
-    "failed" : 0
-  },
-  "hits" : {
-    "total" : {
-      "value" : 1000,
-      "relation" : "eq"
-    },
-    "max_score" : 1.0,
-    "hits" : [
-      {
-        "_index" : "bank",
-        "_type" : "account",//原来类型为account，新版本没有类型了，所以我们把他去掉
-        "_id" : "1",
-        "_score" : 1.0,
-        "_source" : {
-          "account_number" : 1,
-          "balance" : 39225,
-          "firstname" : "Amber",
-          "lastname" : "Duke",
-          "age" : 32,
-          "gender" : "M",
-          "address" : "880 Holmes Lane",
-          "employer" : "Pyrami",
-          "email" : "amberduke@pyrami.com",
-          "city" : "Brogan",
-          "state" : "IL"
-        }
-      },
-      ...
-    ]
-  }
-}
-
-
-GET /bank/_search
-查出
+// 结果中查出
 "age":{"type":"long"}
-
-
+```
 想要将年龄修改为integer
-
-先创建新的索引
+创建新的映射
 ``` json
 PUT /newbank
 {
@@ -4271,12 +4195,88 @@ PUT /newbank
   }
 }
 ```
-
 查看 newbank 的映射：
 ``` json
 GET /newbank/_mapping
 // 能够看到age的映射类型被修改为了integer.
 "age":{"type":"integer"}
+```
+
+##### 数据迁移
+先创建new_twitter的正确映射。
+略
+
+然后使用如下方式进行数据迁移。
+6.0以后写法, eg:
+``` json
+POST _reindex
+{
+  "source":{
+      "index":"twitter"
+   },
+  "dest":{
+      "index":"new_twitters"
+   }
+}
+```
+
+老版本写法, eg:
+``` json
+POST _reindex
+{
+  "source":{
+      "index":"twitter",
+      "twitter":"twitter"
+   },
+  "dest":{
+      "index":"new_twitters"
+   }
+}
+```
+
+案例：原来类型为account，新版本没有类型了，所以我们把他去掉
+// 查询原映射
+``` json
+GET /bank/_search
+{
+  "took" : 0,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1000,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",//原来类型为account，新版本没有类型了，所以我们把他去掉
+        "_id" : "1",
+        "_score" : 1.0,
+        "_source" : {
+          "account_number" : 1,
+          "balance" : 39225,
+          "firstname" : "Amber",
+          "lastname" : "Duke",
+          "age" : 32,
+          "gender" : "M",
+          "address" : "880 Holmes Lane",
+          "employer" : "Pyrami",
+          "email" : "amberduke@pyrami.com",
+          "city" : "Brogan",
+          "state" : "IL"
+        }
+      },
+      ...
+    ]
+  }
+}
 ```
 
 将bank中的数据迁移到newbank中
@@ -4314,8 +4314,7 @@ POST _reindex
 }
 ```
 
-
-查看 newbank 中的数据
+重新查看 newbank 中的数据
 ``` json
 GET /newbank/_search
 // 输出
@@ -4330,7 +4329,7 @@ GET /newbank/_search
     "hits" : [
       {
         "_index" : "newbank",
-        "_type" : "_doc", # 没有了类型
+        "_type" : "_doc", //没有了类型
   ...
 ```
 
