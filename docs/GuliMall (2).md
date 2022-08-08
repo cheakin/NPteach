@@ -4335,9 +4335,383 @@ GET /newbank/_search
 ```
 
 
+### ES-分词
+一个**tokenizer**（分词器）接收一个字符流，将之分割为独立的**tokens**（词元，通常是独立的单词），然后输出tokens流。
+例如：whitespace **tokenizer**遇到空白字符时分割文本。它会将文本`Quick brown fox!`分割为`[Quick,brown,fox!]`
+该**tokenizer**（分词器）还负责记录各个**terms**(词条)的顺序或**position**位置（用于**phrase**短语和**word proximity**词近邻查询），以及**term**（词条）所代表的原始**word**（单词）的**start**（起始）和**end**（结束）的**character offsets**（字符串偏移量）（用于高亮显示搜索的内容）。
+**elasticsearch**提供了很多内置的分词器（标准分词器），可以用来构建custom analyzers（自定义分词器）。
+
+关于分词器： https://www.elastic.co/guide/en/elasticsearch/reference/7.6/analysis.html
+``` json
+POST _analyze
+{
+  "analyzer": "standard", //标准分词器
+  "text": "The 2 Brown-Foxes bone."
+}
+// 执行结果：
+{
+  "tokens" : [
+    {
+      "token" : "the",
+      "start_offset" : 0,
+      "end_offset" : 3,
+      "type" : "<ALPHANUM>",
+      "position" : 0
+    },
+    {
+      "token" : "2",
+      "start_offset" : 4,
+      "end_offset" : 5,
+      "type" : "<NUM>",
+      "position" : 1
+    },
+    {
+      "token" : "brown",
+      "start_offset" : 6,
+      "end_offset" : 11,
+      "type" : "<ALPHANUM>",
+      "position" : 2
+    },
+    {
+      "token" : "foxes",
+      "start_offset" : 12,
+      "end_offset" : 17,
+      "type" : "<ALPHANUM>",
+      "position" : 3
+    },
+    {
+      "token" : "bone",
+      "start_offset" : 18,
+      "end_offset" : 22,
+      "type" : "<ALPHANUM>",
+      "position" : 4
+    }
+  ]
+}
+```
+
+对于中文，我们需要安装额外的分词器
+
+#### (1) 安装ik分词器
+所有的语言分词，默认使用的都是`Standard Analyzer`，但是这些分词器针对于中文的分词，并不友好。为此需要安装中文的分词器。
+
+IK 分词器的版本需要跟 Elasticsearch 的版本对应，当前选择的版本为 7.4.2，下载地址为：[Github Release](https://github.91chi.fun/https://github.com//medcl/elasticsearch-analysis-ik/releases/download/v7.4.2/elasticsearch-analysis-ik-7.4.2.zip)
 
 
+在前面安装的elasticsearch时，我们已经将elasticsearch容器的`/usr/share/elasticsearch/plugins`目录，映射到宿主机的`/mydata/elasticsearch/plugins`目录下，所以比较方便的做法就是下载`/elasticsearch-analysis-ik-7.4.2.zip`文件，然后解压到目录ik下即可。安装完毕后，需要重启elasticsearch容器。
+**下载**
+``` shell
+# 进入挂载的插件目录 /mydata/elasticsearch/plugins
+cd /mydata/elasticsearch/plugins
 
+# 安装 wget 下载工具
+yum install -y wget
+
+# 下载对应版本的 IK 分词器（这里是7.4.2）
+wget https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v7.4.2/elasticsearch-analysis-ik-7.4.2.zip
+```
+这里已经在挂载的 plugins 目录安装好了 IK分词器。现在我们进入到 es 容器内部检查是否成功安装. 确认是否安装好了分词器
+``` shell
+# 进入容器内部
+docker exec -it elasticsearch /bin/bash
+
+# 查看 es 插件目录
+ls /usr/share/elasticsearch/plugins
+
+# 可以看到 elasticsearch-analysis-ik-7.4.2.zip
+```
+所以我们之后只需要在挂载的目录/mydata/elasticsearch/plugins下进行操作即可。
+**解压**
+``` shell
+# 进入到 es 的插件目录(宿主机)
+cd /mydata/elasticsearch/plugins
+
+# 解压到 plugins 目录下的 ik 目录
+unzip elasticsearch-analysis-ik-7.4.2.zip -d ik
+# 还是提示没有命令, 遂放弃命令模式, 使用ssh,sftp方式解压
+#1.开启远程连接, 修改配置文件
+vi /etc/ssh/sshd_config
+#2.开启远程连接: 'I'键进入插入模式, 将'PaswordAuthentication no'改成'PasswordAuthentication yes', 然后按esc, 输入':wq'保存并退出
+#3.重启远程连接服务
+service sshd restart
+#然后就可以使用远程连接工具测试了
+
+# 删除下载的压缩包
+rm -f elasticsearch-analysis-ik-7.4.2.zip 
+
+# 修改文件夹访问权限
+chmod -R 777 ik/
+```
+**查看安装的ik插件**
+``` ssh
+# 进入 es 容器内部
+docker exec -it elasticsearch /bin/bash
+
+# 进入 es bin 目录
+cd /usr/share/elasticsearch/bin
+
+# 执行查看命令  显示 ik
+elasticsearch-plugin list
+
+# 退出容器
+exit
+
+# 重启 Elasticsearch
+docker restart elasticsearch
+```
+
+#### (2) 测试分词器
+``` json
+使用默认分词器
+GET _analyze
+{
+   "text":"我是中国人"
+}
+// 执行结果：
+{
+  "tokens" : [
+    {
+      "token" : "我",
+      "start_offset" : 0,
+      "end_offset" : 1,
+      "type" : "<IDEOGRAPHIC>",
+      "position" : 0
+    },
+    {
+      "token" : "是",
+      "start_offset" : 1,
+      "end_offset" : 2,
+      "type" : "<IDEOGRAPHIC>",
+      "position" : 1
+    },
+    {
+      "token" : "中",
+      "start_offset" : 2,
+      "end_offset" : 3,
+      "type" : "<IDEOGRAPHIC>",
+      "position" : 2
+    },
+    {
+      "token" : "国",
+      "start_offset" : 3,
+      "end_offset" : 4,
+      "type" : "<IDEOGRAPHIC>",
+      "position" : 3
+    },
+    {
+      "token" : "人",
+      "start_offset" : 4,
+      "end_offset" : 5,
+      "type" : "<IDEOGRAPHIC>",
+      "position" : 4
+    }
+  ]
+}
+
+// 使用ik分词器
+GET _analyze
+{
+   "analyzer": "ik_smart", 
+   "text":"我是中国人"
+}
+// 输出结果：
+{
+  "tokens" : [
+    {
+      "token" : "我",
+      "start_offset" : 0,
+      "end_offset" : 1,
+      "type" : "CN_CHAR",
+      "position" : 0
+    },
+    {
+      "token" : "是",
+      "start_offset" : 1,
+      "end_offset" : 2,
+      "type" : "CN_CHAR",
+      "position" : 1
+    },
+    {
+      "token" : "中国人",
+      "start_offset" : 2,
+      "end_offset" : 5,
+      "type" : "CN_WORD",
+      "position" : 2
+    }
+  ]
+}
+
+//使用ik的ik_max_word分词
+GET _analyze
+{
+   "analyzer": "ik_max_word", 
+   "text":"我是中国人"
+}
+// 输出结果：
+{
+  "tokens" : [
+    {
+      "token" : "我",
+      "start_offset" : 0,
+      "end_offset" : 1,
+      "type" : "CN_CHAR",
+      "position" : 0
+    },
+    {
+      "token" : "是",
+      "start_offset" : 1,
+      "end_offset" : 2,
+      "type" : "CN_CHAR",
+      "position" : 1
+    },
+    {
+      "token" : "中国人",
+      "start_offset" : 2,
+      "end_offset" : 5,
+      "type" : "CN_WORD",
+      "position" : 2
+    },
+    {
+      "token" : "中国",
+      "start_offset" : 2,
+      "end_offset" : 4,
+      "type" : "CN_WORD",
+      "position" : 3
+    },
+    {
+      "token" : "国人",
+      "start_offset" : 3,
+      "end_offset" : 5,
+      "type" : "CN_WORD",
+      "position" : 4
+    }
+  ]
+}
+```
+
+#### (3) 自定义词库
+比如我们要把尚硅谷算作一个词
+修改/usr/local/elasticsearch/plugins/ik/config中的IKAnalyzer.cfg.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+	<comment>IK Analyzer 扩展配置</comment>
+	<!--用户可以在这里配置自己的扩展字典 -->
+	<entry key="ext_dict"></entry>
+	 <!--用户可以在这里配置自己的扩展停止词字典-->
+	<entry key="ext_stopwords"></entry>
+	<!--用户可以在这里配置远程扩展字典 -->
+	<entry key="remote_ext_dict">http://192.168.11.129/es/fenci.txt</entry> 
+	<!--用户可以在这里配置远程扩展停止词字典-->
+	<!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+</properties>
+
+修改完成后，需要重启elasticsearch容器，否则修改不生效。docker restart elasticsearch
+
+更新完成后，es只会对于新增的数据用更新分词。历史数据是不会重新分词的。如果想要历史数据重新分词，需要执行：
+POST my_index/_update_by_query?conflicts=proceed
+
+安装Nginx
+随便启动一个nginx实例，只是为了复制出配置
+docker run -p 80:80 --name nginx -d nginx:1.10   
+将容器内的配置文件拷贝到/usr/local/nginx/conf/ 下
+mkdir -p/usr/local/nginx/html
+mkdir -p /usr/local/nginx/logs
+mkdir -p /usr/local/nginx/conf
+docker container cp nginx:/etc/nginx/*  /usr/local/nginx/conf/ 
+#由于拷贝完成后会在config中存在一个nginx文件夹，所以需要将它的内容移动到conf中
+mv /usr/local/nginx/conf/nginx/* /usr/local/nginx/conf/
+rm -rf /usr/local/nginx/conf/nginx
+
+终止原容器：
+docker stop nginx
+
+执行命令删除原容器：
+docker rm nginx
+
+创建新的Nginx，执行以下命令
+docker run -p 80:80 --name nginx \
+ -v /usr/local/nginx/html:/usr/share/nginx/html \
+ -v /usr/local/nginx/logs:/var/log/nginx \
+ -v /usr/local/nginx/conf/:/etc/nginx \
+ -d nginx:1.10
+ 
+创建“/mydata/nginx/html/index.html”文件，测试是否能够正常访问
+访问：http://ngix所在主机的IP:80/index.html
+
+安装好nginx,把Nginx当做tomcat来用
+mkdir /usr/local/nginx/html/es
+cd /usr/local/nginx/html/es
+vim fenci.txt
+输入尚硅谷
+
+测试http://192.168.11.129/es/fenci.txt
+
+然后创建“fenci.txt”文件，内容如下：
+echo "樱桃萨其马，带你甜蜜入夏" > /usr/local/nginx/html/es/fenci.txt
+测试效果：
+GET _analyze
+{
+   "analyzer": "ik_max_word", 
+   "text":"樱桃萨其马，带你甜蜜入夏"
+}
+
+输出结果：
+{
+  "tokens" : [
+    {
+      "token" : "樱桃",
+      "start_offset" : 0,
+      "end_offset" : 2,
+      "type" : "CN_WORD",
+      "position" : 0
+    },
+    {
+      "token" : "萨其马",
+      "start_offset" : 2,
+      "end_offset" : 5,
+      "type" : "CN_WORD",
+      "position" : 1
+    },
+    {
+      "token" : "带你",
+      "start_offset" : 6,
+      "end_offset" : 8,
+      "type" : "CN_WORD",
+      "position" : 2
+    },
+    {
+      "token" : "甜蜜",
+      "start_offset" : 8,
+      "end_offset" : 10,
+      "type" : "CN_WORD",
+      "position" : 3
+    },
+    {
+      "token" : "入夏",
+      "start_offset" : 10,
+      "end_offset" : 12,
+      "type" : "CN_WORD",
+      "position" : 4
+    }
+  ]
+}
+
+java操作es有两种方式
+
+1）9300: TCP
+spring-data-elasticsearch:transport-api.jar;
+springboot版本不同，ransport-api.jar不同，不能适配es版本
+7.x已经不建议使用，8以后就要废弃
+2）9200: HTTP
+有诸多包
+
+jestClient: 非官方，更新慢；
+RestTemplate：模拟HTTP请求，ES很多操作需要自己封装，麻烦；
+HttpClient：同上；
+Elasticsearch-Rest-Client：官方RestClient，封装了ES操作，API层次分明，上手简单；
+最终选择Elasticsearch-Rest-Client（elasticsearch-rest-high-level-client）
 
 
 
