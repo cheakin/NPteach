@@ -4426,7 +4426,7 @@ ls /usr/share/elasticsearch/plugins
 # 进入到 es 的插件目录(宿主机)
 cd /mydata/elasticsearch/plugins
 
-# 解压到 plugins 目录下的 ik 目录
+# 解压到 plugins 目录下的 ik 目录(yum install -y unzip)
 unzip elasticsearch-analysis-ik-7.4.2.zip -d ik
 # 还是提示没有命令, 遂放弃命令模式, 使用ssh,sftp方式解压
 #1.开启远程连接, 修改配置文件
@@ -4591,8 +4591,8 @@ GET _analyze
 
 #### (3) 自定义词库
 比如我们要把尚硅谷算作一个词
-修改/usr/local/elasticsearch/plugins/ik/config中的IKAnalyzer.cfg.xml
-
+修改`/usr/local/elasticsearch/plugins/ik/config`中的`IKAnalyzer.cfg.xml`
+``` xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
@@ -4606,97 +4606,170 @@ GET _analyze
 	<!--用户可以在这里配置远程扩展停止词字典-->
 	<!-- <entry key="remote_ext_stopwords">words_location</entry> -->
 </properties>
-
-修改完成后，需要重启elasticsearch容器，否则修改不生效。docker restart elasticsearch
+```
+修改完成后，需要重启elasticsearch容器，否则修改不生效。`docker restart elasticsearch`
 
 更新完成后，es只会对于新增的数据用更新分词。历史数据是不会重新分词的。如果想要历史数据重新分词，需要执行：
-POST my_index/_update_by_query?conflicts=proceed
+`POST my_index/_update_by_query?conflicts=proceed`
 
-安装Nginx
-随便启动一个nginx实例，只是为了复制出配置
-docker run -p 80:80 --name nginx -d nginx:1.10   
-将容器内的配置文件拷贝到/usr/local/nginx/conf/ 下
-mkdir -p/usr/local/nginx/html
-mkdir -p /usr/local/nginx/logs
-mkdir -p /usr/local/nginx/conf
-docker container cp nginx:/etc/nginx/*  /usr/local/nginx/conf/ 
-#由于拷贝完成后会在config中存在一个nginx文件夹，所以需要将它的内容移动到conf中
-mv /usr/local/nginx/conf/nginx/* /usr/local/nginx/conf/
-rm -rf /usr/local/nginx/conf/nginx
+**安装Nginx**
+我们在 nginx 中自定义分词文件，通过配置 es 的 ik 配置文件来远程调用 nginx 中的分词文件来实现自定义扩展词库。*默认 nginx 请求的是 数据目录的 html 静态目录*
 
-终止原容器：
+安装Nginx, 随便启动一个nginx实例，只是为了复制出配置
+``` shell
+# 启动ngin容器, 没有镜像会自动下载
+docker run -p 80:80 --name nginx -d nginx:1.10  
+``` 
+将容器内的配置文件拷贝到`/mydata/nginx/conf`下
+``` shell
+# 创建配置目录
+mkdir -p /mydata/nginx/conf
+
+# 拷贝出 Nginx 容器的配置
+# 将nginx容器中的nginx目录复制到本机的/mydata/nginx/conf目录
+docker container cp nginx:/etc/nginx /mydata/nginx/conf
+
+# 复制的是nginx目录，将该目录的所有文件移动到 conf 目录
+mv /mydata/nginx/conf/nginx/* /mydata/nginx/conf/
+
+# 删除多余的 /mydata/nginx/conf/nginx目录
+rm -rf /mydata/nginx/conf/nginx
+```
+删除临时nginx容器
+``` shell
+# 停止运行 nginx 容器
 docker stop nginx
 
-执行命令删除原容器：
+# 删除 nginx 容器
 docker rm nginx
-
-创建新的Nginx，执行以下命令
+```
+启动真正需要的nginx容器
+``` shell
+# 启动容器
 docker run -p 80:80 --name nginx \
- -v /usr/local/nginx/html:/usr/share/nginx/html \
- -v /usr/local/nginx/logs:/var/log/nginx \
- -v /usr/local/nginx/conf/:/etc/nginx \
- -d nginx:1.10
- 
-创建“/mydata/nginx/html/index.html”文件，测试是否能够正常访问
-访问：http://ngix所在主机的IP:80/index.html
+  -v /mydata/nginx/html:/usr/share/nginx/html \
+  -v /mydata/nginx/logs:/var/log/nginx \
+  -v /mydata/nginx/conf/:/etc/nginx \
+  -d nginx:1.10
 
-安装好nginx,把Nginx当做tomcat来用
-mkdir /usr/local/nginx/html/es
-cd /usr/local/nginx/html/es
-vim fenci.txt
-输入尚硅谷
+# 设置 nginx 随 Docker 启动
+docker update nginx --restart=always
+```
+测试 nginx
+``` shell
+# 创建一个首页到nginx中
+echo '<h1>Gulimall</h1>' >/mydata/nginx/html/index.html
+```
+访问：ngix所在主机的IP:80/index.html(http://192.168.56.10)
+能正常访问说明安装成功
 
-测试http://192.168.11.129/es/fenci.txt
+**自定义扩展分词库**
+nginx 默认请求地址为 `ip:port/fenci.txt`；本机为：`192.168.56.10/fenci.txt`
+如果想要增加新的词语，只需要在该文件追加新的行并保存新的词语即可。
 
-然后创建“fenci.txt”文件，内容如下：
-echo "樱桃萨其马，带你甜蜜入夏" > /usr/local/nginx/html/es/fenci.txt
+给 es 配置自定义词库
+``` shell
+# nginx 中自定义分词文件
+echo "蔡徐坤" > /mydata/nginx/html/fenci.txt
+
+# 打开并编辑 ik 插件配置文件
+vi /mydata/elasticsearch/plugins/ik/config/IKAnalyzer.cfg.xml
+
+# 修改为以下内容：
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <comment>IK Analyzer 扩展配置</comment>
+    <!--用户可以在这里配置自己的扩展字典 -->
+    <entry key="ext_dict"></entry>
+      <!--用户可以在这里配置自己的扩展停止词字典-->
+    <entry key="ext_stopwords"></entry>
+    <!--用户可以在这里配置远程扩展字典 -->
+    <!-- <entry key="remote_ext_dict">words_location</entry> -->
+    <entry key="remote_ext_dict">http://192.168.56.10/fenci.txt</entry>
+    <!--用户可以在这里配置远程扩展停止词字典-->
+    <!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+</properties>
+
+# 重启 elasticsearch 容器
+docker restart elasticsearch
+```
 测试效果：
+``` json
 GET _analyze
 {
    "analyzer": "ik_max_word", 
-   "text":"樱桃萨其马，带你甜蜜入夏"
+   "text":"我是练习时长两年半的蔡徐坤"
 }
-
-输出结果：
+//输出结果：
 {
   "tokens" : [
     {
-      "token" : "樱桃",
+      "token" : "我",
       "start_offset" : 0,
-      "end_offset" : 2,
-      "type" : "CN_WORD",
+      "end_offset" : 1,
+      "type" : "CN_CHAR",
       "position" : 0
     },
     {
-      "token" : "萨其马",
-      "start_offset" : 2,
-      "end_offset" : 5,
-      "type" : "CN_WORD",
+      "token" : "是",
+      "start_offset" : 1,
+      "end_offset" : 2,
+      "type" : "CN_CHAR",
       "position" : 1
     },
     {
-      "token" : "带你",
-      "start_offset" : 6,
-      "end_offset" : 8,
+      "token" : "练习",
+      "start_offset" : 2,
+      "end_offset" : 4,
       "type" : "CN_WORD",
       "position" : 2
     },
     {
-      "token" : "甜蜜",
-      "start_offset" : 8,
-      "end_offset" : 10,
+      "token" : "时长",
+      "start_offset" : 4,
+      "end_offset" : 6,
       "type" : "CN_WORD",
       "position" : 3
     },
     {
-      "token" : "入夏",
-      "start_offset" : 10,
-      "end_offset" : 12,
+      "token" : "两年",
+      "start_offset" : 6,
+      "end_offset" : 8,
       "type" : "CN_WORD",
       "position" : 4
+    },
+    {
+      "token" : "两",
+      "start_offset" : 6,
+      "end_offset" : 7,
+      "type" : "COUNT",
+      "position" : 5
+    },
+    {
+      "token" : "年半",
+      "start_offset" : 7,
+      "end_offset" : 9,
+      "type" : "CN_WORD",
+      "position" : 6
+    },
+    {
+      "token" : "的",
+      "start_offset" : 9,
+      "end_offset" : 10,
+      "type" : "CN_CHAR",
+      "position" : 7
+    },
+    {
+      "token" : "蔡徐坤",
+      "start_offset" : 10,
+      "end_offset" : 13,
+      "type" : "CN_WORD",
+      "position" : 8
     }
   ]
 }
+```
 
 java操作es有两种方式
 
