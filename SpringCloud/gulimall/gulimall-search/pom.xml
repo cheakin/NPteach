@@ -19,6 +19,7 @@
             <groupId>cn.cheakin</groupId>
             <artifactId>gulimall-common</artifactId>
             <version>0.0.1-SNAPSHOT</version>
+            <!--不需要数据库连接, 或者在启动类上使用`@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)`-->
             <exclusions>
                 <exclusion>
                     <groupId>com.baomidou</groupId>

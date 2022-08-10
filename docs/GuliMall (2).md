@@ -4798,6 +4798,13 @@ https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest
         <groupId>cn.cheakin</groupId>
         <artifactId>gulimall-common</artifactId>
         <version>0.0.1-SNAPSHOT</version>
+        <!--不需要数据库连接, 或者在启动类上使用`@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)`-->
+        <exclusions>
+            <exclusion>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+            </exclusion>
+        </exclusions>
     </dependency>
 
     <dependency>
@@ -4807,6 +4814,37 @@ https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest
     </dependency>
 </dependencies>
 ```
+查看依赖关系发现es的依赖还是有问题, 是因为springboot中自带了其他版本的elasticsearch, 所以需要在`父级pom.xml`中覆盖掉
+```xml
+<properties>
+    ......
+    <elasticsearch.version>7.4.2</elasticsearch.version>
+</properties>
+
+<dependencyManagement>
+    <dependencies>
+        ......
+
+        <!-- 重写覆盖 spring-boot-dependencies 中的依赖版本  -->
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+            <version>${elasticsearch.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>${elasticsearch.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-client</artifactId>
+            <version>${elasticsearch.version}</version>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
 `applicaion.yml`
 ```yml
 spring:
@@ -4847,6 +4885,7 @@ void contextLoads() {
     System.out.println("client = " + client);
 }
 ```
+能够正常打印内存的地址即为成功
 
 
 
