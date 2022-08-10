@@ -4771,20 +4771,83 @@ GET _analyze
 }
 ```
 
+### ES-项目整合
+#### Elasticsearch-Rest-Client
 java操作es有两种方式
 
-1）9300: TCP
-spring-data-elasticsearch:transport-api.jar;
-springboot版本不同，ransport-api.jar不同，不能适配es版本
-7.x已经不建议使用，8以后就要废弃
-2）9200: HTTP
-有诸多包
-
-jestClient: 非官方，更新慢；
-RestTemplate：模拟HTTP请求，ES很多操作需要自己封装，麻烦；
-HttpClient：同上；
-Elasticsearch-Rest-Client：官方RestClient，封装了ES操作，API层次分明，上手简单；
+1. 通过 9300:TCP
+   * spring-data-elasticsearch:transport-api.jar;
+     * springboot版本不同，ransport-api.jar不同，不能适配es版本
+     * 7.x已经不建议使用，8以后就要废弃
+2. 9200: HTTP
+   有诸多包
+   * jestClient: 非官方，更新慢；
+   * RestTemplate：模拟HTTP请求，ES很多操作需要自己封装，麻烦；
+   * HttpClient：同上；
+   * Elasticsearch-Rest-Client：官方RestClient，封装了ES操作，API层次分明，上手简单；
 最终选择Elasticsearch-Rest-Client（elasticsearch-rest-high-level-client）
+https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high.html
+
+#### 整合high-level-client
+创建项目`gulimall-search`项目
+过程略
+`pom.xml`
+``` xml
+<dependencies>
+    <dependency>
+        <groupId>cn.cheakin</groupId>
+        <artifactId>gulimall-common</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
+        <groupId>org.elasticsearch.client</groupId>
+        <artifactId>elasticsearch-rest-high-level-client</artifactId>
+        <version>7.4.2</version>
+    </dependency>
+</dependencies>
+```
+`applicaion.yml`
+```yml
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+  application:
+    name: gulimall-search
+```
+注册到注册中心: 
+1.使用`@EnableDiscoveryClient`注解
+2.创建`bootstrap.properties`
+``` yml
+spring.cloud.nacos.config.server-addr=127.0.0.1:8848
+spring.cloud.nacos.config.namespace=gulimall-search
+```
+创建配置类`GulimallElasticSearchConfig`, 给容器中注入RestHighLevelClient
+``` java
+@Configuration
+public class GulimallElasticSearchConfig {
+
+    @Bean
+    public RestHighLevelClient esRestClient() {
+        return new RestHighLevelClient(
+                RestClient.builder(
+                        new HttpHost("192.168.56.10", 9200, "http")));
+    }
+}
+```
+单元测试测试整合ES, `GulimallSearchAplicationTests`
+``` java
+@Autowired
+private RestHighLevelClient client;
+
+@Test
+void contextLoads() {
+    System.out.println("client = " + client);
+}
+```
+
 
 
 
