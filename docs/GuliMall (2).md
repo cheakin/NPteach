@@ -23,7 +23,7 @@ Elastic 的底层是开源库 Lucene。但是，你没法直接用 Lucene，必�
 保存在某个索引(Index)下，某种类型(Type)的一个数据文档(Document)，文档是json格式的，
 Document就像是MySQL中的某个Table里面的内容。每一行对应的列叫属性
 
-[](./assets/GuliMall.md/GuliMall_high/1659623601145.jpg)
+![](./assets/GuliMall.md/GuliMall_high/1659623601145.jpg)
 
 
 ElasticSearch7-去掉type概念
