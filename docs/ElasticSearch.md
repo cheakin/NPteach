@@ -33,51 +33,51 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
 
 ### 准备
 #### 下载并启动Elasticsearch
-    Windows 版的 Elasticsearch 压缩包，解压即安装完毕，解压后的 Elasticsearch 的目录结构如下 ：
-    | 目录 | 含义 |
-    | -- | -- |
-    | bin | 可执行脚本目录 |
-    | config | 配置目录|
-    | jdk | 内置 JDK 目录|
-    | lib | 类库|
-    | modules | 模块目录|
-    | plugins | 插件目录|
-    解压后，进入 bin 文件目录，点击 elasticsearch.bat 文件启动 ES 服务 。
+Windows 版的 Elasticsearch 压缩包，解压即安装完毕，解压后的 Elasticsearch 的目录结构如下 ：
+| 目录    | 含义           |
+| ------- | -------------- |
+| bin     | 可执行脚本目录 |
+| config  | 配置目录       |
+| jdk     | 内置 JDK 目录  |
+| lib     | 类库           |
+| modules | 模块目录       |
+| plugins | 插件目录       |
+解压后，进入 bin 文件目录，点击 elasticsearch.bat 文件启动 ES 服务 。
 
-    注意: 启动后会显示默认账号Elasticsearch的密码
-    增加用户密码和SSL对于初学来说，徒增不必要的麻烦,这里直接干掉:
-    config/elasticsearch.yml
-    ```yaml
-    xpack.security.enabled: false
-    以及
-    xpack.security.http.ssl:
-        enabled: false
-    ```
+注意: 启动后会显示默认账号Elasticsearch的密码
+增加用户密码和SSL对于初学来说，徒增不必要的麻烦,这里直接干掉:
+config/elasticsearch.yml
+```yaml
+xpack.security.enabled: false
+以及
+xpack.security.http.ssl:
+    enabled: false
+```
 
-    注意： 9300 端口为 Elasticsearch 集群间组件的通信端口， 9200 端口为浏览器访问的 http协议`RESTful`端口。
+注意： 9300 端口为 Elasticsearch 集群间组件的通信端口， 9200 端口为浏览器访问的 http协议`RESTful`端口。
 
-    打开浏览器，输入地址： `http://localhost:9200`，测试返回结果, 正常访问即启动成功.
+打开浏览器，输入地址： `http://localhost:9200`，测试返回结果, 正常访问即启动成功.
 
-    * RESTful 测试工具
-        这里推荐使用`Apifox`, 官网: https://www.apifox.cn/
+* RESTful 测试工具
+    这里推荐使用`Apifox`, 官网: https://www.apifox.cn/
 
 #### 数据格式
-    Elasticsearch 是面向文档型数据库，一条数据在这里就是一个文档。 为了方便大家理解，我们将 Elasticsearch 里存储文档数据和关系型数据库 MySQL 存储数据的概念进行一个类比
-    ![Img](./FILES/ElasticSearch.md/img-20220630103238.png)
-    ES 里的 Index 可以看做一个库，而 Types 相当于表， Documents 则相当于表的行。这里 Types 的概念已经被逐渐弱化， Elasticsearch 6.X 中，一个 index 下已经只能包含一个type， Elasticsearch 7.X 中, Type 的概念已经被删除了。
+Elasticsearch 是面向文档型数据库，一条数据在这里就是一个文档。 为了方便大家理解，我们将 Elasticsearch 里存储文档数据和关系型数据库 MySQL 存储数据的概念进行一个类比
+![Img](./assets/ElasticSearch.md/img-20220630103238.png)
+ES 里的 Index 可以看做一个库，而 Types 相当于表， Documents 则相当于表的行。这里 Types 的概念已经被逐渐弱化， Elasticsearch 6.X 中，一个 index 下已经只能包含一个type， Elasticsearch 7.X 中, Type 的概念已经被删除了。
 
-    **倒排索引**  
-    传统的正排索引
-    | id | content |
-    | -- | -- |
-    | 1001 | my name is zhangsan |
-    | 1002 | my name is lisi |
+**倒排索引**  
+传统的正排索引
+| id   | content             |
+| ---- | ------------------- |
+| 1001 | my name is zhangsan |
+| 1002 | my name is lisi     |
 
-    ES的倒排索引
-    |keyword|id|
-    |--|--|
-    |name|1001, 1002|
-    |zhang|1001|
+ES的倒排索引
+| keyword | id         |
+| ------- | ---------- |
+| name    | 1001, 1002 |
+| zhang   | 1001       |
 
 #### HTTP-操作
 1. 索引-创建
@@ -98,34 +98,34 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
 
 2. 索引-查询&删除  
     * 查询单个索引
-    向 ES 服务器发`GET`请求 ： `http://127.0.0.1:9200/shopping`, 返回结果: 
-    ``` json
-    {
-        "shopping": {   // 索引名
-            "aliases": {},  // 别名
-            "mappings": {}, // 映射
-            "settings": {   // 设置
-                "index": {  // 设置-索引
-                    "routing": {        // 设置-索引路由
-                        "allocation": {
-                            "include": {
-                                "_tier_preference": "data_content"
+        向 ES 服务器发`GET`请求 ： `http://127.0.0.1:9200/shopping`, 返回结果: 
+        ``` json
+        {
+            "shopping": {   // 索引名
+                "aliases": {},  // 别名
+                "mappings": {}, // 映射
+                "settings": {   // 设置
+                    "index": {  // 设置-索引
+                        "routing": {        // 设置-索引路由
+                            "allocation": {
+                                "include": {
+                                    "_tier_preference": "data_content"
+                                }
                             }
+                        },
+                        "number_of_shards": "1",
+                        "provided_name": "shopping",
+                        "creation_date": "1656561245711",   // 设置-索引-创建时间
+                        "number_of_replicas": "1",
+                        "uuid": "N5a6epUoSVi3qis7wQFo3w",
+                        "version": {
+                            "created": "8030099"
                         }
-                    },
-                    "number_of_shards": "1",
-                    "provided_name": "shopping",
-                    "creation_date": "1656561245711",   // 设置-索引-创建时间
-                    "number_of_replicas": "1",
-                    "uuid": "N5a6epUoSVi3qis7wQFo3w",
-                    "version": {
-                        "created": "8030099"
                     }
                 }
             }
         }
-    }
-    ```
+        ```
 
     * 查询所有索引
         向 ES 服务器发`GET`请求 ： `http://127.0.0.1:9200/_cat/indices?v`
@@ -134,27 +134,27 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
         health status index    uuid                   pri rep docs.count docs.deleted store.size pri.store.size
         yellow open   shopping N5a6epUoSVi3qis7wQFo3w   1   1          0            0       225b           225b
         ```  
-        |表头|含义|
-        |--|--|
-        | health	| 当前服务器健康状态： green(集群完整) yellow(单点正常、集群不完整) red(单点不正常)|
-        |status	| 索引打开、关闭状态|
-        |index	| 索引名|
-        ||uuid	| 索引统一编号|
-        |pri	| 主分片数量|
-        |rep	| 副本数量|
-        |docs.count	| 可用文档数量|
-        |docs.deleted	| 文档删除状态（逻辑删除）|
-        |store.size	| 主分片和副分片整体占空间大小|
-        |pri.store.size	| 主分片占空间大小|  
+        | 表头           | 含义                                                                              |
+        | -------------- | --------------------------------------------------------------------------------- |
+        | health         | 当前服务器健康状态： green(集群完整) yellow(单点正常、集群不完整) red(单点不正常) |
+        | status         | 索引打开、关闭状态                                                                |
+        | index          | 索引名                                                                            |
+        |                | uuid                                                                              | 索引统一编号 |
+        | pri            | 主分片数量                                                                        |
+        | rep            | 副本数量                                                                          |
+        | docs.count     | 可用文档数量                                                                      |
+        | docs.deleted   | 文档删除状态（逻辑删除）                                                          |
+        | store.size     | 主分片和副分片整体占空间大小                                                      |
+        | pri.store.size | 主分片占空间大小                                                                  |
 
     * 删除索引
-    向 ES 服务器发`DELETE`请求 ： `http://127.0.0.1:9200/shopping`, 返回结果: 
-    ``` json
-    {
-        "acknowledged": true
-    }
-    ```
-    再次查看索引, 已经没有 shopping 了
+        向 ES 服务器发`DELETE`请求 ： `http://127.0.0.1:9200/shopping`, 返回结果: 
+        ``` json
+        {
+            "acknowledged": true
+        }
+        ```
+        再次查看索引, 已经没有 shopping 了
 
 
 假设索引已经创建好了，接下来我们来创建文档等操作。
@@ -659,69 +659,69 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
         }
         ```
     * 查询排序
-            如果你想通过排序查出价格最高的手机,向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
-            ``` json
-            {
-                "query":{
-                    "match_all":{}
-                },
-                "sort":{
-                    "price":{
-                        "order":"desc"
-                    }
+        如果你想通过排序查出价格最高的手机,向 ES 服务器发 `GET` 请求 ： `http://127.0.0.1:9200/shopping/_search`，附带JSON体如下：
+        ``` json
+        {
+            "query":{
+                "match_all":{}
+            },
+            "sort":{
+                "price":{
+                    "order":"desc"
                 }
             }
-            ```
-            返回结果:
-            ``` json
-            {
-                "took": 1,
-                "timed_out": false,
-                "_shards": {
-                    "total": 1,
-                    "successful": 1,
-                    "skipped": 0,
-                    "failed": 0
+        }
+        ```
+        返回结果:
+        ``` json
+        {
+            "took": 1,
+            "timed_out": false,
+            "_shards": {
+                "total": 1,
+                "successful": 1,
+                "skipped": 0,
+                "failed": 0
+            },
+            "hits": {
+                "total": {
+                    "value": 2,
+                    "relation": "eq"
                 },
-                "hits": {
-                    "total": {
-                        "value": 2,
-                        "relation": "eq"
-                    },
-                    "max_score": null,
-                    "hits": [
-                        {
-                            "_index": "shopping",
-                            "_id": "6IUzs4EB5TX8OJxkDCeX",
-                            "_score": null,
-                            "_source": {
-                                "title": "小米手机",
-                                "category": "小米",
-                                "images": "http://www.gulixueyuan.com/xm.jpg",
-                                "price": 3999
-                            },
-                            "sort": [
-                                3999
-                            ]
+                "max_score": null,
+                "hits": [
+                    {
+                        "_index": "shopping",
+                        "_id": "6IUzs4EB5TX8OJxkDCeX",
+                        "_score": null,
+                        "_source": {
+                            "title": "小米手机",
+                            "category": "小米",
+                            "images": "http://www.gulixueyuan.com/xm.jpg",
+                            "price": 3999
                         },
-                        {
-                            "_index": "shopping",
-                            "_id": "6YU0s4EB5TX8OJxkkici",
-                            "_score": null,
-                            "_source": {
-                                "title": "小米手机",
-                                "category": "小米",
-                                "images": "http://www.gulixueyuan.com/xm.jpg",
-                                "price": 3999
-                            },
-                            "sort": [
-                                3999
-                            ]
-                        }
-                    ]
-                }
+                        "sort": [
+                            3999
+                        ]
+                    },
+                    {
+                        "_index": "shopping",
+                        "_id": "6YU0s4EB5TX8OJxkkici",
+                        "_score": null,
+                        "_source": {
+                            "title": "小米手机",
+                            "category": "小米",
+                            "images": "http://www.gulixueyuan.com/xm.jpg",
+                            "price": 3999
+                        },
+                        "sort": [
+                            3999
+                        ]
+                    }
+                ]
             }
-            ```
+        }
+        ```
             
 
 8. 多条件查询 & 范围查询
@@ -1432,152 +1432,152 @@ Google，百度类的网站搜索，它们都是根据网页中的关键字生�
     查不到只因创建映射时"tel"的"index"为false。
 
 ### Java API
-1. 环境准备
-    新建Maven工程, 添加依赖：
-    ``` maven
-        <dependencies>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch</artifactId>
-            <version>7.8.0</version>
-        </dependency>
-        <!-- elasticsearch 的客户端 -->
-        <dependency>
-            <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <version>7.8.0</version>
-        </dependency>
-        <!-- elasticsearch 依赖 2.x 的 log4j -->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.8.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.8.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.9.9</version>
-        </dependency>
-        <!-- junit 单元测试 -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-        </dependency>
-    </dependencies>
-    ```
+#### 1. 环境准备
+新建Maven工程, 添加依赖：
+``` maven
+    <dependencies>
+    <dependency>
+        <groupId>org.elasticsearch</groupId>
+        <artifactId>elasticsearch</artifactId>
+        <version>7.8.0</version>
+    </dependency>
+    <!-- elasticsearch 的客户端 -->
+    <dependency>
+        <groupId>org.elasticsearch.client</groupId>
+        <artifactId>elasticsearch-rest-high-level-client</artifactId>
+        <version>7.8.0</version>
+    </dependency>
+    <!-- elasticsearch 依赖 2.x 的 log4j -->
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-api</artifactId>
+        <version>2.8.2</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>2.8.2</version>
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.9.9</version>
+    </dependency>
+    <!-- junit 单元测试 -->
+    <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+    </dependency>
+</dependencies>
+```
 
-    测试连接
-    ``` java
-    public class Client {
+测试连接
+``` java
+public class Client {
 
-        public static void main(String[] args) throws IOException {
-    //        new TransportClient(); // 已经不推荐使用
+    public static void main(String[] args) throws IOException {
+//        new TransportClient(); // 已经不推荐使用
 
-            // 创建ES客户端
-            RestHighLevelClient esClient = new RestHighLevelClient(
-                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
-            );
+        // 创建ES客户端
+        RestHighLevelClient esClient = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
 
-            // 关闭客户端
-            esClient.close();
+        // 关闭客户端
+        esClient.close();
 
-        }
     }
-    ```
+}
+```
 
-2. 索引 - 创建
-    ``` java
-        public class IndexCreate {
+#### 2. 索引 - 创建
+``` java
+    public class IndexCreate {
 
-        public static void main(String[] args) throws IOException {
-            // 创建ES客户端
-            RestHighLevelClient esClient = new RestHighLevelClient(
-                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
-            );
+    public static void main(String[] args) throws IOException {
+        // 创建ES客户端
+        RestHighLevelClient esClient = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
 
-            // 创建索引
-            CreateIndexRequest request = new CreateIndexRequest("user");
-            CreateIndexResponse response = esClient.indices().create(request, RequestOptions.DEFAULT);
+        // 创建索引
+        CreateIndexRequest request = new CreateIndexRequest("user");
+        CreateIndexResponse response = esClient.indices().create(request, RequestOptions.DEFAULT);
 
-            // 响应状态
-            boolean result = response.isAcknowledged();
-            System.out.println("索引操作： " + result);
+        // 响应状态
+        boolean result = response.isAcknowledged();
+        System.out.println("索引操作： " + result);
 
-            // 关闭客户端
-            esClient.close();
-
-        }
+        // 关闭客户端
+        esClient.close();
 
     }
 
-    // 后台打印
-    索引操作： true
-    ```
+}
 
-3. 索引 - 查询 & 删除
-    查询
-    ``` java
-    public class IndexSearch {
-        public static void main(String[] args) throws IOException {
-            // 创建ES客户端
-            RestHighLevelClient client = new RestHighLevelClient(
-                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
-            );
+// 后台打印
+索引操作： true
+```
 
-            // 查询索引 - 请求对象
-            GetIndexRequest request = new GetIndexRequest("user");
-            // 发送请求，获取响应
-            GetIndexResponse response = client.indices().get(request,
-                    RequestOptions.DEFAULT);
+#### 3. 索引 - 查询 & 删除
+查询
+``` java
+public class IndexSearch {
+    public static void main(String[] args) throws IOException {
+        // 创建ES客户端
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
 
-            System.out.println("aliases:"+response.getAliases());
-            System.out.println("mappings:"+response.getMappings());
-            System.out.println("settings:"+response.getSettings());
+        // 查询索引 - 请求对象
+        GetIndexRequest request = new GetIndexRequest("user");
+        // 发送请求，获取响应
+        GetIndexResponse response = client.indices().get(request,
+                RequestOptions.DEFAULT);
+
+        System.out.println("aliases:"+response.getAliases());
+        System.out.println("mappings:"+response.getMappings());
+        System.out.println("settings:"+response.getSettings());
 
 
-            // 关闭客户端
-            client.close();
-        }
-
+        // 关闭客户端
+        client.close();
     }
 
+}
 
-    // 控制台打印
-    aliases:{user=[]}
-    mappings:{user=org.elasticsearch.cluster.metadata.MappingMetadata@89e179ff}
-    settings:{user={"index.creation_date":"1656741519990","index.number_of_replicas":"1","index.number_of_shards":"1","index.provided_name":"user","index.routing.allocation.include._tier_preference":"data_content","index.uuid":"G_Ps7dPkTVWNvowjR1sQ5g","index.version.created":"8030099"}}
-    ```
 
-    删除
-    ``` java
-    public class IndexDelete {
-        public static void main(String[] args) throws IOException {
-            // 创建ES客户端
-            RestHighLevelClient client = new RestHighLevelClient(
-                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
-            );
+// 控制台打印
+aliases:{user=[]}
+mappings:{user=org.elasticsearch.cluster.metadata.MappingMetadata@89e179ff}
+settings:{user={"index.creation_date":"1656741519990","index.number_of_replicas":"1","index.number_of_shards":"1","index.provided_name":"user","index.routing.allocation.include._tier_preference":"data_content","index.uuid":"G_Ps7dPkTVWNvowjR1sQ5g","index.version.created":"8030099"}}
+```
 
-            // 删除索引 - 请求对象
-            DeleteIndexRequest request = new DeleteIndexRequest("user2");
-            // 发送请求，获取响应
-            AcknowledgedResponse response = client.indices().delete(request,RequestOptions.DEFAULT);
-            // 操作结果
-            System.out.println("操作结果 ： " + response.isAcknowledged());
+删除
+``` java
+public class IndexDelete {
+    public static void main(String[] args) throws IOException {
+        // 创建ES客户端
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
 
-            // 关闭客户端
-            client.close();
-        }
+        // 删除索引 - 请求对象
+        DeleteIndexRequest request = new DeleteIndexRequest("user2");
+        // 发送请求，获取响应
+        AcknowledgedResponse response = client.indices().delete(request,RequestOptions.DEFAULT);
+        // 操作结果
+        System.out.println("操作结果 ： " + response.isAcknowledged());
+
+        // 关闭客户端
+        client.close();
     }
+}
 
-    // 打印结果
-    操作结果 ： true
-    ```
+// 打印结果
+操作结果 ： true
+```
 
 接下来的文档操作会用到实体类, 这里先创建一下
 ``` java
@@ -1595,103 +1595,46 @@ public class User {
 }
 ```
 
-4. 文档 - 新增 & 修改
-    ``` java
-    public class DocInsert {
-        public static void main(String[] args) throws IOException {
-            // 创建ES客户端
-            RestHighLevelClient client = new RestHighLevelClient(
-                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
-            );
+#### 4. 文档 - 新增 & 修改
+``` java
+public class DocInsert {
+    public static void main(String[] args) throws IOException {
+        // 创建ES客户端
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
 
-            // 新增文档 - 请求对象
-            IndexRequest request = new IndexRequest();
-            // 设置索引及唯一性标识
-            request.index("user").id("1001");
+        // 新增文档 - 请求对象
+        IndexRequest request = new IndexRequest();
+        // 设置索引及唯一性标识
+        request.index("user").id("1001");
 
-            // 创建数据对象
-            User user = new User();
-            user.setName("zhangsan");
-            user.setAge(30);
-            user.setSex("男");
+        // 创建数据对象
+        User user = new User();
+        user.setName("zhangsan");
+        user.setAge(30);
+        user.setSex("男");
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            String productJson = objectMapper.writeValueAsString(user);
-            // 添加文档数据，数据格式为 JSON 格式
-            request.source(productJson, XContentType.JSON);
-            // 客户端发送请求，获取响应对象
-            IndexResponse response = client.index(request, RequestOptions.DEFAULT);
-            // 3.打印结果信息
-            System.out.println("response.getResult() = " + response.getResult());
+        ObjectMapper objectMapper = new ObjectMapper();
+        String productJson = objectMapper.writeValueAsString(user);
+        // 添加文档数据，数据格式为 JSON 格式
+        request.source(productJson, XContentType.JSON);
+        // 客户端发送请求，获取响应对象
+        IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+        // 3.打印结果信息
+        System.out.println("response.getResult() = " + response.getResult());
 
-            // 关闭客户端
-            client.close();
-        }
+        // 关闭客户端
+        client.close();
     }
+}
 
-    // 控制台打印
-    ```
-
-
-
-
+// 控制台打印
+```
     
-5. 文档 - 查询 & 删除
-    * 查询
-        ``` java
-            public static void main(String[] args) throws IOException {
-                // 创建ES客户端
-                RestHighLevelClient client = new RestHighLevelClient(
-                        RestClient.builder(new HttpHost("localhost", 9200, "http"))
-                );
-
-                // 新增文档 - 请求对象
-                IndexRequest request = new IndexRequest();
-                // 设置索引及唯一性标识
-                request.index("user").id("1001");
-
-                // 创建数据对象
-                User user = new User();
-                user.setName("zhangsan");
-                user.setAge(30);
-                user.setSex("男");
-
-                // 添加文档数据, es8.0以后可以直接传对象 <= 报错, 但是操作成功
-                request.source(user, XContentType.JSON);
-                // 客户端发送请求，获取响应对象
-                IndexResponse response = client.index(request, RequestOptions.DEFAULT);
-                // 3.打印结果信息
-                System.out.println("response.getResult() = " + response.getResult());
-
-                // 关闭客户端
-                client.close();
-            }
-        }
-        ```
-    * 删除
-        ``` java
-        public class DocDelete {
-        public static void main(String[] args) throws IOException {
-            // 创建ES客户端
-            RestHighLevelClient client = new RestHighLevelClient(
-                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
-            );
-
-            DeleteRequest request = new DeleteRequest();
-            request.index("user").id("1001");
-            DeleteResponse response = client.delete(request, RequestOptions.DEFAULT);
-
-            System.out.println(response.toString());
-
-            // 关闭客户端
-            client.close();
-        }
-    }
-        ```
-
-6. 文档 - 高级查询 - 全量查询
+#### 5. 文档 - 查询 & 删除
+* 查询
     ``` java
-    public class DocSearch {
         public static void main(String[] args) throws IOException {
             // 创建ES客户端
             RestHighLevelClient client = new RestHighLevelClient(
@@ -1721,124 +1664,175 @@ public class User {
         }
     }
     ```
-
-7. 文档-高级查询 - 分页查询 & 条件查询 & 查询排序 & 组合查询 & 范围查询 & 模糊查询 & 高亮查询 & 最大值查询 & 分组查询
+* 删除
     ``` java
-    public class DocQuery {
-        public static void main(String[] args) throws IOException {
-            // 创建ES客户端
-            RestHighLevelClient client = new RestHighLevelClient(
-                    RestClient.builder(new HttpHost("localhost", 9200, "http"))
-            );
+    public class DocDelete {
+    public static void main(String[] args) throws IOException {
+        // 创建ES客户端
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
 
-            // 创建搜索请求对象
-            SearchRequest request = new SearchRequest();
-            request.indices("user");
+        DeleteRequest request = new DeleteRequest();
+        request.index("user").id("1001");
+        DeleteResponse response = client.delete(request, RequestOptions.DEFAULT);
 
-            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        System.out.println(response.toString());
 
-            // 1.条件查询
-            /*sourceBuilder.query(QueryBuilders.termQuery("age", "30"));*/
-
-            // 2.分页查询
-            /*sourceBuilder.query(QueryBuilders.matchAllQuery());
-            // 分页查询
-            // 当前页其实索引(第一条数据的顺序号)， from
-            sourceBuilder.from(0);
-            // 每页显示多少条 size
-            sourceBuilder.size(2);*/
-
-            // 3.排序查询
-            /*sourceBuilder.query(QueryBuilders.matchAllQuery());
-            // 排序
-            sourceBuilder.sort("age", SortOrder.ASC);
-            // 需要的话可以加 排除
-            String[] include = {"name"};
-            String[] excludes = {};
-            sourceBuilder.fetchSource(include, excludes);*/
-
-            // 4.组合查询
-            /*BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-            // 必须包含
-            boolQueryBuilder.must(QueryBuilders.matchQuery("age", "30"));
-            // 一定不含
-            boolQueryBuilder.mustNot(QueryBuilders.matchQuery("name", "zhangsan"));
-            // 可能包含
-            boolQueryBuilder.should(QueryBuilders.matchQuery("sex", "男"));
-            sourceBuilder.query(boolQueryBuilder);*/
-
-            // 5.范围查询
-            /*RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("age");
-            // 大于等于
-            //rangeQuery.gte("30");
-            // 小于等于
-            rangeQuery.lte("40");
-            sourceBuilder.query(rangeQuery);*/
-
-            // 6.模糊查询
-            /*sourceBuilder.query(QueryBuilders.fuzzyQuery("name","wangwu")
-                    .fuzziness(Fuzziness.ONE)); // 允许偏差值*/
-
-            // 7.高亮查询
-            /*TermsQueryBuilder termsQueryBuilder =
-                    QueryBuilders.termsQuery("name","lisi");
-            sourceBuilder.query(termsQueryBuilder);
-            // 构建高亮字段
-            HighlightBuilder highlightBuilder = new HighlightBuilder();
-            highlightBuilder.preTags("<font color='red'>"); // 设置标签前缀
-            highlightBuilder.postTags("</font>");   // 设置标签后缀
-            highlightBuilder.field("name"); // 设置高亮字段
-            // 设置高亮构建对象
-            sourceBuilder.highlighter(highlightBuilder);*/
-
-            // 8.最大值查询
-            /*sourceBuilder.aggregation(AggregationBuilders.max("maxAge").field("age"));*/
-
-            // 9.分组查询
-            sourceBuilder.aggregation(AggregationBuilders.terms("age_groupby").field("age"));
-
-            request.source(sourceBuilder);
-            SearchResponse response = client.search(request, RequestOptions.DEFAULT);
-            System.out.println("response = " + response);
-
-            // 关闭客户端
-            client.close();
-        }
+        // 关闭客户端
+        client.close();
     }
+}
     ```
+
+#### 6. 文档 - 高级查询 - 全量查询
+``` java
+public class DocSearch {
+    public static void main(String[] args) throws IOException {
+        // 创建ES客户端
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
+
+        // 新增文档 - 请求对象
+        IndexRequest request = new IndexRequest();
+        // 设置索引及唯一性标识
+        request.index("user").id("1001");
+
+        // 创建数据对象
+        User user = new User();
+        user.setName("zhangsan");
+        user.setAge(30);
+        user.setSex("男");
+
+        // 添加文档数据, es8.0以后可以直接传对象 <= 报错, 但是操作成功
+        request.source(user, XContentType.JSON);
+        // 客户端发送请求，获取响应对象
+        IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+        // 3.打印结果信息
+        System.out.println("response.getResult() = " + response.getResult());
+
+        // 关闭客户端
+        client.close();
+    }
+}
+```
+
+#### 7. 文档-高级查询 - 分页查询 & 条件查询 & 查询排序 & 组合查询 & 范围查询 & 模糊查询 & 高亮查询 & 最大值查询 & 分组查询
+``` java
+public class DocQuery {
+    public static void main(String[] args) throws IOException {
+        // 创建ES客户端
+        RestHighLevelClient client = new RestHighLevelClient(
+                RestClient.builder(new HttpHost("localhost", 9200, "http"))
+        );
+
+        // 创建搜索请求对象
+        SearchRequest request = new SearchRequest();
+        request.indices("user");
+
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+
+        // 1.条件查询
+        /*sourceBuilder.query(QueryBuilders.termQuery("age", "30"));*/
+
+        // 2.分页查询
+        /*sourceBuilder.query(QueryBuilders.matchAllQuery());
+        // 分页查询
+        // 当前页其实索引(第一条数据的顺序号)， from
+        sourceBuilder.from(0);
+        // 每页显示多少条 size
+        sourceBuilder.size(2);*/
+
+        // 3.排序查询
+        /*sourceBuilder.query(QueryBuilders.matchAllQuery());
+        // 排序
+        sourceBuilder.sort("age", SortOrder.ASC);
+        // 需要的话可以加 排除
+        String[] include = {"name"};
+        String[] excludes = {};
+        sourceBuilder.fetchSource(include, excludes);*/
+
+        // 4.组合查询
+        /*BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        // 必须包含
+        boolQueryBuilder.must(QueryBuilders.matchQuery("age", "30"));
+        // 一定不含
+        boolQueryBuilder.mustNot(QueryBuilders.matchQuery("name", "zhangsan"));
+        // 可能包含
+        boolQueryBuilder.should(QueryBuilders.matchQuery("sex", "男"));
+        sourceBuilder.query(boolQueryBuilder);*/
+
+        // 5.范围查询
+        /*RangeQueryBuilder rangeQuery = QueryBuilders.rangeQuery("age");
+        // 大于等于
+        //rangeQuery.gte("30");
+        // 小于等于
+        rangeQuery.lte("40");
+        sourceBuilder.query(rangeQuery);*/
+
+        // 6.模糊查询
+        /*sourceBuilder.query(QueryBuilders.fuzzyQuery("name","wangwu")
+                .fuzziness(Fuzziness.ONE)); // 允许偏差值*/
+
+        // 7.高亮查询
+        /*TermsQueryBuilder termsQueryBuilder =
+                QueryBuilders.termsQuery("name","lisi");
+        sourceBuilder.query(termsQueryBuilder);
+        // 构建高亮字段
+        HighlightBuilder highlightBuilder = new HighlightBuilder();
+        highlightBuilder.preTags("<font color='red'>"); // 设置标签前缀
+        highlightBuilder.postTags("</font>");   // 设置标签后缀
+        highlightBuilder.field("name"); // 设置高亮字段
+        // 设置高亮构建对象
+        sourceBuilder.highlighter(highlightBuilder);*/
+
+        // 8.最大值查询
+        /*sourceBuilder.aggregation(AggregationBuilders.max("maxAge").field("age"));*/
+
+        // 9.分组查询
+        sourceBuilder.aggregation(AggregationBuilders.terms("age_groupby").field("age"));
+
+        request.source(sourceBuilder);
+        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+        System.out.println("response = " + response);
+
+        // 关闭客户端
+        client.close();
+    }
+}
+```
 
 ## Elasticsearch环境
 ### 简介
 * 单机 & 集群
-    单台 Elasticsearch 服务器提供服务，往往都有最大的负载能力，超过这个阈值，服务器
-    性能就会大大降低甚至不可用，所以生产环境中，一般都是运行在指定服务器集群中。
+    单台 Elasticsearch 服务器提供服务，往往都有最大的负载能力，超过这个阈值，服务器性能就会大大降低甚至不可用，所以生产环境中，一般都是运行在指定服务器集群中。
     除了负载能力，单点服务器也存在其他问题：
     * 单台机器存储容量有限
     * 单服务器容易出现单点故障，无法实现高可用
     * 单服务的并发处理能力有限
-    配置服务器集群时，集群中节点数量没有限制，大于等于 2 个节点就可以看做是集群了。一
-般出于高性能及高可用方面来考虑集群中节点数量都是 3 个以上
+    配置服务器集群时，集群中节点数量没有限制，大于等于 2 个节点就可以看做是集群了。一般出于高性能及高可用方面来考虑集群中节点数量都是 3 个以上
 
 总之，集群能提高性能，增加容错。
 
 * 集群 Cluster
-**一个集群就是由一个或多个服务器节点组织在一起，共同持有整个的数据，并一起提供索引和搜索功能。**一个 Elasticsearch 集群有一个唯一的名字标识，这个名字默认就是”elasticsearch”。这个名字是重要的，因为一个节点只能通过指定某个集群的名字，来加入这个集群。
+    **一个集群就是由一个或多个服务器节点组织在一起，共同持有整个的数据，并一起提供索引和搜索功能。** 一个 Elasticsearch 集群有一个唯一的名字标识，这个名字默认就是”elasticsearch”。这个名字是重要的，因为一个节点只能通过指定某个集群的名字，来加入这个集群。
 
 * 节点 Node
-集群中包含很多服务器， 一个节点就是其中的一个服务器。 作为集群的一部分，它存储数据，参与集群的索引和搜索功能。
+    集群中包含很多服务器， 一个节点就是其中的一个服务器。 作为集群的一部分，它存储数据，参与集群的索引和搜索功能。
 
-一个节点也是由一个名字来标识的，默认情况下，这个名字是一个随机的漫威漫画角色的名字，这个名字会在启动的时候赋予节点。这个名字对于管理工作来说挺重要的，因为在这个管理过程中，你会去确定网络中的哪些服务器对应于 Elasticsearch 集群中的哪些节点。
+    一个节点也是由一个名字来标识的，默认情况下，这个名字是一个随机的漫威漫画角色的名字，这个名字会在启动的时候赋予节点。这个名字对于管理工作来说挺重要的，因为在这个管理过程中，你会去确定网络中的哪些服务器对应于 Elasticsearch 集群中的哪些节点。
 
-一个节点可以通过配置集群名称的方式来加入一个指定的集群。默认情况下，每个节点都会被安排加入到一个叫做“elasticsearch”的集群中，这意味着，如果你在你的网络中启动了若干个节点，并假定它们能够相互发现彼此，它们将会自动地形成并加入到一个叫做“elasticsearch”的集群中。
+    一个节点可以通过配置集群名称的方式来加入一个指定的集群。默认情况下，每个节点都会被安排加入到一个叫做“elasticsearch”的集群中，这意味着，如果你在你的网络中启动了若干个节点，并假定它们能够相互发现彼此，它们将会自动地形成并加入到一个叫做“elasticsearch”的集群中。
 
-在一个集群里，只要你想，可以拥有任意多个节点。而且，如果当前你的网络中没有运
-行任何 Elasticsearch 节点，这时启动一个节点，会默认创建并加入一个叫做“elasticsearch”的
-集群。
+    在一个集群里，只要你想，可以拥有任意多个节点。而且，如果当前你的网络中没有运
+    行任何 Elasticsearch 节点，这时启动一个节点，会默认创建并加入一个叫做“elasticsearch”的
+    集群。
 
 ### Windows集群部署
 * 配置
     使用新环境, 复制出三个服务, 分别为node1001, node1002, node1003
-    [](./assets/ElasticSearch.md/1656948629345.jpg)
+    ![](./assets/ElasticSearch.md/1656948629345.jpg)
 
     若内存不够, 可再 config/jvm.options 中做出如下修改(默认是1g)
     ``` yml
@@ -2000,11 +1994,11 @@ public class User {
 #### 类型Type
 在一个索引中，你可以定义一种或多种类型。
 一个类型是你的索引的一个逻辑上的分类/分区，其语义完全由你来定。通常，会为具有一组共同字段的文档定义一个类型。不同的版本，类型发生了不同的变化。
-| 版本	| Type |
-| -- | -- |
-| 5.x |	支持多种 type |
-|6.x |	只能有一种 type |
-|7.x |	默认不再支持自定义索引类型（默认类型为： _doc） |
+| 版本 | Type                                            |
+| ---- | ----------------------------------------------- |
+| 5.x  | 支持多种 type                                   |
+| 6.x  | 只能有一种 type                                 |
+| 7.x  | 默认不再支持自定义索引类型（默认类型为： _doc） |
 
 #### 文档Document、
 一个文档是一个可被索引的基础信息单元，也就是一条数据。
@@ -2021,7 +2015,7 @@ mapping 是处理数据的方式和规则方面做一些限制，如：某个字
 
 #### 分片Shards
 一个索引可以存储超出单个节点硬件限制的大量数据。比如，一个具有 10 亿文档数据
-的索引占据 1TB 的磁盘空间，而任一节点都可能没有这样大的磁盘空间。 或者单个节点处理搜索请求，响应太慢。为了解决这个问题，**Elasticsearch 提供了将索引划分成多份的能力，每一份就称之为分片。**当你创建一个索引的时候，你可以指定你想要的分片的数量。**每个分片本身也是一个功能完善并且独立的“索引”**，这个“索引”可以被放置到集群中的任何节点上。
+的索引占据 1TB 的磁盘空间，而任一节点都可能没有这样大的磁盘空间。 或者单个节点处理搜索请求，响应太慢。为了解决这个问题，**Elasticsearch 提供了将索引划分成多份的能力，每一份就称之为分片**。当你创建一个索引的时候，你可以指定你想要的分片的数量。**每个分片本身也是一个功能完善并且独立的“索引”**，这个“索引”可以被放置到集群中的任何节点上。
 
 分片很重要，主要有两方面的原因：
 1. 允许你水平分割 / 扩展你的内容容量。
@@ -2052,15 +2046,12 @@ Lucene 是 Apache 软件基金会 Jakarta 项目组的一个子项目，提供�
 将分片分配给某个节点的过程，包括分配主分片或者副本。如果是副本，还包含从主分片复制数据的过程。这个过程是由 master 节点完成的。
 
 ### 系统架构
-[](./assets/ElasticSearch.md/1657037866096.jpg)
-一个运行中的 Elasticsearch 实例称为一个节点，而集群是由一个或者多个拥有相同
-cluster.name 配置的节点组成， 它们共同承担数据和负载的压力。当有节点加入集群中或者从集群中移除节点时，集群将会重新平均分布所有的数据。
+![](./assets/ElasticSearch.md/1657037866096.jpg)
+一个运行中的 Elasticsearch 实例称为一个节点，而集群是由一个或者多个拥有相同`cluster.name`配置的节点组成， 它们共同承担数据和负载的压力。当有节点加入集群中或者从集群中移除节点时，集群将会重新平均分布所有的数据。
 
-当一个节点被选举成为主节点时， 它将负责管理集群范围内的所有变更，例如增加、
-删除索引，或者增加、删除节点等。 而主节点并不需要涉及到文档级别的变更和搜索等操作，所以当集群只拥有一个主节点的情况下，即使流量的增加它也不会成为瓶颈。 任何节点都可以成为主节点。我们的示例集群就只有一个节点，所以它同时也成为了主节点。
+当一个节点被选举成为主节点时， 它将负责管理集群范围内的所有变更，例如增加、删除索引，或者增加、删除节点等。 而主节点并不需要涉及到文档级别的变更和搜索等操作，所以当集群只拥有一个主节点的情况下，即使流量的增加它也不会成为瓶颈。 任何节点都可以成为主节点。我们的示例集群就只有一个节点，所以它同时也成为了主节点。
 
-作为用户，我们可以将请求发送到集群中的任何节点 ，包括主节点。 每个节点都知道
-任意文档所处的位置，并且能够将我们的请求直接转发到存储我们所需文档的节点。 无论我们将请求发送到哪个节点，它都能负责从各个包含我们所需文档的节点收集回数据，并将最终结果返回給客户端。 Elasticsearch 对这一切的管理都是透明的。
+作为用户，我们可以将请求发送到集群中的任何节点 ，包括主节点。 每个节点都知道任意文档所处的位置，并且能够将我们的请求直接转发到存储我们所需文档的节点。 无论我们将请求发送到哪个节点，它都能负责从各个包含我们所需文档的节点收集回数据，并将最终结果返回給客户端。 Elasticsearch 对这一切的管理都是透明的。
 
 ### 单节点集群
 我们在包含一个空节点的集群内创建名为 users 的索引，为了演示目的，我们将分配 3个主分片和一份副本（每个主分片拥有一个副本分片）。
@@ -2081,14 +2072,14 @@ cluster.name 配置的节点组成， 它们共同承担数据和负载的压力
 }
 ```
 集群现在是拥有一个索引的单节点集群。所有 3 个主分片都被分配在 node-1 。
-[](./assets/ElasticSearch.md/1657037978706.jpg)
+![](./assets/ElasticSearch.md/1657037978706.jpg)
 通过 elasticsearch-head 插件（一个Chrome插件）查看集群情况 。
 * 集群健康值:yellow( 3 of 6 )：表示当前集群的全部主分片都正常运行，但是副本分片没有全部处在正常状态。
-    [](./assets/ElasticSearch.md/1657039351820.jpg)
+    ![](./assets/ElasticSearch.md/1657039351820.jpg)
 * 3 个主分片正常。
-  [](./assets/ElasticSearch.md/1657107387986.jpg)
+    ![](./assets/ElasticSearch.md/1657107387986.jpg)
 * 3 个副本分片都是 Unassigned，它们都没有被分配到任何节点。 在同 一个节点上既保存原始数据又保存副本是没有意义的，因为一旦失去了那个节点，我们也将丢失该节点 上的所有副本数据。
-[](./assets/ElasticSearch.md/1657039527897.jpg)
+    ![](./assets/ElasticSearch.md/1657039527897.jpg)
 
 当前集群是正常运行的，但存在丢失数据的风险。
 
@@ -2100,9 +2091,9 @@ cluster.name 配置的节点组成， 它们共同承担数据和负载的压力
 通过 elasticsearch-head 插件查看集群情况:
 * 集群健康值:green( 3 of 6 )：表示所有 6 个分片（包括 3 个主分片和 3 个副本分片）都在正常运行。
 * 3 个主分片正常。
-  [](./assets/ElasticSearch.md/1657108187627.jpg)
+    ![](./assets/ElasticSearch.md/1657108187627.jpg)
 * 第二个节点加入到集群后， 3 个副本分片将会分配到这个节点上——每 个主分片对应一个副本分片。这意味着当集群内任何一个节点出现问题时，我们的数据都完好无损。所 有新近被索引的文档都将会保存在主分片上，然后被并行的复制到对应的副本分片上。这就保证了我们 既可以从主分片又可以从副本分片上获得文档。
-  [](./assets/ElasticSearch.md/1657108237082.jpg)
+    ![](./assets/ElasticSearch.md/1657108237082.jpg)
 
 ### 水平扩容
 怎样为我们的正在增长中的应用程序按需扩容呢？当启动了第三个节点，我们的集群将会拥有三个节点的集群 : 为了分散负载而对分片进行重新分配 。
@@ -2110,45 +2101,33 @@ cluster.name 配置的节点组成， 它们共同承担数据和负载的压力
 通过 elasticsearch-head 插件查看集群情况。
 * 集群健康值:green( 3 of 6 )：表示所有 6 个分片（包括 3 个主分片和 3 个副本分片）都在正常运行。
 * Node 1 和 Node 2 上各有一个分片被迁移到了新的 Node 3 节点，现在每个节点上都拥有 2 个分片， 而不是之前的 3 个。 这表示每个节点的硬件资源（CPU, RAM, I/O）将被更少的分片所共享，每个分片 的性能将会得到提升。
-  [](./assets/ElasticSearch.md/1657108640314.jpg)
+  ![](./assets/ElasticSearch.md/1657108640314.jpg)
 分片是一个功能完整的搜索引擎，它拥有使用一个节点上的所有资源的能力。 我们这个拥有 6 个分 片（3 个主分片和 3 个副本分片）的索引可以最大扩容到 6 个节点，每个节点上存在一个分片，并且每个 分片拥有所在节点的全部资源。
 
 **但是如果我们想要扩容超过 6 个节点怎么办呢？**
-主分片的数目在索引创建时就已经确定了下来。实际上，这个数目定义了这个索引能够
-存储 的最大数据量。（实际大小取决于你的数据、硬件和使用场景。） 但是，读操作——
-搜索和返回数据——可以同时被主分片 或 副本分片所处理，所以当你拥有越多的副本分片
-时，也将拥有越高的吞吐量。
-在运行中的集群上是可以动态调整副本分片数目的，我们可以按需伸缩集群。让我们把
-副本数从默认的 1 增加到 2。
+主分片的数目在索引创建时就已经确定了下来。实际上，这个数目定义了这个索引能够存储 的最大数据量。（实际大小取决于你的数据、硬件和使用场景。） 但是，读操作——搜索和返回数据——可以同时被主分片 或 副本分片所处理，所以当你拥有越多的副本分片时，也将拥有越高的吞吐量。
+在运行中的集群上是可以动态调整副本分片数目的，我们可以按需伸缩集群。让我们把副本数从默认的 1 增加到 2。
 ``` json
 #PUT http://127.0.0.1:1001/users/_settings
 {
     "number_of_replicas" : 2
 }
 ```
-users 索引现在拥有 9 个分片： 3 个主分片和 6 个副本分片。 这意味着我们可以将集群
-扩容到 9 个节点，每个节点上一个分片。相比原来 3 个节点时，集群搜索性能可以提升 3 倍。
+users 索引现在拥有 9 个分片： 3 个主分片和 6 个副本分片。 这意味着我们可以将集群扩容到 9 个节点，每个节点上一个分片。相比原来 3 个节点时，集群搜索性能可以提升 3 倍。
 
-当然，如果只是在相同节点数目的集群上增加更多的副本分片并不能提高性能，因为每
-个分片从节点上获得的资源会变少。 你需要增加更多的硬件资源来提升吞吐量。
+当然，如果只是在相同节点数目的集群上增加更多的副本分片并不能提高性能，因为每个分片从节点上获得的资源会变少。 你需要增加更多的硬件资源来提升吞吐量。
 
-但是更多的副本分片数提高了数据冗余量：按照上面的节点配置，我们可以在失去 2 个节点
-的情况下不丢失任何数据。
+但是更多的副本分片数提高了数据冗余量：按照上面的节点配置，我们可以在失去 2 个节点的情况下不丢失任何数据。
 
 ### 应对故障
 我们关闭第一个节点，这时集群的状态为:关闭了一个节点后的集群。
 
-我们关闭的节点是一个主节点。而集群必须拥有一个主节点来保证正常工作，所以发生
-的第一件事情就是选举一个新的主节点： Node 2 。在我们关闭 Node 1 的同时也失去了主
-分片 1 和 2 ，并且在缺失主分片的时候索引也不能正常工作。 如果此时来检查集群的状况，我们看到的状态将会为 red ：不是所有主分片都在正常工作。
+我们关闭的节点是一个主节点。而集群必须拥有一个主节点来保证正常工作，所以发生的第一件事情就是选举一个新的主节点： Node 2 。在我们关闭 Node 1 的同时也失去了主分片 1 和 2 ，并且在缺失主分片的时候索引也不能正常工作。 如果此时来检查集群的状况，我们看到的状态将会为 red ：不是所有主分片都在正常工作。
 
 幸运的是，在其它节点上存在着这两个主分片的完整副本， 所以新的主节点立即将这些分片在 Node 2 和 Node 3 上对应的副本分片提升为主分片， 此时集群的状态将会为yellow。这个提升主分片的过程是瞬间发生的，如同按下一个开关一般。
 
 **为什么我们集群状态是 yellow 而不是 green 呢？**
-虽然我们拥有所有的三个主分片，但是同时设置了每个主分片需要对应 2 份副本分片，而此
-时只存在一份副本分片。 所以集群不能为 green 的状态，不过我们不必过于担心：如果我
-们同样关闭了 Node 2 ，我们的程序 依然 可以保持在不丢任何数据的情况下运行，因为
-Node 3 为每一个分片都保留着一份副本。
+虽然我们拥有所有的三个主分片，但是同时设置了每个主分片需要对应 2 份副本分片，而此时只存在一份副本分片。 所以集群不能为 green 的状态，不过我们不必过于担心：如果我们同样关闭了 Node 2 ，我们的程序 依然 可以保持在不丢任何数据的情况下运行，因为Node 3 为每一个分片都保留着一份副本。
 
 如果想回复原来的样子，要确保Node-1的配置文件有如下配置：
 ``` yml
@@ -2175,7 +2154,7 @@ discovery.seed_hosts: ["localhost:9302", "localhost:9303"]
 
 ### 数据写流程
 新建、索引和删除请求都是写操作， 必须在主分片上面完成之后才能被复制到相关的副本分片。
-[](./assets/ElasticSearch.md/1657039527897.jpg)
+![](./assets/ElasticSearch.md/1657039527897.jpg)
 
 在客户端收到成功响应时，文档变更已经在主分片和所有副本分片执行完成，变更是安全的。有一些可选的请求参数允许您影响这个过程，可能以数据安全为代价提升性能。这些选项很少使用，因为 Elasticsearch 已经很快，但是为了完整起见， 请参考下文：
    1. consistency
@@ -2190,13 +2169,13 @@ discovery.seed_hosts: ["localhost:9302", "localhost:9303"]
 新索引默认有1个副本分片，这意味着为满足规定数量应该需要两个活动的分片副本。 但是，这些默认的设置会阻止我们在单一节点上做任何事情。为了避免这个问题，要求只有当number_of_replicas 大于1的时候，规定数量才会执行。
 
 ### 数据读流程
-[](assets/ElasticSearch.md/1657116259349.jpg)
+![](assets/ElasticSearch.md/1657116259349.jpg)
 在处理读取请求时，协调结点在每次请求的时候都会通过轮询所有的副本分片来达到负载均衡。在文档被检索时，已经被索引的文档可能已经存在于主分片上但是还没有复制到副本分片。 在这种情况下，副本分片可能会报告文档不存在，但是主分片可能成功返回文档。 一旦索引请求成功返回给用户，文档在主分片和副本分片都是可用的。
 
 ### 更新流程 & 批量操作流程
 * 更新流程
     部分更新一个文档结合了先前说明的读取和写入流程：
-    [](./assets/ElasticSearch.md/1657119286989.jpg)
+    ![](./assets/ElasticSearch.md/1657119286989.jpg)
     部分更新一个文档的步骤如下：
       1. 客户端向Node 1发送更新请求。
       2. 它将请求转发到主分片所在的Node 3 。
@@ -2207,7 +2186,7 @@ discovery.seed_hosts: ["localhost:9302", "localhost:9303"]
     **mget和 bulk API的模式类似于单文档模式。**区别在于协调节点知道每个文档存在于哪个分片中。它将整个多文档请求分解成每个分片的多文档请求，并且将这些请求并行转发到每个参与节点。
 
     协调节点一旦收到来自每个节点的应答，就将每个节点的响应收集整理成单个响应，返回给客户端。
-    [](./assets/ElasticSearch.md/1657119435446.jpg)
+    ![](./assets/ElasticSearch.md/1657119435446.jpg)
 
     **用单个 mget 请求取回多个文档所需的步骤顺序:**
       1. 客户端向 Node 1 发送 mget 请求。
@@ -2215,7 +2194,7 @@ discovery.seed_hosts: ["localhost:9302", "localhost:9303"]
     可以对docs数组中每个文档设置routing参数。
 
     bulk API， 允许在单个批量请求中执行多个创建、索引、删除和更新请求。
-    [](./assets/ElasticSearch.md/1657119567175.jpg)
+    ![](./assets/ElasticSearch.md/1657119567175.jpg)
     bulk API 按如下步骤顺序执行：
       1. 客户端向Node 1 发送 bulk请求。
       2. Node 1为每个节点创建一个批量请求，并将这些请求并行转发到每个包含主分片的节点主机。
@@ -2232,9 +2211,9 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 见其名，知其意，有倒排索引，肯定会对应有正向索引。正向索引（forward index），反向索引（inverted index）更熟悉的名字是**倒排索引**。
 
 所谓的**正向索引**，就是搜索引擎会将待搜索的文件都对应一个文件ID，搜索时将这个ID和搜索关键字进行对应，形成K-V对，然后对关键字进行统计计数。（统计？？下文有解释）
-[](./assets/ElasticSearch.md/1657119981407.jpg)
+![](./assets/ElasticSearch.md/1657119981407.jpg)
 但是互联网上收录在搜索引擎中的文档的数目是个天文数字，这样的索引结构根本无法满足实时返回排名结果的要求。所以，搜索引擎会将正向索引重新构建为倒排索引，即把文件ID对应到关键词的映射转换为关键词到文件ID的映射，每个关键词都对应着一系列的文件，这些文件中都出现这个关键词。
-[](./assets/ElasticSearch.md/1657120032909.jpg))
+![](./assets/ElasticSearch.md/1657120032909.jpg))
 
 #### 倒排索引的例子
 一个倒排索引由文档中所有不重复词的列表构成，对于其中每个词，有一个包含它的文档列表。例如，假设我们有两个文档，每个文档的content域包含如下内容：
@@ -2242,9 +2221,9 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
   * Quick brown foxes leap over lazy dogs in summer
 
 为了创建倒排索引，我们首先将每个文档的content域拆分成单独的词（我们称它为词条或tokens)，创建一个包含所有不重复词条的排序列表，然后列出每个词条出现在哪个文档。结果如下所示：
-[](assets/ElasticSearch.md/1657120146999.jpg)
+![](assets/ElasticSearch.md/1657120146999.jpg)
 现在，如果我们想搜索 `quick` `brown` ，我们只需要查找包含每个词条的文档：
-[](./assets/ElasticSearch.md/1657120185675.jpg)
+![](./assets/ElasticSearch.md/1657120185675.jpg)
 两个文档都匹配，但是第一个文档比第二个匹配度更高。如果我们使用仅计算匹配词条数量的简单相似性算法，那么我们可以说，对于我们查询的相关性来讲，第一个文档比第二个文档更佳。
 
 但是，我们目前的倒排索引有一些问题：
@@ -2262,7 +2241,7 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
   * foxes可以词干提取变为词根的格式为fox。类似的，dogs可以为提取为dog。
   * jumped和leap是同义词，可以索引为相同的单词jump 。
 现在索引看上去像这样：
-[](./assets/ElasticSearch.md/1657120920487.jpg)
+![](./assets/ElasticSearch.md/1657120920487.jpg)
 这还远远不够。我们搜索`+Quick` `+fox` 仍然会失败，因为在我们的索引中，已经没有`Quick`了。但是，如果我们对搜索的字符串使用与content域相同的标准化规则，会变成查询`+quick` `+fox`，这样两个文档都会匹配！分词和标准化的过程称为**分析**，这非常重要。你只能搜索在索引中出现的词条，所以索引文本和查询字符串必须标准化为相同的格式。
 
 ### 文档搜索
@@ -2282,18 +2261,18 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     答案是：用更多的索引。通过增加新的补充索引来反映新近的修改，而不是直接重写整个倒排索引。每一个倒排索引都会被轮流查询到,从最早的开始查询完后再对结果进行合并。
 
     Elasticsearch基于Lucene，这个java库引入了**按段搜索**的概念。每一段本身都是一个倒排索引，但索引在 Lucene 中除表示所有段的集合外，还增加了提交点的概念—一个列出了所有已知段的文件。
-    [](./assets/ElasticSearch.md/1657121243009.jpg)
+    ![](./assets/ElasticSearch.md/1657121243009.jpg)
 
     按段搜索会以如下流程执行：
     1. 新文档被收集到内存索引缓存。
-        [](./assets/ElasticSearch.md/1657206432888.jpg)
+        ![](./assets/ElasticSearch.md/1657206432888.jpg)
     2. 不是地， 缓存被提交
        1. 一个新的段，一个追加的倒排索引，被写入磁盘。
        2. 一个新的包含新段名字的提交点被写入磁盘。
        3. 磁盘进行同步，所有在文件系统缓存中等待的写入都刷新到磁盘，以确保它们被写入物理文件
     3. 新的段被开启，让它包含的文档可见以被搜索。
     4. 内存缓存被清空，等待接收新的文档。
-        [](./assets/ElasticSearch.md/1657206543473.jpg)
+        ![](./assets/ElasticSearch.md/1657206543473.jpg)
     
 当一个查询被触发，所有已知的段按顺序被查询。词项统计会对所有段的结果进行聚合，以保证每个词和每个文档的关联都被准确计算。这种方式可以用相对较低的成本将新文档添加到索引。
 
@@ -2304,17 +2283,17 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 文档更新也是类似的操作方式:当一个文档被更新时，旧版本文档被标记删除，文档的新版本被索引到一个新的段中。可能两个版本的文档都会被一个查询匹配到，但被删除的那个旧版本文档在结果集返回前就已经被移除。
 
 ### 文档刷新 & 文档刷写 & 文档合并
-[](./assets/ElasticSearch.md/1657206606536.jpg)
-[](./assets/ElasticSearch.md/1657206635607.jpg)
+![](./assets/ElasticSearch.md/1657206606536.jpg)
+![](./assets/ElasticSearch.md/1657206635607.jpg)
 
 * 近实时搜索
     随着按段（per-segment）搜索的发展，一个新的文档从索引到可被搜索的延迟显著降低了。新文档在几分钟之内即可被检索，但这样还是不够快。磁盘在这里成为了瓶颈。**提交（Commiting）一个新的段到磁盘需要一个fsync来确保段被物理性地写入磁盘**，这样在断电的时候就不会丢失数据。但是fsync操作代价很大；如果每次索引一个文档都去执行一次的话会造成很大的性能问题。
 
     我们需要的是一个更轻量的方式来使一个文档可被搜索，这意味着fsync要从整个过程中被移除。在Elasticsearch和磁盘之间是**文件系统缓存**。像之前描述的一样，在内存索引缓冲区中的文档会被写入到一个新的段中。但是这里新段会被先写入到文件系统缓存—这一步代价会比较低，稍后再被刷新到磁盘—这一步代价比较高。不过只要文件已经在缓存中，就可以像其它文件一样被打开和读取了。
-    [](./assets/ElasticSearch.md/1657206754246.jpg)
+    ![](./assets/ElasticSearch.md/1657206754246.jpg)
 
     Lucene允许新段被写入和打开，使其包含的文档在未进行一次完整提交时便对搜索可见。这种方式比进行一次提交代价要小得多，并且在不影响性能的前提下可以被频繁地执行。
-    [](./assets/ElasticSearch.md/1657206787896.jpg)
+    ![](./assets/ElasticSearch.md/1657206787896.jpg)
 
     在 Elasticsearch 中，写入和打开一个新段的轻量的过程叫做refresh。默认情况下每个分片会每秒自动刷新一次。这就是为什么我们说 Elasticsearch是近实时搜索：文档的变化并不是立即对搜索可见，但会在一秒之内变为可见。
 
@@ -2348,14 +2327,14 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
 
     整个流程如下:
     1. 一个文档被索引之后，就会被添加到内存缓冲区，并且追加到了 translog
-        [](assets/ElasticSearch.md/1657206912189.jpg)
+        ![](assets/ElasticSearch.md/1657206912189.jpg)
     2. 刷新（refresh）使分片每秒被刷新（refresh）一次：
         * 这些在内存缓冲区的文档被写入到一个新的段中，且没有进行fsync操作。
         * 这个段被打开，使其可被搜索。
         * 内存缓冲区被清空。
-        [](./assets/ElasticSearch.md/1657206953686.jpg)
+        ![](./assets/ElasticSearch.md/1657206953686.jpg)
     3. 这个进程继续工作，更多的文档被添加到内存缓冲区和追加到事务日志。
-        [](./assets/ElasticSearch.md/1657206990474.jpg)
+        ![](./assets/ElasticSearch.md/1657206990474.jpg)
     4. 每隔一段时间—例如translog变得越来越大，索引被刷新（flush）；一个新的translog被创建，并且一个全量提交被执行。
         * 所有在内存缓冲区的文档都被写入一个新的段。
         * 缓冲区被清空。
@@ -2365,7 +2344,7 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     translog 提供所有还没有被刷到磁盘的操作的一个持久化纪录。当Elasticsearch启动的时候，它会从磁盘中使用最后一个提交点去恢复己知的段，并且会重放translog 中所有在最后一次提交后发生的变更操作。
 
     translog 也被用来提供实时CRUD。当你试着通过ID查询、更新、删除一个文档，它会在尝试从相应的段中检索之前，首先检查 translog任何最近的变更。这意味着它总是能够实时地获取到文档的最新版本。
-    [](./assets/ElasticSearch.md/1657207067292.jpg)
+    ![](./assets/ElasticSearch.md/1657207067292.jpg)
 
     执行一个提交并且截断translog 的行为在 Elasticsearch 被称作一次flush。分片每30分钟被自动刷新（flush)，或者在 translog 太大的时候也会刷新。
 
@@ -2387,12 +2366,12 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     启动段合并不需要你做任何事。进行索引和搜索时会自动进行。
     1. 当索引的时候，刷新（refresh）操作会创建新的段并将段打开以供搜索使用。
     2. 合并进程选择一小部分大小相似的段，并且在后台将它们合并到更大的段中。这并不会中断索引和搜索。
-        [](./assets/ElasticSearch.md/1657207172310.jpg)
+        ![](./assets/ElasticSearch.md/1657207172310.jpg)
     3. 一旦合并结束，老的段被删除
         * 新的段被刷新(flush)到了磁盘。
         * 写入一个包含新段且排除旧的和较小的段的新提交点。
         * 新的段被打开用来搜索。老的段被删除。
-        [](./assets/ElasticSearch.md/1657207359427.jpg)
+        ![](./assets/ElasticSearch.md/1657207359427.jpg)
     4. 合并大的段需要消耗大量的 I/O 和 CPU 资源，如果任其发展会影响搜索性能。 Elasticsearch在默认情况下会对合并流程进行资源限制，所以搜索仍然有足够的资源很好地执行。
 
 ### 文档分析
@@ -2757,7 +2736,7 @@ Elasticsearch使用一种称为倒排索引的结构，它适用于快速的全�
     很多时候这是没有问题的。也许我们的主数据存储是一个关系型数据库，我们只是将数据复制到Elasticsearch中并使其可被搜索。也许两个人同时更改相同的文档的几率很小。或者对于我们的业务来说偶尔丢失更改并不是很严重的问题。
 
     但有时丢失了一个变更就是非常严重的。试想我们使用Elasticsearch 存储我们网上商城商品库存的数量，每次我们卖一个商品的时候，我们在 Elasticsearch 中将库存数量减少。有一天，管理层决定做一次促销。突然地，我们一秒要卖好几个商品。假设有两个web程序并行运行，每一个都同时处理所有商品的销售。
-    [](./assets/ElasticSearch.md/1657253439898.jpg)
+    ![](./assets/ElasticSearch.md/1657253439898.jpg)
 
     web_1 对stock_count所做的更改已经丢失，因为 web_2不知道它的 stock_count的拷贝已经过期。结果我们会认为有超过商品的实际数量的库存，因为卖给顾客的库存商品并不存在，我们将让他们非常失望。
 
@@ -2950,7 +2929,7 @@ Spring Data是一个用于简化数据库、非关系型数据库、索引库访
 1. 创建Maven项目。
    略
 2. 修改pom文件，增加依赖关系。
-   ``` YML
+   ``` xml
    <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -3386,17 +3365,17 @@ ES 默认安装后设置的内存是 1GB，对于任何一个现实业务来说�
 假设你有个机器有 128 GB 的内存，你可以创建两个节点，每个节点内存分配不超过 32 GB。也就是说不超过 64 GB 内存给 ES 的堆内存，剩下的超过 64 GB 的内存给 Lucene。
 
 ### 重要配置
-| 参数名 | 参数值 | 说明 |
-| --- | --- | --- |
-|cluster.name |	elasticsearch |	配置 ES 的集群名称，默认值是 ES，建议改成与所存数据相关的名称， ES 会自动发现在同一网段下的 集群名称相同的节点。 |
-|node.name | node-1 |	集群中的节点名，在同一个集群中不能重复。节点 的名称一旦设置，就不能再改变了。当然，也可以 设 置 成 服 务 器 的 主 机 名 称 ， 例 如 node.name:${HOSTNAME}。 |
-|node.master |	true |	指定该节点是否有资格被选举成为 Master 节点，默 认是 True，如果被设置为 True，则只是有资格成为 Master 节点，具体能否成为 Master 节点，需要通 过选举产生。**ES8.0以上已取消, 将以role的方式指定!!!** |
-|node.data |	true |	指定该节点是否存储索引数据，默认为 True。数据 的增、删、改、查都是在 Data 节点完成的。**ES8.0以上已取消, 将以role的方式指定!!!**|
-|index.number_of_shards |	1 |	设置都索引分片个数，默认是 1 片。也可以在创建 索引时设置该值，具体设置为多大都值要根据数据 量的大小来定。如果数据量不大，则设置成 1 时效 率最高 |
-|index.number_of_replicas |	1 |	设置默认的索引副本个数，默认为 1 个。副本数越多，集群的可用性越好，但是写索引时需要同步的数据越多。 |
-|transport.tcp.compress |	true |	设置在节点间传输数据时是否压缩，默认为 False， 不压缩 |
-|discovery.zen.minimum_master_nodes |	1 |	设置在选举 Master 节点时需要参与的最少的候选 主节点数，默认为 1。如果使用默认值，则当网络 不稳定时有可能会出现脑裂。 合 理 的 数 值 为 `(master_eligible_nodes/2)+1` ， 其 中 master_eligible_nodes 表示集群中的候选主节点数 |
-|discovery.zen.ping.timeout |	3s |	设置在集群中自动发现其他节点时 Ping 连接的超 时时间，默认为 3 秒。 在较差的网络环境下需要设置得大一点，防止因误 判该节点的存活状态而导致分片的转移 |
+| 参数名                             | 参数值        | 说明                                                                                                                                                                                                                         |
+| ---------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cluster.name                       | elasticsearch | 配置 ES 的集群名称，默认值是 ES，建议改成与所存数据相关的名称， ES 会自动发现在同一网段下的 集群名称相同的节点。                                                                                                             |
+| node.name                          | node-1        | 集群中的节点名，在同一个集群中不能重复。节点 的名称一旦设置，就不能再改变了。当然，也可以 设 置 成 服 务 器 的 主 机 名 称 ， 例 如 node.name:${HOSTNAME}。                                                                  |
+| node.master                        | true          | 指定该节点是否有资格被选举成为 Master 节点，默 认是 True，如果被设置为 True，则只是有资格成为 Master 节点，具体能否成为 Master 节点，需要通 过选举产生。**ES8.0以上已取消, 将以role的方式指定!!!**                           |
+| node.data                          | true          | 指定该节点是否存储索引数据，默认为 True。数据 的增、删、改、查都是在 Data 节点完成的。**ES8.0以上已取消, 将以role的方式指定!!!**                                                                                             |
+| index.number_of_shards             | 1             | 设置都索引分片个数，默认是 1 片。也可以在创建 索引时设置该值，具体设置为多大都值要根据数据 量的大小来定。如果数据量不大，则设置成 1 时效 率最高                                                                              |
+| index.number_of_replicas           | 1             | 设置默认的索引副本个数，默认为 1 个。副本数越多，集群的可用性越好，但是写索引时需要同步的数据越多。                                                                                                                          |
+| transport.tcp.compress             | true          | 设置在节点间传输数据时是否压缩，默认为 False， 不压缩                                                                                                                                                                        |
+| discovery.zen.minimum_master_nodes | 1             | 设置在选举 Master 节点时需要参与的最少的候选 主节点数，默认为 1。如果使用默认值，则当网络 不稳定时有可能会出现脑裂。 合 理 的 数 值 为 `(master_eligible_nodes/2)+1` ， 其 中 master_eligible_nodes 表示集群中的候选主节点数 |
+| discovery.zen.ping.timeout         | 3s            | 设置在集群中自动发现其他节点时 Ping 连接的超 时时间，默认为 3 秒。 在较差的网络环境下需要设置得大一点，防止因误 判该节点的存活状态而导致分片的转移                                                                           |
 
 
 ## Elasticsearch面试题
@@ -3423,7 +3402,7 @@ ES 默认安装后设置的内存是 1GB，对于任何一个现实业务来说�
   * 从节点配置为：node master: false，node data: true
 
 ### Elasticsearch 索引文档的流程？
-[](./assets/ElasticSearch.md/1657259556324.jpg)
+![](./assets/ElasticSearch.md/1657259556324.jpg)
 * 协调节点默认使用文档 ID 参与计算（也支持通过 routing），以便为路由提供合适的分片：shard = hash(document_id) % (num_of_primary_shards)
 * 当分片所在的节点接收到来自协调节点的请求后，会将请求写入到 Memory Buffer，然后定时（默认是每隔 1 秒）写入到 Filesystem Cache，这个从 Memory Buffer 到 Filesystem Cache 的过程就叫做 refresh；
 * 当然在某些情况下，存在 Momery Buffer 和 Filesystem Cache 的数据可能会丢失， ES 是通过 translog的机制来保证数据的可靠性的。其实现机制是接收到请求后，同时也会写入到 translog 中，当 Filesystemcache 中的数据写入到磁盘中时，才会清除掉，这个过程叫做 flush；
@@ -3436,7 +3415,7 @@ ES 默认安装后设置的内存是 1GB，对于任何一个现实业务来说�
 * 在新的文档被创建时， Elasticsearch 会为该文档指定一个版本号，当执行更新时，旧版本的文档在.del文件中被标记为删除，新版本的文档被索引到一个新段。旧版本的文档依然能匹配查询，但是会在结果中被过滤掉。
 
 ### Elasticsearch 搜索的流程？
-[](./assets/ElasticSearch.md/1657259671129.jpg)
+![](./assets/ElasticSearch.md/1657259671129.jpg)
 * 搜索被执行成一个两阶段过程，我们称之为 Query Then Fetch；
 * 在初始查询阶段时，查询会广播到索引中每一个分片拷贝（主分片或者副本分片）。 每个分片在本地执行搜索并构建一个匹配文档的大小为 from + size 的优先队列。 PS：在搜索的时候是会查
 Filesystem Cache 的，但是有部分数据还在 Memory Buffer，所以搜索是近实时的。
