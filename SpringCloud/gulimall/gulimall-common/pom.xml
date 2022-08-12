@@ -78,6 +78,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+            <version>5.8.5</version>
+        </dependency>
+
         <!--Nacos注册中心-->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>

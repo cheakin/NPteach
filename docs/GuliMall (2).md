@@ -163,7 +163,6 @@ GET http://192.168.56.10:9200/customer/external/1
     "_primary_term": 1, // 同上，主分片重新分配，如重启，就会变化
     "found": true,
     "_source": {  // 真正的内容
-
         "name": "John Doe"
     }
 }
@@ -4875,7 +4874,7 @@ public class GulimallElasticSearchConfig {
     }
 }
 ```
-单元测试测试整合ES, `GulimallSearchAplicationTests`
+单元测试测试整合ES, `GulimallSearchAplicationTests`中
 ``` java
 @Autowired
 private RestHighLevelClient client;
@@ -4887,6 +4886,34 @@ void contextLoads() {
 ```
 能够正常打印内存的地址即为成功
 
+#### 测试保存
+首先配置请求选项, 在`GulimallElasticSearchConfig`中配置
+``` java
+/**
+  * 配置请求选项
+  */
+public static final RequestOptions COMMON_OPTIONS;
+static {
+    RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
+    // builder.addHeader("Authorization", "Bearer " + TOKEN);
+    // builder.setHttpAsyncResponseConsumerFactory(
+    //         new HttpAsyncResponseConsumerFactory
+    //                 .HeapBufferedResponseConsumerFactory(30 * 1024 * 1024 * 1024));
+    COMMON_OPTIONS = builder.build();
+}
+```
+在`GulimallSearchApplicationTests`中测试
+``` java
+
+``` 
+
+
+
+
+
+
+
+#### 测试复杂检索
 
 
 
