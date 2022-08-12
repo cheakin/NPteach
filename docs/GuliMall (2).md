@@ -4904,16 +4904,116 @@ static {
 ```
 在`GulimallSearchApplicationTests`中测试
 ``` java
+/**
+     * 测试存储数据到 es
+     * source 方法用于保存数据，数据的格式为键值对形式的类型
+     * - json 字符串
+     * - Map
+     * - XContentBuilder
+     * - KV 键值对
+     * - 实体类对象转json
+     */
+    @Test
+    void indexData() throws IOException {
+        IndexRequest indexRequest = new IndexRequest("users");
+        indexRequest.id("1");
+        indexRequest.source("userName", "张三", "age", 18, "gender", "男");
 
-``` 
+        // KV 键值对
+        // indexRequest.source("username", "zhangsan", "age", 12, "address", "sz");
 
+        // json 字符串
+        indexRequest.source("{" +
+                "\"user\":\"kimchy\"," +
+                "\"postDate\":\"2013-01-30\"," +
+                "\"message\":\"trying out Elasticsearch\"" +
+                "}", XContentType.JSON);
 
+        // 同步执行
+        IndexResponse index = client.index(indexRequest, GulimallElasticSearchConfig.COMMON_OPTIONS);
 
+        // 提取响应的数据
+        System.out.println("index = " + index);
+    }
+```
+运行后的返回
+``` ``
+``` java
+index = IndexResponse[index=users,type=_doc,id=1,version=1,result=created,seqNo=0,primaryTerm=1,shards={"total":2,"successful":1,"failed":0}]
 
-
-
+```
 
 #### 测试复杂检索
+`GulimallSearchApplicationTests`
+``` java
+/**
+  * 检索地址中带有 mill 的人员年龄分布和平均薪资
+  * @throws IOException
+  */
+@Test
+void searchData() throws IOException {
+    // 1. 创建检索请求
+    SearchRequest searchRequest = new SearchRequest();
+    // 指定索引
+    searchRequest.indices("bank");
+    // 指定 DSL 检索条件
+    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+    // 1.1 构建检索条件 address 包含 mill
+    searchSourceBuilder.query(QueryBuilders.matchQuery("address", "mill"));
+    // 1.2 按照年龄值分布进行聚合
+    TermsAggregationBuilder ageAgg = AggregationBuilders.terms("ageAgg").field("age").size(10);
+    searchSourceBuilder.aggregation(ageAgg);
+    // 1.3 计算平均薪资
+    AvgAggregationBuilder balanceAvg = AggregationBuilders.avg("balanceAvg").field("balance");
+    searchSourceBuilder.aggregation(balanceAvg);
+
+    System.out.println("检索条件：" + searchSourceBuilder.toString());
+    searchRequest.source(searchSourceBuilder);
+
+
+    // 2. 执行检索, 获得响应
+    SearchResponse searchResponse = client.search(searchRequest, GulimallElasticSearchConfig.COMMON_OPTIONS);
+
+    // 3. 分析结果
+    // 3.1 获取所有查到的记录
+    SearchHits hits = searchResponse.getHits();
+    SearchHit[] searchHits = hits.getHits();
+    for (SearchHit hit : searchHits) {
+        // 数据字符串
+        String jsonString = hit.getSourceAsString();
+        System.out.println(jsonString);
+        // 可以通过 json 转换成实体类对象
+        // Account account = JSON.parseObject(jsonString, Account.class);
+    }
+
+    // 3.2 获取检索的分析信息(聚合数据等)
+    Aggregations aggregations = searchResponse.getAggregations();
+    // for (Aggregation aggregation : aggregations.asList()) {
+    //     System.out.println("当前聚合名：" + aggregation.getName());
+    // }
+    Terms ageAgg1 = aggregations.get("ageAgg");
+    for (Terms.Bucket bucket : ageAgg1.getBuckets()) {
+        String keyAsString = bucket.getKeyAsString();
+        System.out.println("年龄：" + keyAsString + " 岁的有 " + bucket.getDocCount() + " 人");
+    }
+
+    Avg balanceAvg1 = aggregations.get("balanceAvg");
+    System.out.println("平均薪资: " + balanceAvg1.getValue());
+}
+```
+打印结果
+``` java
+检索条件：{"query":{"match":{"address":{"query":"mill","operator":"OR","prefix_length":0,"max_expansions":50,"fuzzy_transpositions":true,"lenient":false,"zero_terms_query":"NONE","auto_generate_synonyms_phrase_query":true,"boost":1.0}}},"aggregations":{"ageAgg":{"terms":{"field":"age","size":10,"min_doc_count":1,"shard_min_doc_count":0,"show_term_doc_count_error":false,"order":[{"_count":"desc"},{"_key":"asc"}]}},"balanceAvg":{"avg":{"field":"balance"}}}}
+{"account_number":970,"balance":19648,"firstname":"Forbes","lastname":"Wallace","age":28,"gender":"M","address":"990 Mill Road","employer":"Pheast","email":"forbeswallace@pheast.com","city":"Lopezo","state":"AK"}
+{"account_number":136,"balance":45801,"firstname":"Winnie","lastname":"Holland","age":38,"gender":"M","address":"198 Mill Lane","employer":"Neteria","email":"winnieholland@neteria.com","city":"Urie","state":"IL"}
+{"account_number":345,"balance":9812,"firstname":"Parker","lastname":"Hines","age":38,"gender":"M","address":"715 Mill Avenue","employer":"Baluba","email":"parkerhines@baluba.com","city":"Blackgum","state":"KY"}
+{"account_number":472,"balance":25571,"firstname":"Lee","lastname":"Long","age":32,"gender":"F","address":"288 Mill Street","employer":"Comverges","email":"leelong@comverges.com","city":"Movico","state":"MT"}
+年龄：38 岁的有 2 人
+年龄：28 岁的有 1 人
+年龄：32 岁的有 1 人
+平均薪资: 25208.0
+
+```
 
 
 
