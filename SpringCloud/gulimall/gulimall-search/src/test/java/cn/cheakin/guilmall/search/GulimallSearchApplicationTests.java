@@ -1,11 +1,24 @@
 package cn.cheakin.guilmall.search;
 
 import cn.cheakin.gulimall.search.GulimallSearchApplication;
-import javafx.scene.control.IndexRange;
+import cn.cheakin.gulimall.search.config.GulimallElasticSearchConfig;
 import lombok.Data;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.Avg;
+import org.elasticsearch.search.aggregations.metrics.AvgAggregationBuilder;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,7 +28,7 @@ import java.io.IOException;
 /**
  * Create by botboy on 2022/08/10.
  **/
-@SpringBootTest
+@SpringBootTest(classes = GulimallSearchApplication.class)
 public class GulimallSearchApplicationTests {
     @Autowired
     private RestHighLevelClient client;
@@ -53,7 +66,10 @@ public class GulimallSearchApplicationTests {
                 "}", XContentType.JSON);
 
         // 同步执行
-        //client.index(indexRequest, MallElasticSearchConfig.COMMON_OPTIONS);
+        IndexResponse index = client.index(indexRequest, GulimallElasticSearchConfig.COMMON_OPTIONS);
+
+        // 提取响应的数据
+        System.out.println("index = " + index);
     }
 
     @Data
@@ -67,7 +83,7 @@ public class GulimallSearchApplicationTests {
      * 检索地址中带有 mill 的人员年龄分布和平均薪资
      * @throws IOException
      */
-    /*@Test
+    @Test
     void searchData() throws IOException {
         // 1. 创建检索请求
         SearchRequest searchRequest = new SearchRequest();
@@ -89,7 +105,7 @@ public class GulimallSearchApplicationTests {
 
 
         // 2. 执行检索, 获得响应
-        SearchResponse searchResponse = client.search(searchRequest, MallElasticSearchConfig.COMMON_OPTIONS);
+        SearchResponse searchResponse = client.search(searchRequest, GulimallElasticSearchConfig.COMMON_OPTIONS);
 
         // 3. 分析结果
         // 3.1 获取所有查到的记录
@@ -116,5 +132,5 @@ public class GulimallSearchApplicationTests {
 
         Avg balanceAvg1 = aggregations.get("balanceAvg");
         System.out.println("平均薪资: " + balanceAvg1.getValue());
-    }*/
+    }
 }
