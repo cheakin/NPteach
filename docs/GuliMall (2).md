@@ -5015,7 +5015,139 @@ void searchData() throws IOException {
 
 ```
 
+## 商城业务
+### 商品上架
+#### sku在es中存储模型分析
+ES在内存中，所以在检索中优于mysql。ES也支持集群，数据分片存储。
 
+需求：
+上架的商品才可以在网站展示。
+上架的商品需要可以被检索。
+
+分析sku在es中如何存储
+商品mapping
+
+分析：商品上架在es中是存sku还是spu？
+1）检索的时候输入名字，是需要按照sku的title进行全文检索的
+2）检素使用商品规格，规格是spu的公共属性，每个spu是一样的
+3）按照分类id进去的都是直接列出spu的，还可以切换。
+4〕我们如果将sku的全量信息保存到es中（包括spu属性〕就太多字段了
+
+方案1：
+``` json
+{
+    skuId:1
+    spuId:11
+    skyTitile:华为xx
+    price:999
+    saleCount:99
+    attr:[
+        {尺寸:5},
+        {CPU:高通945},
+        {分辨率:全高清}
+	]
+}
+缺点：如果每个sku都存储规格参数(如尺寸)，会有冗余存储，因为每个spu对应的sku的规格参数都一样
+
+
+方案2：
+`sku索引`
+``` json
+{
+    spuId:1
+    skuId:11
+}
+```
+`attr索引`
+``` json
+{
+    skuId:11
+    attr:[
+        {尺寸:5},
+        {CPU:高通945},
+        {分辨率:全高清}
+	]
+}
+```
+先找到4000个符合要求的spu，再根据4000个spu查询对应的属性，封装了4000个id，long 8B*4000=32000B=32KB
+1K个人检索，就是32MB
+
+
+结论：如果将规格参数单独建立索引，会出现检索时出现大量数据传输的问题，会引起网络网络
+因此选用方案1，以空间换时间
+
+建立product索引
+最终选用的数据模型：
+PUT product
+{
+    "mappings":{
+        "properties": {
+            "skuId":{ "type": "long" },
+            "spuId":{ "type": "keyword" },  # 不可分词
+            "skuTitle": {
+                "type": "text",
+                "analyzer": "ik_smart"  # 中文分词器
+            },
+            "skuPrice": { "type": "keyword" },
+            "skuImg"  : { "type": "keyword" },
+            "saleCount":{ "type":"long" },
+            "hasStock": { "type": "boolean" },
+            "hotScore": { "type": "long"  },
+            "brandId":  { "type": "long" },
+            "catalogId": { "type": "long"  },
+            "brandName": {"type": "keyword"},
+            "brandImg":{
+                "type": "keyword",
+                "index": false,  # 不可被检索，不生成index
+                "doc_values": false # 不可被聚合
+            },
+            "catalogName": {"type": "keyword" },
+            "attrs": {
+                "type": "nested",
+                "properties": {
+                    "attrId": {"type": "long"  },
+                    "attrName": {
+                        "type": "keyword",
+                        "index": false,
+                        "doc_values": false
+                    },
+                    "attrValue": {"type": "keyword" }
+                }
+            }
+        }
+    }
+}
+
+
+其中
+
+“type”: “keyword” 保持数据精度问题，可以检索，但不分词
+“index”:false 代表不可被检索
+“doc_values”: false 不可被聚合，es就不会维护一些聚合的信息
+冗余存储的字段：不用来检索，也不用来分析，节省空间
+
+库存是bool。
+
+检索品牌id，但是不检索品牌名字、图片
+
+用skuTitle检索
+
+
+nested嵌入式对象
+属性是"type": “nested”,因为是内部的属性进行检索
+
+数组类型的对象会被扁平化处理（对象的每个属性会分别存储到一起）
+user.name=["aaa","bbb"]
+user.addr=["ccc","ddd"]
+
+这种存储方式，可能会发生如下错误：
+错误检索到{aaa,ddd}，这个组合是不存在的
+
+数组的扁平化处理会使检索能检索到本身不存在的，为了解决这个问题，就采用了嵌入式属性，数组里是对象时用嵌入式属性（不是对象无需用嵌入式属性）
+
+nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599
+
+使用聚合：https://blog.csdn.net/kabike/article/details/101460578
 
 # 谷粒商城-集群篇(cluster)
 包括k8s集群，CI/CD(持续集成)，DevOps等
