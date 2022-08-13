@@ -57,8 +57,9 @@ ElasticSearch7-去掉type概念
     echo "http.host: 0.0.0.0" >/mydata/elasticsearch/config/elasticsearch.yml
     ```
 3. 创建实例(启动Elasticsearch)
-    命令后面的 \是换行符，注意前面有空格
+    命令后面的 \ 是换行符，注意前面有空格
     ``` shell
+    # elasticsearch.yml 要先创建, 不然会被自动创建为文件夹
     docker run --name elasticsearch -p 9200:9200 -p 9300:9300 \
       -e  "discovery.type=single-node" \
       -e ES_JAVA_OPTS="-Xms64m -Xmx512m" \
