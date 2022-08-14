@@ -5119,33 +5119,96 @@ PUT product
     }
 }
 ```
-
-
 其中
-
-“type”: “keyword” 保持数据精度问题，可以检索，但不分词
-“index”:false 代表不可被检索
-“doc_values”: false 不可被聚合，es就不会维护一些聚合的信息
+`"type": "keyword"` 保持数据精度问题，可以检索，但不分词
+`"index":false` 代表不可被检索
+`"doc_values": false` 不可被聚合，es就不会维护一些聚合的信息
 冗余存储的字段：不用来检索，也不用来分析，节省空间
 
 库存是bool。
-
 检索品牌id，但是不检索品牌名字、图片
+用skuTitle分词和检索
 
-用skuTitle检索
-
-
-nested嵌入式对象
-属性是"type": “nested”,因为是内部的属性进行检索
+#### nested(嵌入式对象)
+属性是`"type": "nested"`, 因为是内部的属性进行检索
+官方文档: https://www.elastic.co/guide/en/elasticsearch/reference/current/nested.html
 
 数组类型的对象会被扁平化处理（对象的每个属性会分别存储到一起）
 user.name=["aaa","bbb"]
 user.addr=["ccc","ddd"]
 
 这种存储方式，可能会发生如下错误：
-错误检索到{aaa,ddd}，这个组合是不存在的
+错误检索到`{aaa,ddd}`，这个组合是不存在的
+数组的扁平化处理会使检索能检索到本身不存在的，为了解决这个问题，就采用了嵌入式属性，数组里是对象时用嵌入式属性nested（不是对象无需用嵌入式属性）
 
-数组的扁平化处理会使检索能检索到本身不存在的，为了解决这个问题，就采用了嵌入式属性，数组里是对象时用嵌入式属性（不是对象无需用嵌入式属性）
+
+#### 构造基本数据
+`gulimlla-product`的`SpuInfoController`中
+``` java
+/**
+  * 商品上架功能
+  *
+  * @param spuId
+  * @return
+  */
+@PostMapping("/{spuId}/up")
+public R upSpu(@PathVariable Long spuId) {
+    spuInfoService.up(spuId);
+    return R.ok();
+}
+```
+`gulimall-common`中创建`SkuEsModel`
+``` java
+@Data
+public class SkuEsModel {
+
+    private Long skuId;
+
+    private Long spuId;
+
+    private String skuTitle;
+
+    private BigDecimal skuPrice;
+
+    private String skuImg;
+
+    private Long saleCount;
+
+    /**
+     * 是否有库存
+     */
+    private Boolean hasStock;
+
+    /**
+     * 热度
+     */
+    private Long hotScore;
+
+    private Long brandId;
+
+    private Long catalogId;
+
+    private String brandName;
+
+    private String brandImg;
+
+    private String catalogName;
+
+    private List<Attrs> attrs;
+
+    @Data
+    public static class Attrs {
+
+        private Long attrId;
+
+        private String attrName;
+
+        private String attrValue;
+    }
+}
+```
+
+
 
 nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599
 
