@@ -1,11 +1,13 @@
 package cn.cheakin.gulimall.product.service.impl;
 
+import cn.cheakin.common.to.SkuHasStockVo;
 import cn.cheakin.common.to.SkuReductionTo;
 import cn.cheakin.common.to.SpuBoundTo;
 import cn.cheakin.common.to.es.SkuEsModel;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.product.entity.*;
 import cn.cheakin.gulimall.product.feign.CouponFeignService;
+import cn.cheakin.gulimall.product.feign.WareFeignService;
 import cn.cheakin.gulimall.product.service.*;
 import cn.cheakin.gulimall.product.vo.*;
 import org.springframework.beans.BeanUtils;
@@ -13,9 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -45,6 +45,16 @@ import org.springframework.util.StringUtils;
     SkuImagesService skuImagesService;
     @Autowired
     SkuSaleAttrValueService skuSaleAttrValueService;
+    @Autowired
+    BrandService brandService;
+    @Autowired
+    CategoryService categoryService;
+
+
+    @Autowired
+    private ProductAttrValueService productAttrValueService;
+    @Autowired
+    private WareFeignService wareFeignService;
 
     @Autowired
     CouponFeignService couponFeignService;
@@ -249,11 +259,9 @@ import org.springframework.util.StringUtils;
         // TODO 1、发送远程调用，库存系统查询是否有库存
         Map<Long, Boolean> stockMap = null;
         try {
-            R skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
-            //
-            TypeReference<List<SkuHasStockVo>> typeReference = new TypeReference<List<SkuHasStockVo>>() {
-            };
-            stockMap = skuHasStock.getData(typeReference).stream()
+            R<List<SkuHasStockVo>> skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
+
+            stockMap = skuHasStock.getData().stream()
                     .collect(Collectors.toMap(SkuHasStockVo::getSkuId, item -> item.getHasStock()));
         } catch (Exception e) {
             log.error("库存服务查询异常：原因{}", e);

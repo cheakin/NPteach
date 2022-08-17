@@ -5142,7 +5142,7 @@ user.addr=["ccc","ddd"]
 数组的扁平化处理会使检索能检索到本身不存在的，为了解决这个问题，就采用了嵌入式属性，数组里是对象时用嵌入式属性nested（不是对象无需用嵌入式属性）
 
 
-#### 构造基本数据
+#### 构造基本数据、SKU检索属性、远程查询库存&泛型结果封装
 `gulimlla-product`的`SpuInfoController`中
 ``` java
 /**
@@ -5207,6 +5207,269 @@ public class SkuEsModel {
     }
 }
 ```
+`gulimlla-product`的`SpuInfoServiceImpl`
+``` java
+@Autowired
+BrandService brandService;
+@Autowired
+CategoryService categoryService;
+
+@Autowired
+private WareFeignService wareFeignService;
+
+@Override
+public void up(Long spuId) {
+
+    // 1、查出当前spuId对应的所有sku信息,品牌的名字
+    List<SkuInfoEntity> skuInfoEntities = skuInfoService.getSkusBySpuId(spuId);
+
+    // TODO 4、查出当前sku的所有可以被用来检索的规格属性
+    List<ProductAttrValueEntity> baseAttrs = productAttrValueService.baseAttrListforspu(spuId);
+
+    List<Long> attrIds = baseAttrs.stream().map(ProductAttrValueEntity::getAttrId).collect(Collectors.toList());
+
+    List<Long> searchAttrIds = attrService.selectSearchAttrs(attrIds);
+    //转换为Set集合
+    Set<Long> idSet = new HashSet<>(searchAttrIds);
+
+    List<SkuEsModel.Attrs> attrsList = baseAttrs.stream()
+            .filter(item -> idSet.contains(item.getAttrId()))
+            .map(item -> {
+                SkuEsModel.Attrs attrs = new SkuEsModel.Attrs();
+                BeanUtils.copyProperties(item, attrs);
+                return attrs;
+            }).collect(Collectors.toList());
+
+    List<Long> skuIdList = skuInfoEntities.stream().map(SkuInfoEntity::getSkuId).collect(Collectors.toList());
+    // TODO 1、发送远程调用，库存系统查询是否有库存
+    Map<Long, Boolean> stockMap = null;
+    try {
+        R<List<SkuHasStockVo>> skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
+
+        stockMap = skuHasStock.getData().stream()
+                .collect(Collectors.toMap(SkuHasStockVo::getSkuId, item -> item.getHasStock()));
+    } catch (Exception e) {
+        log.error("库存服务查询异常：原因{}", e);
+    }
+
+    //2、封装每个sku的信息
+    Map<Long, Boolean> finalStockMap = stockMap;
+    List<SkuEsModel> collect = skuInfoEntities.stream().map(sku -> {
+        //组装需要的数据
+        SkuEsModel esModel = new SkuEsModel();
+        esModel.setSkuPrice(sku.getPrice());
+        esModel.setSkuImg(sku.getSkuDefaultImg());
+
+        // 设置库存信息
+        if (finalStockMap == null) {
+            esModel.setHasStock(true);
+        } else {
+            esModel.setHasStock(finalStockMap.get(sku.getSkuId()));
+        }
+
+        // TODO 2、热度评分。0
+        esModel.setHotScore(0L);
+
+        // TODO 3、查询品牌和分类的名字信息
+        BrandEntity brandEntity = brandService.getById(sku.getBrandId());
+        esModel.setBrandName(brandEntity.getName());
+        esModel.setBrandId(brandEntity.getBrandId());
+        esModel.setBrandImg(brandEntity.getLogo());
+
+        CategoryEntity categoryEntity = categoryService.getById(sku.getCatalogId());
+        esModel.setCatalogId(categoryEntity.getCatId());
+        esModel.setCatalogName(categoryEntity.getName());
+
+        // 设置检索属性
+        esModel.setAttrs(attrsList);
+
+        BeanUtils.copyProperties(sku, esModel);
+
+        return esModel;
+    }).collect(Collectors.toList());
+
+    // TODO 5、将数据发给es进行保存：mall-search
+    R r = searchFeignService.productStatusUp(collect);
+
+    if (r.getCode() == 0) {
+        // 远程调用成功
+        // TODO 6、修改当前spu的状态
+        this.baseMapper.updaSpuStatus(spuId, ProductConstant.ProductStatusEnum.SPU_UP.getCode());
+    } else {
+        // 远程调用失败
+        // TODO 7、重复调用？接口幂等性:重试机制
+    }
+}
+```
+`gulimlla-product`的`SkuInfoServiceImpl`
+``` java
+@Override
+public List<SkuInfoEntity> getSkusBySpuId(Long spuId) {
+    return this.list(new QueryWrapper<SkuInfoEntity>().eq("spu_id", spuId));
+}
+```
+`gulimlla-product`的`AttrServiceImpl`
+``` java
+/**
+  * 在指定的所有属性集合里面，挑出检索属性
+  * @param attrIds
+  * @return
+  */
+@Override
+public List<Long> selectSearchAttrs(List<Long> attrIds) {
+    return this.baseMapper.selectSearchAttrIds(attrIds);
+}
+```
+`AttrDao.xml`
+``` xml
+<select id="selectSearchAttrIds" resultType="java.lang.Long">
+    SELECT attr_id FROM pms_attr WHERE attr_id IN
+    <foreach collection="attrIds" item="id" separator="," open="(" close=")">
+        #{id}
+    </foreach>
+    AND search_type = 1
+</select>
+```
+
+`gulimlla-ware`的`WareSkuController`
+``` java
+/**
+  * 查询sku是否有库存
+  * @return
+  */
+@PostMapping(value = "/hasStock")
+public R getSkuHasStock(@RequestBody List<Long> skuIds) {
+    //skuId stock
+    List<SkuHasStockVo> vos = wareSkuService.getSkuHasStock(skuIds);
+
+//        return R.ok().put("data", vos);
+        R<List<SkuHasStockVo>> ok = R.ok();
+        ok.setData(vos);
+        return ok;
+}
+```
+`gulimlla-ware`中新建`SkuHasStockVo`
+``` java
+@Data
+public class SkuHasStockVo {
+
+    private Long skuId;
+
+    private Boolean hasStock;
+
+}
+```
+`gulimlla-ware`的`WareSkuServiceImpl`
+``` java
+/**
+  * 判断是否有库存
+  * @param skuIds
+  * @return
+  */
+@Override
+public List<SkuHasStockVo> getSkuHasStock(List<Long> skuIds) {
+    return skuIds.stream().map(item -> {
+        Long count = this.baseMapper.getSkuStock(item);
+        SkuHasStockVo skuHasStockVo = new SkuHasStockVo();
+        skuHasStockVo.setSkuId(item);
+        skuHasStockVo.setHasStock(count == null?false:count > 0);
+        return skuHasStockVo;
+    }).collect(Collectors.toList());
+}
+```
+`WareSkuDao.xml`
+``` xml
+<select id="getSkuStock" resultType="java.lang.Long">
+    SELECT SUM(stock - stock_locked)
+    FROM wms_ware_sku
+    WHERE sku_id = #{skuId}
+</select>
+```
+
+`gulimlla-product`中新建`WareFeignService`, 注意使用完整路径
+``` java
+@FeignClient("mall-ware")
+public interface WareFeignService {
+
+    /**
+     * 1、R设计的时候可以加上泛型
+     * 2、直接返回我们想要的结果
+     * 3、自己封装解析结果
+     * @param skuIds
+     * @return
+     */
+    @PostMapping(value = "/ware/waresku/hasStock")
+//    R getSkuHasStock(@RequestBody List<Long> skuIds);
+    R<List<SkuHasStockVo>> getSkuHasStock(@RequestBody List<Long> skuIds);
+
+}
+```
+`gulimall-common`的`R`中
+``` java
+public class R<T> extends HashMap<String, Object> {
+	private static final long serialVersionUID = 1L;
+
+	private T data;
+
+	public T getData() {
+		return data;
+	}
+
+	public void setData(T data) {
+		this.data = data;
+	}
+	
+	public R() {
+		put("code", 0);
+		put("msg", "success");
+	}
+	
+	public static R error() {
+		return error(HttpStatus.SC_INTERNAL_SERVER_ERROR, "未知异常，请联系管理员");
+	}
+	
+	public static R error(String msg) {
+		return error(HttpStatus.SC_INTERNAL_SERVER_ERROR, msg);
+	}
+	
+	public static R error(int code, String msg) {
+		R r = new R();
+		r.put("code", code);
+		r.put("msg", msg);
+		return r;
+	}
+
+	public static R ok(String msg) {
+		R r = new R();
+		r.put("msg", msg);
+		return r;
+	}
+	
+	public static R ok(Map<String, Object> map) {
+		R r = new R();
+		r.putAll(map);
+		return r;
+	}
+	
+	public static R ok() {
+		return new R();
+	}
+
+	public R put(String key, Object value) {
+		super.put(key, value);
+		return this;
+	}
+
+	public Integer getCode() {
+
+		return (Integer) this.get("code");
+	}
+}
+```
+拷贝一份`gulimall-ware`中的`SkuHasStockVo`到`gulimall-common`中
+``` java
+
+
 
 
 
