@@ -3,6 +3,7 @@ package cn.cheakin.gulimall.search.controller;
 import cn.cheakin.common.exception.BizCodeEnum;
 import cn.cheakin.common.to.es.SkuEsModel;
 import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.search.service.ProductSaveService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;

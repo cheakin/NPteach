@@ -5217,6 +5217,8 @@ CategoryService categoryService;
 
 @Autowired
 private WareFeignService wareFeignService;
+@Autowired
+private SearchFeignService searchFeignService;
 
 @Override
 public void up(Long spuId) {
@@ -5534,7 +5536,7 @@ public class ProductSaveServiceImpl implements ProductSaveService {
             //构造保存请求
             IndexRequest indexRequest = new IndexRequest(EsConstant.PRODUCT_INDEX);
             indexRequest.id(skuEsModel.getSkuId().toString());
-            String jsonString = JSON.toJSONString(skuEsModel);
+            String jsonString = JSONUtil.toJsonStr(skuEsModel);
             indexRequest.source(jsonString, XContentType.JSON);
             bulkRequest.add(indexRequest);
         }
@@ -5564,6 +5566,128 @@ public class EsConstant {
     public static final Integer PRODUCT_PAGE_SIZE = 2;
 }
 ```
+`guliamll-search`中新建`product-mapping.txt`, 并通过ES创建映射
+``` json
+// PUT product
+{
+  "mappings": {
+    "properties": {
+      "skuId": {
+        "type": "long"
+      },
+      "spuId": {
+        "type": "long"
+      },
+      "skuTitle": {
+        "type": "text",
+        "analyzer": "ik_smart"
+      },
+      "skuPrice": {
+        "type": "keyword"
+      },
+      "skuImg": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "saleCount": {
+        "type": "long"
+      },
+      "hosStock": {
+        "type": "boolean"
+      },
+      "hotScore": {
+        "type": "long"
+      },
+      "brandId": {
+        "type": "long"
+      },
+      "catelogId": {
+        "type": "long"
+      },
+      "brandName": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "brandImg": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "catelogName": {
+        "type": "keyword",
+        "index": false,
+        "doc_values": false
+      },
+      "attrs": {
+        "type": "nested",
+        "properties": {
+          "attrId": {
+            "type": "long"
+          },
+          "attrName": {
+            "type": "keyword",
+            "index": false,
+            "doc_values": false
+          },
+          "attrValue": {
+            "type": "keyword"
+          }
+        }
+      }
+    }
+  }
+}
+```
+`gulimall-common`中修改`BizCodeEnum`, 增加错误码`PRODUCT_UP_EXCEPTION(11000, "商品上架异常")`
+`gulimlla-product`中新建`SearchFeignService`
+``` java
+@FeignClient("mall-search")
+public interface SearchFeignService {
+
+    @PostMapping(value = "/search/save/product")
+    R productStatusUp(@RequestBody List<SkuEsModel> skuEsModels);
+
+}
+```
+在`gulimall-common`中修改`ProductConstant`
+``` java
+public enum ProductStatusEnum {
+    NEW_SPU(0, "新建"),
+    SPU_UP(1, "商品上架"),
+    SPU_DOWN(2, "商品下架"),
+    ;
+
+    private int code;
+
+    private String msg;
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    ProductStatusEnum(int code, String msg) {
+        this.code = code;
+        this.msg = msg;
+    }
+}
+```
+`SpuInfoDao.xml`
+``` xml
+<update id="updaSpuStatus">
+    UPDATE pms_spu_info
+    SET publish_status = #{code},
+        update_time    = NOW()
+    WHERE id = #{spuId}
+</update>
+```
+
+
 
 
 nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599

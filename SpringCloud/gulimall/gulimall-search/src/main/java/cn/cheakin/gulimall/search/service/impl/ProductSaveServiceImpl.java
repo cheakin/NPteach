@@ -2,7 +2,10 @@ package cn.cheakin.gulimall.search.service.impl;
 
 import cn.cheakin.common.to.es.SkuEsModel;
 import cn.cheakin.gulimall.search.config.GulimallElasticSearchConfig;
+import cn.cheakin.gulimall.search.constant.EsConstant;
 import cn.cheakin.gulimall.search.service.ProductSaveService;
+import cn.hutool.json.JSON;
+import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -39,7 +42,7 @@ public class ProductSaveServiceImpl implements ProductSaveService {
             //构造保存请求
             IndexRequest indexRequest = new IndexRequest(EsConstant.PRODUCT_INDEX);
             indexRequest.id(skuEsModel.getSkuId().toString());
-            String jsonString = JSON.toJSONString(skuEsModel);
+            String jsonString = JSONUtil.toJsonStr(skuEsModel);
             indexRequest.source(jsonString, XContentType.JSON);
             bulkRequest.add(indexRequest);
         }

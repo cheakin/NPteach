@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.product.service.impl;
 
+import cn.cheakin.common.constant.ProductConstant;
 import cn.cheakin.common.to.SkuHasStockVo;
 import cn.cheakin.common.to.SkuReductionTo;
 import cn.cheakin.common.to.SpuBoundTo;
@@ -7,6 +8,7 @@ import cn.cheakin.common.to.es.SkuEsModel;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.product.entity.*;
 import cn.cheakin.gulimall.product.feign.CouponFeignService;
+import cn.cheakin.gulimall.product.feign.SearchFeignService;
 import cn.cheakin.gulimall.product.feign.WareFeignService;
 import cn.cheakin.gulimall.product.service.*;
 import cn.cheakin.gulimall.product.vo.*;
@@ -49,6 +51,8 @@ import org.springframework.util.StringUtils;
     BrandService brandService;
     @Autowired
     CategoryService categoryService;
+    @Autowired
+    private SearchFeignService searchFeignService;
 
 
     @Autowired
