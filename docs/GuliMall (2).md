@@ -5142,7 +5142,8 @@ user.addr=["ccc","ddd"]
 数组的扁平化处理会使检索能检索到本身不存在的，为了解决这个问题，就采用了嵌入式属性，数组里是对象时用嵌入式属性nested（不是对象无需用嵌入式属性）
 
 
-#### 构造基本数据、SKU检索属性、远程查询库存&泛型结果封装
+#### 构造基本数据、SKU检索属性、远程查询库存&泛型结果封装、远程上架接口
+**构造基本数据**
 `gulimlla-product`的`SpuInfoController`中
 ``` java
 /**
@@ -5301,6 +5302,7 @@ public void up(Long spuId) {
     }
 }
 ```
+**SKU检索属性**
 `gulimlla-product`的`SkuInfoServiceImpl`
 ``` java
 @Override
@@ -5330,7 +5332,6 @@ public List<Long> selectSearchAttrs(List<Long> attrIds) {
     AND search_type = 1
 </select>
 ```
-
 `gulimlla-ware`的`WareSkuController`
 ``` java
 /**
@@ -5385,7 +5386,7 @@ public List<SkuHasStockVo> getSkuHasStock(List<Long> skuIds) {
     WHERE sku_id = #{skuId}
 </select>
 ```
-
+**远程查询库存&泛型结果封装**
 `gulimlla-product`中新建`WareFeignService`, 注意使用完整路径
 ``` java
 @FeignClient("mall-ware")
@@ -5468,9 +5469,101 @@ public class R<T> extends HashMap<String, Object> {
 ```
 拷贝一份`gulimall-ware`中的`SkuHasStockVo`到`gulimall-common`中
 ``` java
+@Data
+public class SkuHasStockVo {
 
+    private Long skuId;
 
+    private Boolean hasStock;
 
+}
+```
+**远程上架接口**
+`guliamll-search`中新建`ElasticSaveController`
+``` java
+@Slf4j
+@RequestMapping(value = "/search/save")
+@RestController
+public class ElasticSaveController {
+
+    @Autowired
+    private ProductSaveService productSaveService;
+
+    /**
+     * 上架商品
+     *
+     * @param skuEsModels
+     * @return
+     */
+    @PostMapping(value = "/product")
+    public R productStatusUp(@RequestBody List<SkuEsModel> skuEsModels) {
+
+        boolean status = false;
+        try {
+            status = productSaveService.productStatusUp(skuEsModels);
+        } catch (IOException e) {
+            log.error("ElasticSaveController - 商品上架错误: ", e);
+            return R.error(BizCodeEnum.PRODUCT_UP_EXCEPTION.getCode(), BizCodeEnum.PRODUCT_UP_EXCEPTION.getMsg());
+        }
+
+        if (status) {
+            return R.error(BizCodeEnum.PRODUCT_UP_EXCEPTION.getCode(), BizCodeEnum.PRODUCT_UP_EXCEPTION.getMsg());
+        } else {
+            return R.ok();
+        }
+    }
+}
+```
+`guliamll-search`中新建`ProductSaveService`， 以及对应的实现`ProductSaveServiceImpl`
+``` java
+@Slf4j
+@Service("productSaveService")
+public class ProductSaveServiceImpl implements ProductSaveService {
+
+    @Autowired
+    private RestHighLevelClient esRestClient;
+
+    @Override
+    public boolean productStatusUp(List<SkuEsModel> skuEsModels) throws IOException {
+
+        //1.在es中建立索引，建立号映射关系（doc/json/product-mapping.json）
+
+        //2. 在ES中保存这些数据
+        BulkRequest bulkRequest = new BulkRequest();
+        for (SkuEsModel skuEsModel : skuEsModels) {
+            //构造保存请求
+            IndexRequest indexRequest = new IndexRequest(EsConstant.PRODUCT_INDEX);
+            indexRequest.id(skuEsModel.getSkuId().toString());
+            String jsonString = JSON.toJSONString(skuEsModel);
+            indexRequest.source(jsonString, XContentType.JSON);
+            bulkRequest.add(indexRequest);
+        }
+
+        BulkResponse bulk = esRestClient.bulk(bulkRequest, GulimallElasticSearchConfig.COMMON_OPTIONS);
+
+        //TODO 如果批量错误
+        boolean hasFailures = bulk.hasFailures();
+
+        List<String> collect = Arrays.stream(bulk.getItems()).map(BulkItemResponse::getId).collect(Collectors.toList());
+
+        log.info("商品上架完成：{}", collect);
+
+        return hasFailures;
+    }
+}
+```
+`guliamll-search`中新建`EsConstant`
+``` java
+public class EsConstant {
+
+    /**
+     * 在es中的索引, 已经修改完映射并数据迁移
+     */
+    public static final String PRODUCT_INDEX = "mall_product";
+
+    public static final Integer PRODUCT_PAGE_SIZE = 2;
+}
+```
 
 
 nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599
