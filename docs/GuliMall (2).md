@@ -5391,7 +5391,7 @@ public List<SkuHasStockVo> getSkuHasStock(List<Long> skuIds) {
 **远程查询库存&泛型结果封装**
 `gulimlla-product`中新建`WareFeignService`, 注意使用完整路径
 ``` java
-@FeignClient("mall-ware")
+@FeignClient("gulimall-ware")
 public interface WareFeignService {
 
     /**
@@ -5643,7 +5643,7 @@ public class EsConstant {
 `gulimall-common`中修改`BizCodeEnum`, 增加错误码`PRODUCT_UP_EXCEPTION(11000, "商品上架异常")`
 `gulimlla-product`中新建`SearchFeignService`
 ``` java
-@FeignClient("mall-search")
+@FeignClient("gulimall-search")
 public interface SearchFeignService {
 
     @PostMapping(value = "/search/save/product")

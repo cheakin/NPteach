@@ -12,7 +12,7 @@ import java.util.List;
  * ES服务
  * Create by botboy on 2022/08/19.
  **/
-@FeignClient("mall-search")
+@FeignClient("gulimall-search")
 public interface SearchFeignService {
 
     @PostMapping(value = "/search/save/product")

@@ -11847,7 +11847,7 @@ public void saveSkuInfo(SkuInfoEntity skuInfoEntity) {
 涉及远程调用, 在启动类上添加`@EnableFeignClients`注解
 新建`CouponFeignService`接口
 ``` java
-@FeignClient("mall-coupon")
+@FeignClient("gulimall-coupon")
 public interface CouponFeignService {
 
     /**
@@ -12640,7 +12640,7 @@ void addStock(@Param("skuId") Long skuId, @Param("wareId") Long wareId, @Param("
 远程获取sku信息
 **启动类上使用`@EnableFeignClients`注解**, 创建`ProductFeignService`
 ``` java
-@FeignClient("mall-product")
+@FeignClient("gulimall-product")
 public interface ProductFeignService {
 
     /**

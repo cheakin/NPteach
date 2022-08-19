@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * 优惠券服务
  * Create by botboy on 2022/07/31.
  **/
-@FeignClient("mall-coupon")
+@FeignClient("gulimall-coupon")
 public interface CouponFeignService {
 
     /**

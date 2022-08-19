@@ -25,7 +25,7 @@ import cn.cheakin.common.utils.R;
 @RequestMapping("product/spuinfo")
 public class SpuInfoController {
     @Autowired
-    private SpuInfoService spuInfoService;v
+    private SpuInfoService spuInfoService;
 
     /**
      * 商品上架功能

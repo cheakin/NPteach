@@ -12,7 +12,7 @@ import java.util.List;
  * 库存服务
  * Create by botboy on 2022/08/18.
  **/
-@FeignClient("mall-ware")
+@FeignClient("gulimall-ware")
 public interface WareFeignService {
 
     /**
