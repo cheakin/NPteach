@@ -12,6 +12,7 @@ import cn.cheakin.gulimall.product.feign.SearchFeignService;
 import cn.cheakin.gulimall.product.feign.WareFeignService;
 import cn.cheakin.gulimall.product.service.*;
 import cn.cheakin.gulimall.product.vo.*;
+import cn.hutool.json.JSONUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -263,10 +264,11 @@ import org.springframework.util.StringUtils;
         // TODO 1、发送远程调用，库存系统查询是否有库存
         Map<Long, Boolean> stockMap = null;
         try {
-            R<List<SkuHasStockVo>> skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
+            R skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
 
-            stockMap = skuHasStock.getData().stream()
-                    .collect(Collectors.toMap(SkuHasStockVo::getSkuId, item -> item.getHasStock()));
+            List<SkuHasStockVo> data = JSONUtil.toList(skuHasStock.getData(), SkuHasStockVo.class);
+            stockMap = data.stream()
+                    .collect(Collectors.toMap(t -> t.getSkuId(), t -> t.getHasStock()));
         } catch (Exception e) {
             log.error("库存服务查询异常：原因{}", e);
         }

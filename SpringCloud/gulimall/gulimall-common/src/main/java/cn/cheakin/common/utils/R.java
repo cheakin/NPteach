@@ -8,6 +8,9 @@
 
 package cn.cheakin.common.utils;
 
+import cn.hutool.core.lang.TypeReference;
+import cn.hutool.json.JSON;
+import cn.hutool.json.JSONUtil;
 import org.apache.http.HttpStatus;
 
 import java.util.HashMap;
@@ -23,12 +26,14 @@ public class R<T> extends HashMap<String, Object> {
 
 	private T data;
 
-	public T getData() {
-		return data;
+	public String getData() {
+		// 默认是map
+		return this.get("data").toString();
 	}
 
-	public void setData(T data) {
-		this.data = data;
+	public R setData(T data) {
+		put("data", JSONUtil.toJsonStr(data));
+		return this;
 	}
 	
 	public R() {

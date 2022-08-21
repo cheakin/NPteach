@@ -5341,7 +5341,7 @@ public List<Long> selectSearchAttrs(List<Long> attrIds) {
   * @return
   */
 @PostMapping(value = "/hasStock")
-public R getSkuHasStock(@RequestBody List<Long> skuIds) {
+public R<List<SkuHasStockVo>> getSkuHasStock(@RequestBody List<Long> skuIds) {
     //skuId stock
     List<SkuHasStockVo> vos = wareSkuService.getSkuHasStock(skuIds);
 
@@ -5371,10 +5371,10 @@ public class SkuHasStockVo {
   */
 @Override
 public List<SkuHasStockVo> getSkuHasStock(List<Long> skuIds) {
-    return skuIds.stream().map(item -> {
+    return skuIds.stream().map(skuId -> {
         Long count = this.baseMapper.getSkuStock(item);
-        SkuHasStockVo skuHasStockVo = new SkuHasStockVo();
-        skuHasStockVo.setSkuId(item);
+        SkuHasStockVo skuHasStocskuIdkVo = new SkuHasStockVo();
+        skuHasStockVo.setSkuId(skuId);
         skuHasStockVo.setHasStock(count == null?false:count > 0);
         return skuHasStockVo;
     }).collect(Collectors.toList());
@@ -5409,64 +5409,15 @@ public interface WareFeignService {
 ```
 `gulimall-common`的`R`中
 ``` java
-public class R<T> extends HashMap<String, Object> {
-	private static final long serialVersionUID = 1L;
+private T data;
 
-	private T data;
+public T getData() {
+  return this.getData();
+}
 
-	public T getData() {
-		return data;
-	}
-
-	public void setData(T data) {
-		this.data = data;
-	}
-	
-	public R() {
-		put("code", 0);
-		put("msg", "success");
-	}
-	
-	public static R error() {
-		return error(HttpStatus.SC_INTERNAL_SERVER_ERROR, "未知异常，请联系管理员");
-	}
-	
-	public static R error(String msg) {
-		return error(HttpStatus.SC_INTERNAL_SERVER_ERROR, msg);
-	}
-	
-	public static R error(int code, String msg) {
-		R r = new R();
-		r.put("code", code);
-		r.put("msg", msg);
-		return r;
-	}
-
-	public static R ok(String msg) {
-		R r = new R();
-		r.put("msg", msg);
-		return r;
-	}
-	
-	public static R ok(Map<String, Object> map) {
-		R r = new R();
-		r.putAll(map);
-		return r;
-	}
-	
-	public static R ok() {
-		return new R();
-	}
-
-	public R put(String key, Object value) {
-		super.put(key, value);
-		return this;
-	}
-
-	public Integer getCode() {
-
-		return (Integer) this.get("code");
-	}
+public R setData(T data) {
+  put("data", data);
+  return this;
 }
 ```
 拷贝一份`gulimall-ware`中的`SkuHasStockVo`到`gulimall-common`中
