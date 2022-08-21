@@ -27,7 +27,6 @@ public class R<T> extends HashMap<String, Object> {
 	private T data;
 
 	public String getData() {
-		// 默认是map
 		return this.get("data").toString();
 	}
 

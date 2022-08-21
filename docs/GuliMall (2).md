@@ -5247,9 +5247,10 @@ public void up(Long spuId) {
     // TODO 1、发送远程调用，库存系统查询是否有库存
     Map<Long, Boolean> stockMap = null;
     try {
-        R<List<SkuHasStockVo>> skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
+        R skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
 
-        stockMap = skuHasStock.getData().stream()
+        List<SkuHasStockVo> data = JSONUtil.toList(skuHasStock.getData(), SkuHasStockVo.class);
+        stockMap = data.stream()
                 .collect(Collectors.toMap(SkuHasStockVo::getSkuId, item -> item.getHasStock()));
     } catch (Exception e) {
         log.error("库存服务查询异常：原因{}", e);
@@ -5411,12 +5412,12 @@ public interface WareFeignService {
 ``` java
 private T data;
 
-public T getData() {
-  return this.getData();
+public String getData() {
+  return this.get("data").toString();
 }
 
 public R setData(T data) {
-  put("data", data);
+  put("data", JSONUtil.toJsonStr(data));
   return this;
 }
 ```
