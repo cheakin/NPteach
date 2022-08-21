@@ -319,6 +319,12 @@ import org.springframework.util.StringUtils;
         } else {
             // 远程调用失败
             // TODO 7、重复调用？接口幂等性:重试机制
+            /**
+             * Feign的调用流程
+             * 1.构造请求数据, 将对象转为json
+             * 2.发送请求进行执行(执行成功会解码响应数据)
+             * 3.执行请求会有重试机制
+             */
         }
     }
 
