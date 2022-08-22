@@ -5249,8 +5249,8 @@ public void up(Long spuId) {
     try {
         R skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
 
-        List<SkuHasStockVo> data = JSONUtil.toList(skuHasStock.getData(), SkuHasStockVo.class);
-        stockMap = data.stream()
+        TypeReference<List<SkuHasStockVo>> typeReference = new TypeReference<List<SkuHasStockVo>>() {};
+        stockMap = skuHasStock.getData(typeReference).stream()
                 .collect(Collectors.toMap(SkuHasStockVo::getSkuId, item -> item.getHasStock()));
     } catch (Exception e) {
         log.error("库存服务查询异常：原因{}", e);
@@ -5342,14 +5342,15 @@ public List<Long> selectSearchAttrs(List<Long> attrIds) {
   * @return
   */
 @PostMapping(value = "/hasStock")
-public R<List<SkuHasStockVo>> getSkuHasStock(@RequestBody List<Long> skuIds) {
+public R getSkuHasStock(@RequestBody List<Long> skuIds) {
     //skuId stock
     List<SkuHasStockVo> vos = wareSkuService.getSkuHasStock(skuIds);
 
 //        return R.ok().put("data", vos);
-        R<List<SkuHasStockVo>> ok = R.ok();
-        ok.setData(vos);
-        return ok;
+    /*R<List<SkuHasStockVo>> ok = R.ok();
+    ok.setData(vos);
+    return ok;*/
+    return R.ok().setData(vos);
 }
 ```
 `gulimlla-ware`中新建`SkuHasStockVo`
@@ -5403,21 +5404,22 @@ public interface WareFeignService {
      * @return
      */
     @PostMapping(value = "/ware/waresku/hasStock")
-//    R getSkuHasStock(@RequestBody List<Long> skuIds);
-    R<List<SkuHasStockVo>> getSkuHasStock(@RequestBody List<Long> skuIds);
+   R getSkuHasStock(@RequestBody List<Long> skuIds);
+    // R<List<SkuHasStockVo>> getSkuHasStock(@RequestBody List<Long> skuIds);
 
 }
 ```
 `gulimall-common`的`R`中
 ``` java
-private T data;
-
-public String getData() {
-  return this.get("data").toString();
+public <T> T getData(TypeReference<T> typeReference) {
+  Object data = this.get("data");	// 默认返回是map类型的
+  String s = JSONUtil.toJsonStr(data);
+  T t = (T) JSONUtil.toBean(s, typeReference.getClass());
+  return t;
 }
 
-public R setData(T data) {
-  put("data", JSONUtil.toJsonStr(data));
+public R setData(Object data) {
+  put("data", data);
   return this;
 }
 ```
@@ -5500,8 +5502,7 @@ public class ProductSaveServiceImpl implements ProductSaveService {
 
         List<String> collect = Arrays.stream(bulk.getItems()).map(BulkItemResponse::getId).collect(Collectors.toList());
 
-        log.info("商品上架完成：{}", collect);
-
+        log.info("商品上架完成:{}, 返回数据:{}", collect, bulk.toString());
         return hasFailures;
     }
 }
@@ -5638,8 +5639,17 @@ public enum ProductStatusEnum {
     WHERE id = #{spuId}
 </update>
 ```
+`gulimall-search`的`application.yml`中添加ES服务的路由
+``` yml
+- id: search_route
+  uri: lb://mall-search
+  predicates:
+    - Path=/api/search/**
+  filters:
+    - RewritePath=/api/(?<segment>.*),/$\{segment}
+```
 
-
+### 首页
 
 
 nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599

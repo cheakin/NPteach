@@ -21,17 +21,18 @@ import java.util.Map;
  *
  * @author Mark sunlightcs@gmail.com
  */
-public class R<T> extends HashMap<String, Object> {
+public class R extends HashMap<String, Object> {
 	private static final long serialVersionUID = 1L;
 
-	private T data;
-
-	public String getData() {
-		return this.get("data").toString();
+	public <T> T getData(TypeReference<T> typeReference) {
+		Object data = this.get("data");	// 默认返回是map类型的
+		String s = JSONUtil.toJsonStr(data);
+		T t = JSONUtil.toBean(s, typeReference, false);
+		return t;
 	}
 
-	public R setData(T data) {
-		put("data", JSONUtil.toJsonStr(data));
+	public R setData(Object data) {
+		put("data", data);
 		return this;
 	}
 	

@@ -12,6 +12,7 @@ import cn.cheakin.gulimall.product.feign.SearchFeignService;
 import cn.cheakin.gulimall.product.feign.WareFeignService;
 import cn.cheakin.gulimall.product.service.*;
 import cn.cheakin.gulimall.product.vo.*;
+import cn.hutool.core.lang.TypeReference;
 import cn.hutool.json.JSONUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -266,7 +267,8 @@ import org.springframework.util.StringUtils;
         try {
             R skuHasStock = wareFeignService.getSkuHasStock(skuIdList);
 
-            List<SkuHasStockVo> data = JSONUtil.toList(skuHasStock.getData(), SkuHasStockVo.class);
+            TypeReference<List<SkuHasStockVo>> typeReference = new TypeReference<List<SkuHasStockVo>>() {};
+            List<SkuHasStockVo> data = skuHasStock.getData(typeReference);
             stockMap = data.stream()
                     .collect(Collectors.toMap(t -> t.getSkuId(), t -> t.getHasStock()));
         } catch (Exception e) {
