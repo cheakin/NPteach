@@ -5650,6 +5650,27 @@ public enum ProductStatusEnum {
 ```
 
 ### 首页
+哪里用到就在响应的地方拷贝前端代码和引入依赖
+#### 整合thymeleaf
+首先在`gulimall=product`中引用. 版本依然由spirngboot的版本指定, 不需要再指定了
+``` xml
+<!-- thymeleaf 模板引擎 -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+```
+按照视频将文件放入`resourcec/static/`和`resourcec/templates`中
+在`applicaion.yml`中配置, 关闭缓存
+``` yml
+spring:
+  thymeleaf:
+    cache: false
+```
+
+**测试**
+访问`http://localhost:10000/`能够进入首页
+访问`http://localhost:10000/index/css/GL.css`能够正常返回css文件内容
 
 
 nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599

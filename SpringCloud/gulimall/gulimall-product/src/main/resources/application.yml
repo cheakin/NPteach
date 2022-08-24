@@ -18,6 +18,8 @@ spring:
     name: gulimall-product
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
+  thymeleaf:
+    cache: false
 
 mybatis-plus:
   # 指定mapper文件位置
