@@ -16,7 +16,6 @@ import java.util.List;
  **/
 @Controller
 public class IndexController {
-
     @Autowired
     CategoryService categoryService;
 

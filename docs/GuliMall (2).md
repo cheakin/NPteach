@@ -5672,6 +5672,48 @@ spring:
 访问`http://localhost:10000/`能够进入首页
 访问`http://localhost:10000/index/css/GL.css`能够正常返回css文件内容
 
+#### 渲染一级分类
+`index.html`中需要指定
+``` xml
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+```
+在`gulimall-product`中新建`IndexController`
+``` java
+@Controller
+public class IndexController {
+    @Autowired
+    CategoryService categoryService;
+
+    @GetMapping({"/", "/index.html"})   // thymeleaf中自动自动配置前缀`classpath:/templates/`
+    public String indexPage(Model model) {
+
+        // TODO 1.查出所有的1级分类
+        List<CategoryEntity> categoryEntities = categoryService.getLevel1Categorys();
+
+        model.addAttribute("categorys", categoryEntities);
+        return "index"; // thymeleaf中自动配置后缀`.html`
+    }
+}
+```
+`gulimall-product`中的`CategoryServiceImpl`中
+``` java
+@Override
+public List<CategoryEntity> getLevel1Categorys() {
+    List<CategoryEntity> categoryEntities = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", 0));
+    return categoryEntities;
+}
+```
+`index.html`渲染一级分类
+``` html
+<div class="header_main_left">
+  <ul>
+    <li th:each="category : ${categorys}">
+      <a href="#" class="header_main_left_a" th:attr="ctg-data = ${category.catId}"><b th:text="${category.name}">家用电器</b></a>
+    </li>
+  </ul>
+</div>
+```
+``` java
 
 nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599
 
