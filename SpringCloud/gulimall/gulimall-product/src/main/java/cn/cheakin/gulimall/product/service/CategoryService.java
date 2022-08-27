@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.product.service;
 
+import cn.cheakin.gulimall.product.vo.Catelog2Vo;
 import com.baomidou.mybatisplus.extension.service.IService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.product.entity.CategoryEntity;
@@ -33,5 +34,7 @@ public interface CategoryService extends IService<CategoryEntity> {
     void updateCascade(CategoryEntity category);
 
     List<CategoryEntity> getLevel1Categorys();
+
+    Map<String,List<Catelog2Vo>> getCatalogJson();
 }
 

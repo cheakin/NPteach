@@ -5673,6 +5673,16 @@ spring:
 访问`http://localhost:10000/index/css/GL.css`能够正常返回css文件内容
 
 #### 渲染一级分类
+为了不用修改后重启, 我们可以使用热加载, 在需要使用的服务的`pom.xml`中添加
+``` xml
+<!--使用热加载-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <optional>true</optional>
+</dependency>
+```
+
 `index.html`中需要指定
 ``` xml
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
@@ -5713,8 +5723,99 @@ public List<CategoryEntity> getLevel1Categorys() {
   </ul>
 </div>
 ```
-``` java
 
+#### 渲染二级三级分类
+`gulimall-product`中根据对应的json结构创建`Catelog2Vo`
+``` java
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Catelog2Vo {
+
+    /**
+     * 一级父分类的id
+     */
+    private String catalog1Id;
+
+    /**
+     * 三级子分类
+     */
+    private List<Category3Vo> catalog3List;
+
+    private String id;
+
+    private String name;
+
+    /**
+     * 三级分类vo
+     */
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Category3Vo {
+
+        /**
+         * 父分类、二级分类id
+         */
+        private String catalog2Id;
+
+        private String id;
+
+        private String name;
+    }
+}
+```
+`IndexController`
+``` java
+/**
+  * 二级、三级分类数据
+  * @return
+  */
+@GetMapping(value = "/index/catalog.json")
+@ResponseBody
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+    Map<String, List<Catelog2Vo>> catalogJson = categoryService.getCatalogJson();
+    return catalogJson;
+}
+```
+`CategoryServiceImpl`
+``` java
+@Override
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+    // 1.查出所有一级分类
+    List<CategoryEntity> level1Categorys = getLevel1Categorys();
+
+    // 2.封装数据
+    // 1.每一个一级分类,查到这个一级分类的二级分类
+    Map<String, List<Catelog2Vo>> parent_cid = level1Categorys.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+        // 1.每一个一级分类,查到这个一级分类的二级分类
+        List<CategoryEntity> categoryEntities = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", v.getCatId()));
+
+        // 2.封装上面的结果
+        List<Catelog2Vo> catelog2Vos = null;
+        if (categoryEntities != null) {
+            catelog2Vos = categoryEntities.stream().map(l2 -> {
+                Catelog2Vo catelog2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName());
+                List<CategoryEntity> level3Catelog = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq(("parent_cid"), l2.getCatId()));
+                if (level3Catelog != null) {
+                    List<Catelog2Vo.Category3Vo> collect = level3Catelog.stream().map(l3 -> {
+                        // 2.封装成指定格式
+                        Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+                        return category3Vo;
+                    }).collect(Collectors.toList());
+                    catelog2Vo.setCatalog3List(collect);
+                }
+                return catelog2Vo;
+            }).collect(Collectors.toList());
+        }
+
+        return catelog2Vos;
+    }));
+    return parent_cid;
+}
+```
+修改`catalogLoader.js`中的接口,从`index/json/catalog.json`修改为`index/catalog.json`
+测试: 访问`http://localhost:10000/index/catalog.json`, 若正常返回json数据则成功
 nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599
 
 使用聚合：https://blog.csdn.net/kabike/article/details/101460578
