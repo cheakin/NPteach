@@ -5724,7 +5724,7 @@ public List<CategoryEntity> getLevel1Categorys() {
 </div>
 ```
 
-#### 渲染二级三级分类
+#### 渲染二级三级分类数据
 `gulimall-product`中根据对应的json结构创建`Catelog2Vo`
 ``` java
 @Data
@@ -5815,13 +5815,216 @@ public Map<String, List<Catelog2Vo>> getCatalogJson() {
 }
 ```
 修改`catalogLoader.js`中的接口,从`index/json/catalog.json`修改为`index/catalog.json`
+
 测试: 访问`http://localhost:10000/index/catalog.json`, 若正常返回json数据则成功
-nested阅读：https://blog.csdn.net/weixin_40341116/article/details/80778599
-
-使用聚合：https://blog.csdn.net/kabike/article/details/101460578
 
 
+### nginx
+#### 搭建域名访问环境一(反向代理配置)
+##### 修改 Windows hosts 文件
+位置：C:\Windows\System32\drivers\etc
+在后面追加以下内容(**ip是虚拟机的ip地址**)
+``` json
+# guli mall #
+192.168.56.10	gulimall.com
+```
 
+##### 在虚拟机中将nginx设置为自动启动
+``` shell
+docker update nginx --restart=always
+```
+
+此时直接访问`gulimall.com`就是访问我们的虚拟机, 80端口就是访问到nginx中了
+
+##### 配置nginx
+**ngin配置文件**
+![](./assets/GuliMall.md/GuliMall_high/1661572925281.jpg)
+
+我们将docker中nginx目录映射到了虚拟机的`/mydata/nginx`中了, 所以我们直接`vi /mydata/nginx/conf/nginx.conf`查看nginx的配置
+``` shell
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf;
+}
+```
+可以看到，在 `http` 块中最后有 `include /etc/nginx/conf.d/*.conf;` 这句配置说明在 conf.d 目录下所有 .conf 后缀的文件内容都会作为 nginx 配置文件 http 块中的配置。这是为了防止主配置文件太复杂，也可以对不同的配置进行分类。
+下面我们参考 conf.d 目录下的配置，来配置 gulimall 的 server 块配置
+
+
+**gulimall.conf**
+默认配置下，我们访问 gulimall.com 会请求 nginx 默认的 index 页面，现在我们要做的是当访问 gulimall.com 的时候转发到我们的商品模块的商城首页界面。
+
+由于虚拟装在我们本机上, 本机和虚拟机将会有个共用的网段, 默认是本机的ip是`192.168.56.1`
+所以我们配置当访问 nginx `/`请求时代理到 `192.168.56.1:10000` 商品服务首页
+首先我们拷贝一份nginx配置(在`/mydata/nginx/conf/conf.d/`目录下)执行
+``` shell
+cp default.conf gulimall.conf
+
+# 然后开始编辑gulimall.conf
+vi gulimall.conf
+```
+`gulimall.conf`, 注意配置需要以分号结尾, vim中可以使用`:set number`显示行号
+``` shell
+server {
+    listen       80;
+    server_name  gulimall.com;
+
+    #charset koi8-r;
+    #access_log  /var/log/nginx/log/host.access.log  main;
+
+    location / {
+      proxy_pass http://192.168.56.1:10000;
+    }
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+配置并保存后, 还需要重启nginx: `docker restart nginx`
+
+测试: 此时再访问`http://gulimall.com/`就能跳到商城首页了. 
+> 转发路径
+> 1. `gulimall.com`这个域名由本机的host转发到了`虚拟机(192.168.56.10)`中;
+> 2. 虚拟机中的nginx监听`80`端口且来自`gulimall.com`的请求, 转发到`192.168.56.10:10000(主机的1000端口上)`;
+> 3. 主机的1000端口运行着我们的product服务, 所以访问`gulimall.com`就相当于访问了`localhost:10000`;
+
+
+#### 搭建域名访问环境二(负载均衡到网关)
+Nginx官网: https://www.nginx.com/
+
+**修改 nginx.conf**
+`vi /mydata/nginx/conf/nginx.conf`, 修改 http 块，配置上游服务器为网关地址
+```shell
+
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+    upstream gulimall {
+        server 192.168.56.1:88;
+    }
+    include /etc/nginx/conf.d/*.conf;
+}
+```
+
+**修改 gulimall.conf**
+`vi /mydata/nginx/conf/conf.d/gulimall.conf`, 配置代理地址为上面配置的上游服务器名
+```shell
+server {
+    listen       80;
+    server_name  gulimall.com;
+
+    #charset koi8-r;
+    #access_log  /var/log/nginx/log/host.access.log  main;
+
+    location / {
+      #proxy_set_header Host $host
+      proxy_pass http://gulimall;
+    }
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+配置完成同样需要重启nginx: `docker restart nginx`
+
+**配置网关**
+在`gulimall-gateway`的`application.yml`中配置域名的路由规则
+``` yml
+- id: gulimall_host_rout #需要放在后面, 优先匹配api/**请求
+  uri: lb://gulimall-product
+  predicates:
+    - Host=**.gulimall.com
+```
+配置完后重启网关服务
+
+测试访问`gulimall.com`时发现仍然访问不通, 原因时nginx转发时请求的头丢失了, 所以我们需要配置一下`gulimall.conf`
+```shell
+server {
+    listen       80;
+    server_name  gulimall.com;
+
+    #charset koi8-r;
+    #access_log  /var/log/nginx/log/host.access.log  main;
+
+    location / {
+      proxy_set_header Host $host;
+      proxy_pass http://gulimall;
+    }
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+
+测试: 访问`http://gulimall.com/`能够正常访问到商城首页, 且访问`http://gulimall.com/api/product/attrattrgrouprelation/list`能偶正常返回json, 则证明成功
+
+![](./assets/GuliMall.md/GuliMall_high/1661602383885.jpg)
 
 
 
