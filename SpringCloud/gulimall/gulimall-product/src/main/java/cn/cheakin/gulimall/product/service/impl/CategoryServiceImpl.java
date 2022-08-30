@@ -2,13 +2,15 @@ package cn.cheakin.gulimall.product.service.impl;
 
 import cn.cheakin.gulimall.product.service.CategoryBrandRelationService;
 import cn.cheakin.gulimall.product.vo.Catelog2Vo;
+import cn.hutool.core.lang.TypeReference;
+import cn.hutool.json.JSON;
+import cn.hutool.json.JSONUtil;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -27,6 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity> implements CategoryService {
     @Autowired
     CategoryBrandRelationService categoryBrandRelationService;
+    @Autowired
+    StringRedisTemplate redisTemplate;
+
+    private Map<String, Object> cache = new HashMap<>();
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
@@ -108,7 +114,110 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
 
     @Override
     public Map<String, List<Catelog2Vo>> getCatalogJson() {
-        // 1.查出所有一级分类
+        //1、加入缓存逻辑
+        String catalogJson = redisTemplate.opsForValue().get("catalogJson");
+        if (StringUtils.isEmpty(catalogJson)) {
+            //2、缓存中没有
+            Map<String, List<Catelog2Vo>> catalogJsonFromDB = getCatalogJsonFromDB();
+            // 3、查询到的数据存放到缓存中，将对象转成 JSON 存储
+            redisTemplate.opsForValue().set("catalogJSON", JSONUtil.toJsonStr(catalogJsonFromDB));
+            return catalogJsonFromDB;
+        }
+        TypeReference<Map<String, List<Catelog2Vo>>> typeReference = new TypeReference<Map<String, List<Catelog2Vo>>>() {
+        };
+        Map<String, List<Catelog2Vo>> result = JSONUtil.toBean(catalogJson, typeReference, true);
+        return result;
+
+                // 本地缓存
+        /*Map<String, List<Catelog2Vo>> catalogJson  = (Map<String, List<Catelog2Vo>>)cache.get("catalogJson");
+
+        if (catalogJson == null) {
+            List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+            //1、查出所有分类
+            //1、1）查出所有一级分类
+            List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+            //封装数据
+            Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+                //1、每一个的一级分类,查到这个一级分类的二级分类
+                List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+                //2、封装上面的结果
+                List<Catelog2Vo> catalogs2Vos = null;
+                if (categoryEntities != null) {
+                    catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                        Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                        //1、找当前二级分类的三级分类封装成vo
+                        List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                        if (level3Catelog != null) {
+                            List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                                //2、封装成指定格式
+                                Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                                return category3Vo;
+                            }).collect(Collectors.toList());
+                            catalogs2Vo.setCatalog3List(category3Vos);
+                        }
+
+                        return catalogs2Vo;
+                    }).collect(Collectors.toList());
+                }
+
+                return catalogs2Vos;
+            }));
+
+            cache.put("catalogJson", parentCid);
+            return parentCid;
+        }
+
+        return catalogJson;*/
+
+                // 性能优化：将数据库的多次查询变为一次
+        /*List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+        //1、查出所有分类
+        //1、1）查出所有一级分类
+        List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+        //封装数据
+        Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+            //1、每一个的一级分类,查到这个一级分类的二级分类
+            List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+            //2、封装上面的结果
+            List<Catelog2Vo> catalogs2Vos = null;
+            if (categoryEntities != null) {
+                catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                    Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                    //1、找当前二级分类的三级分类封装成vo
+                    List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                    if (level3Catelog != null) {
+                        List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                            //2、封装成指定格式
+                            Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                            return category3Vo;
+                        }).collect(Collectors.toList());
+                        catalogs2Vo.setCatalog3List(category3Vos);
+                    }
+
+                    return catalogs2Vo;
+                }).collect(Collectors.toList());
+            }
+
+            return catalogs2Vos;
+        }));
+
+        return parentCid;*/
+
+
+                // 直接从数据库查询数据
+        /*// 1.查出所有一级分类
         List<CategoryEntity> level1Categorys = getLevel1Categorys();
 
         // 2.封装数据
@@ -137,7 +246,56 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
 
             return catelog2Vos;
         }));
-        return parent_cid;
+        return parent_cid;*/
+    }
+
+    // 从数据库查询并封装分类数据
+    public Map<String, List<Catelog2Vo>> getCatalogJsonFromDB() {
+        System.out.println("查询了数据库");
+
+        // 性能优化：将数据库的多次查询变为一次
+        List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+        //1、查出所有分类
+        //1、1）查出所有一级分类
+        List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+        //封装数据
+        Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+            //1、每一个的一级分类,查到这个一级分类的二级分类
+            List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+            //2、封装上面的结果
+            List<Catelog2Vo> catalogs2Vos = null;
+            if (categoryEntities != null) {
+                catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                    Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                    //1、找当前二级分类的三级分类封装成vo
+                    List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                    if (level3Catelog != null) {
+                        List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                            //2、封装成指定格式
+                            Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                            return category3Vo;
+                        }).collect(Collectors.toList());
+                        catalogs2Vo.setCatalog3List(category3Vos);
+                    }
+
+                    return catalogs2Vo;
+                }).collect(Collectors.toList());
+            }
+
+            return catalogs2Vos;
+        }));
+
+        return parentCid;
+    }
+
+    private List<CategoryEntity> getParentCid(List<CategoryEntity> selectList, Long parent_cid) {
+        return selectList.stream().filter(item -> item.getParentCid().equals(parent_cid)).collect(Collectors.toList());
     }
 
 

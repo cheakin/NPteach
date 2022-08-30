@@ -1,13 +1,22 @@
 package cn.cheakin.gulimall.product;
 
 import cn.cheakin.gulimall.product.entity.BrandEntity;
+import cn.cheakin.gulimall.product.entity.CategoryEntity;
 import cn.cheakin.gulimall.product.service.BrandService;
+import cn.cheakin.gulimall.product.vo.Catelog2Vo;
+import cn.hutool.json.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @SpringBootTest
 class GulimallProductApplicationTests {
@@ -17,6 +26,20 @@ class GulimallProductApplicationTests {
 
     /*@Autowired
     OSSClient ossClient;*/
+
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
+    @Test
+    public void teststringRedisTemplate() {
+        // hello world
+        ValueOperations<String, String> ops = stringRedisTemplate.opsForValue();
+
+        // 保存
+        ops.set("hello", "world_" + UUID.randomUUID().toString());
+
+        // 查询
+        ops.get("hello");
+    }
 
     @Test
     void add() {

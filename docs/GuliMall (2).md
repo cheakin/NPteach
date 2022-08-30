@@ -6092,12 +6092,12 @@ TCPTimedWaitDelay：30
 略
 
 ### 优化
-#### 中间件对性能的影响
+#### 中间件对性能的影响 & 简单优化吞吐量
 **压测nginx**
-访问`192.168.56.1:80`, 过程略
+访问`192.168.56.1:80`, 过程略  
 
 **压测网关gateway**
-访问`localhost:88`, 过程略
+访问`localhost:88`, 过程略  
 
 **压测简单服务**
 `gulimall-product`中写一个简单服务
@@ -6108,7 +6108,7 @@ public String hello() {
     return "hello";
 }
 ```
-访问`localhost:10000/hello`, 过程略
+访问`localhost:10000/hello`, 过程略  
 
 **压测 gateway+简单服务**
 在`gulimall-gateway`的`application.yml`中把简单请求路由加进去
@@ -6120,19 +6120,331 @@ public String hello() {
   filters:
     - RewritePath=/api/(?<segment>.*),/$\{segment}
 ```
-访问`localhost:88/hello`, 过程略
+访问`localhost:88/hello`, 过程略  
 
 **压测 全链路(nginx+gateway+简单服务)**
-访问`gulimall.com:80/helo`, 过程略
+访问`gulimall.com:80/helo`, 过程略  
 
 每增加一个中间件, 都会增加一层交互, 交互同样是需要资源的. 中间件越多，性能损失越大，大多都损失在网络交互了；
 
+**压测 首页一级菜单**
+访问`localhost:10000`, 过程略  
+大概率是由dd, thymeleaf拖慢了
+
+**压测 首页三级分类数据**
+访问`localhost:10000/index/catalog.json`, 过程略  
+大概率是由db拖慢了
+
+**压测 首页全量数据**
+访问`localhost:10000/`, 过程略  
+大概率是由静态资源拖慢了
+
+**压测 首页渲染(开缓存)**
+修改`gulimall-product`的`application.yml`的thymeleaf缓存
+``` yml
+spring:
+  thymeleaf:
+    cache: true
+```
+访问`localhost:10000/`, 过程略  
+
+**压测 首页渲染(开缓存, 优化数据库, 关日志)**
+1. 修改`gulimall-product`的`application.yml`的日志输出级别
+    ``` yml
+    logging:
+      level:
+      cn.cheakin.gulimall: error
+    ```
+2. 给`pms_category`表的`parent_cid`字段加索引  
+
+访问`localhost:10000/`, 过程略  
+
+* 中间件越多，性能损失越大，大多都损失在网络交互了；
+* 业务：
+  * Db（MySQL 优化）
+  * 模板的渲染速度（缓存）
+  * 静态资源
+
+#### nginx动静分离
+![](./assets/GuliMall.md/GuliMall_high/1661789564930.jpg)
+1. 首先，把商品服务中静态文件夹 index 放到 nginx 下 /mydata/nginx/html/static目录；
+2. 给模板中所有静态资源的请求路径前都加上 /static；
+3. 修改 Nginx 配置文件 /mydata/nginx/conf/conf.d/gulimall.conf
+  ``` shell
+  # /static/ 下所有的请求都转给 nginx
+  location /static/ {
+    root /usr/share/nginx/html;
+  }
+  ```
+  配置完成后重启nginx: `docker restart nginx`
 
 
+#### 模拟线上应用内存崩溃宕机
+加大JMeter的线程, 比如设置200个线程, 然后访问`localhost:10000/`. 不久服务就会崩溃了......
+
+**调大内存**
+在IDE中设置`gulimall-product`的内: `-Xmx1024m -Xms1024m -Xmn512m`(最大内存大小, 初始内存大小, 新生带内存大小).
+原因是, Full gc 最会影响性能，根据代码问题，避免 full gc 频率。可以适当调大年轻代容量，让大对象可以在年轻代触发 young gc，调整大对象在年轻代的回收频次，尽可能保证大对象在年轻代回收，减小老年代缩短回收时间；
+
+此时再访问`localhost:10000/`, 相较于之前就已经能正常访问了
+
+#### 优化三级分类数据获取
+**性能优化：将数据库的多次查询变为一次**
+`CategoryServiceImpl`
+``` java
+@Override
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+    // 性能优化：将数据库的多次查询变为一次
+    List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+    //1、查出所有分类
+    //1、1）查出所有一级分类
+    List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+    //封装数据
+    Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+        //1、每一个的一级分类,查到这个一级分类的二级分类
+        List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+        //2、封装上面的结果
+        List<Catelog2Vo> catalogs2Vos = null;
+        if (categoryEntities != null) {
+            catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                //1、找当前二级分类的三级分类封装成vo
+                List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                if (level3Catelog != null) {
+                    List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                        //2、封装成指定格式
+                        Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                        return category3Vo;
+                    }).collect(Collectors.toList());
+                    catalogs2Vo.setCatalog3List(category3Vos);
+                }
+
+                return catalogs2Vo;
+            }).collect(Collectors.toList());
+        }
+
+        return catalogs2Vos;
+    }));
+
+    return parentCid;
+}
+
+private List<CategoryEntity> getParentCid(List<CategoryEntity> selectList, Long parent_cid) {
+    return selectList.stream().filter(item -> item.getParentCid().equals(parent_cid)).collect(Collectors.toList());
+}
+```
+压测, 访问`localhost:10000/index/catalog.json`
+
+## 缓存
+### 缓存使用
+#### 本地缓存与分布式缓存
+**哪些数据适合放入缓存？**
+* 即时性、数据一致性要求不高的
+* 访问量大且更新频率不高的数据（读多，写少）
+![](./assets/GuliMall.md/GuliMall_high/1661863979953.jpg)
+
+**本地缓存**
+`CategoryServiceImpl`
+``` java
+private Map<String, Object> cache = new HashMap<>();
+
+@Override
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+
+    // 本地缓存
+    Map<String, List<Catelog2Vo>> catalogJson  = (Map<String, List<Catelog2Vo>>)cache.get("catalogJson");
+
+    if (catalogJson == null) {
+        List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+        //1、查出所有分类
+        //1、1）查出所有一级分类
+        List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+        //封装数据
+        Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+            //1、每一个的一级分类,查到这个一级分类的二级分类
+            List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+            //2、封装上面的结果
+            List<Catelog2Vo> catalogs2Vos = null;
+            if (categoryEntities != null) {
+                catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                    Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                    //1、找当前二级分类的三级分类封装成vo
+                    List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                    if (level3Catelog != null) {
+                        List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                            //2、封装成指定格式
+                            Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                            return category3Vo;
+                        }).collect(Collectors.toList());
+                        catalogs2Vo.setCatalog3List(category3Vos);
+                    }
+
+                    return catalogs2Vo;
+                }).collect(Collectors.toList());
+            }
+
+            return catalogs2Vos;
+        }));
+
+        cache.put("catalogJson", parentCid);
+        return parentCid;
+    }
+
+    return catalogJson;
+}
+```
+本地缓存的方式, 在单体应用中没有问题; 但在分布式服务中, 数据无法保证同时更新, 所以在分布式中无法使用本地缓存.
+
+所以可以选择使用**缓存中间件**来解决这个问题, 如: redis
+![](./assets/GuliMall.md/GuliMall_high/1661865417745.jpg)
 
 
+#### 整合redis测试
+虚拟机初始化时已安装 Redis  
 
+在`gulimall-product`的`pom.yml`中引入redis
+``` xml
+<!-- redis -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+```
+并且在`application.yml`中配置redis地址等信息(端口默认就是6379)
+``` yml
+spring:
+  redis:
+    host: 192.168.50.10
+    port: 6379
+```
+在`gulimall-product`的`GulimallProductApplicationTests`中写单测试
+``` java
+@Autowired
+StringRedisTemplate stringRedisTemplate;
+@Test
+public void teststringRedisTemplate() {
+    // hello world
+    ValueOperations<String, String> ops = stringRedisTemplate.opsForValue();
 
+    // 保存
+    ops.set("hello", "world_" + UUID.randomUUID().toString());
+
+    // 查询
+    ops.get("hello");
+}
+```
+
+#### 改造三级分类业务
+`CategoryServiceImpl`, 顺便将 从数据库查询 封装为 getCatalogJsonFromDB() 方法
+``` java
+@Autowired
+StringRedisTemplate redisTemplate;
+
+@Override
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+    //1、加入缓存逻辑
+    String catalogJson = redisTemplate.opsForValue().get("catalogJson");
+    if (StringUtils.isEmpty(catalogJson)) {
+        //2、缓存中没有
+        Map<String, List<Catelog2Vo>> catalogJsonFromDB = getCatalogJsonFromDB();
+        // 3、查询到的数据存放到缓存中，将对象转成 JSON 存储
+        redisTemplate.opsForValue().set("catalogJSON", JSONUtil.toJsonStr(catalogJsonFromDB));
+        return catalogJsonFromDB;
+    }
+    TypeReference<Map<String, List<Catelog2Vo>>> typeReference = new TypeReference<Map<String, List<Catelog2Vo>>>() {
+    };
+    Map<String, List<Catelog2Vo>> result = JSONUtil.toBean(catalogJson, typeReference, true);
+    return result;
+}
+
+// 从数据库查询并封装分类数据
+public Map<String, List<Catelog2Vo>> getCatalogJsonFromDB() {
+    System.out.println("查询了数据库");
+
+    // 性能优化：将数据库的多次查询变为一次
+    List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+    //1、查出所有分类
+    //1、1）查出所有一级分类
+    List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+    //封装数据
+    Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+        //1、每一个的一级分类,查到这个一级分类的二级分类
+        List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+        //2、封装上面的结果
+        List<Catelog2Vo> catalogs2Vos = null;
+        if (categoryEntities != null) {
+            catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                //1、找当前二级分类的三级分类封装成vo
+                List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                if (level3Catelog != null) {
+                    List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                        //2、封装成指定格式
+                        Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                        return category3Vo;
+                    }).collect(Collectors.toList());
+                    catalogs2Vo.setCatalog3List(category3Vos);
+                }
+
+                return catalogs2Vo;
+            }).collect(Collectors.toList());
+        }
+
+        return catalogs2Vos;
+    }));
+
+    return parentCid;
+}
+```
+访问`localhost:10000/index/catalog.json`后, 查看redis中就会缓存相应的数据了
+
+#### 压力测试出的内存泄露及解决
+压测, 访问`localhost:10000/index/catalog.json`. 这里可能会产生堆外内存溢出异常：OutOfDirectMemoryError。
+下面进行分析：
+* SpringBoot 2.0 以后默认使用 lettuce 作为操作 redis 的客户端，它使用 netty 进行网络通信；
+* lettuce 的 bug 导致 netty 堆外内存溢出；
+* netty 如果没有指定堆外内存，默认使用 -Xmx 参数指定的内存； 
+* 可以通过 -Dio.netty.maxDirectMemory 进行设置；
+解决方案：不能只使用 -Dio.netty.maxDirectMemory 去调大堆外内存，这样只会延缓异常出现的时间。
+
+升级 lettuce 客户端，或使用 jedis 客户端
+`gulimall-product`的`pom.yml`中
+``` xml
+<!-- redis -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+<dependency>
+  <groupId>redis.clients</groupId>
+  <artifactId>jedis</artifactId>
+</dependency>
+```
+再次压测, 访问`localhost:10000/index/catalog.json`
 
 # 谷粒商城-集群篇(cluster)
 包括k8s集群，CI/CD(持续集成)，DevOps等
