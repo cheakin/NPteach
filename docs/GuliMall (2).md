@@ -6446,5 +6446,130 @@ public Map<String, List<Catelog2Vo>> getCatalogJsonFromDB() {
 ```
 再次压测, 访问`localhost:10000/index/catalog.json`
 
+#### 缓存击穿、穿透、雪崩
+1. 缓存穿透
+   缓存穿透是指查询一个一定不存在的数据，由于缓存是不命中，将去查询数据库，但是数据库也无此记录，我们没有将这次查询的 null 写入缓存，这将导致这个不存在的数据每次请求都要到存储层去查询，失去了缓存的意义。
+   在流量大时，可能 DB 就挂掉了，要是有人利用不存在的 key 频繁攻击我们的应用，这就是漏洞。  
+   **解决**：缓存空结果、并且设置短的过期时间。
+2. 缓存雪崩
+   缓存雪崩是指在我们设置缓存时采用了相同的过期时间，导致缓存在某一时刻同时失效，请求全部转发到 DB，DB 瞬时压力过重雪崩。  
+   解决：原有的失效时间基础上增加一个随机值，比如 1-5 分钟随机，这样每一个缓存的过期时间的重复率就会降低，就很难引发集体失效的事件。
+3. 缓存击穿
+   对于一些设置了过期时间的 key，如果这些 key 可能会在某些时间点被超高并发地访问，是一种非常“热点”的数据。
+   这个时候，需要考虑一个问题：如果这个 key 在大量请求同时进来前正好失效，那么所有对这个 key 的数据查询都落到 db，我们称为缓存击穿。
+   **解决**：加锁
+
+**解决缓存缓存穿透**
+解决缓存缓存穿透, 给数据加上过期时间
+`guliamall-product`的`CategoryServiceImpl`
+``` java
+@Override
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+    //1、加入缓存逻辑
+    String catalogJson = redisTemplate.opsForValue().get("catalogJson");
+    if (StringUtils.isEmpty(catalogJson)) {
+        //2、缓存中没有
+        Map<String, List<Catelog2Vo>> catalogJsonFromDB = getCatalogJsonFromDB();
+        // 3、查询到的数据存放到缓存中，将对象转成 JSON 存储
+//            redisTemplate.opsForValue().set("catalogJSON", JSONUtil.toJsonStr(catalogJsonFromDB));
+        String s = JSONUtil.toJsonStr(catalogJsonFromDB);
+        redisTemplate.opsForValue().set("catalogJSON", JSONUtil.toJsonStr(catalogJsonFromDB), 1, TimeUnit.DAYS);
+        return catalogJsonFromDB;
+    }
+    TypeReference<Map<String, List<Catelog2Vo>>> typeReference = new TypeReference<Map<String, List<Catelog2Vo>>>() {
+    };
+    Map<String, List<Catelog2Vo>> result = JSONUtil.toBean(catalogJson, typeReference, true);
+    return result;
+}
+```
+
+#### 加锁解决缓存击穿问题 & 本地所在分布式下的问题
+给查询实例线程加锁
+`CategoryServiceImpl`
+``` java
+@Override
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+    //1、加入缓存逻辑
+    String catalogJson = redisTemplate.opsForValue().get("catalogJson");
+    if (StringUtils.isEmpty(catalogJson)) {
+      System.out.println("缓存未命中,即将查数据库");
+        //2、缓存中没有
+        Map<String, List<Catelog2Vo>> catalogJsonFromDB = getCatalogJsonFromDB();
+        return catalogJsonFromDB;
+    }
+    TypeReference<Map<String, List<Catelog2Vo>>> typeReference = new TypeReference<Map<String, List<Catelog2Vo>>>() {};
+    Map<String, List<Catelog2Vo>> result = JSONUtil.toBean(catalogJson, typeReference, true);
+    return result;
+}
+
+public Map<String, List<Catelog2Vo>> getCatalogJsonFromDB() {
+    System.out.println("查询了数据库");
+    // 加实例的线程锁查询
+    //只要是同一把锁, 就能锁住,需要这个锁的所有线程
+    //1.synchronized (this): SpringBoot所有的组件在容器中都是单例的
+    synchronized (this) {
+        //得到锁以后, 我们应该再去缓存中确定一次, 如果没有才需要继续查询
+        String catalogJson = redisTemplate.opsForValue().get("catalogJson");
+        if (!StringUtils.isEmpty(catalogJson)) {
+            Map<String, List<Catelog2Vo>> result = JSONUtil.toBean(catalogJson, new TypeReference<Map<String, List<Catelog2Vo>>>() {
+            }, true);
+            return result;
+        }
+
+        List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+        //1、查出所有分类
+        //1、1）查出所有一级分类
+        List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+        //封装数据
+        Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+            //1、每一个的一级分类,查到这个一级分类的二级分类
+            List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+            //2、封装上面的结果
+            List<Catelog2Vo> catalogs2Vos = null;
+            if (categoryEntities != null) {
+                catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                    Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                    //1、找当前二级分类的三级分类封装成vo
+                    List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                    if (level3Catelog != null) {
+                        List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                            //2、封装成指定格式
+                            Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                            return category3Vo;
+                        }).collect(Collectors.toList());
+                        catalogs2Vo.setCatalog3List(category3Vos);
+                    }
+
+                    return catalogs2Vo;
+                }).collect(Collectors.toList());
+            }
+
+            return catalogs2Vos;
+        }));
+        // 3、查询到的数据存放到缓存中，将对象转成 JSON 存储
+//            redisTemplate.opsForValue().set("catalogJSON", JSONUtil.toJsonStr(catalogJsonFromDB));
+        String s = JSONUtil.toJsonStr(parentCid);
+        redisTemplate.opsForValue().set("catalogJSON", JSONUtil.toJsonStr(parentCid), 1, TimeUnit.DAYS);
+
+        return parentCid;
+    }
+}
+```
+给实例加锁的方式在单体应用中可以, 但在分布式中就无法有效的锁住了
+![](./assets/GuliMall.md/GuliMall_high/1661960337842.jpg)
+
+
+
+
+
+
+
+
 # 谷粒商城-集群篇(cluster)
 包括k8s集群，CI/CD(持续集成)，DevOps等
