@@ -36,6 +36,13 @@
             <artifactId>jedis</artifactId>
         </dependency>
 
+        <!--以后使用redisson作为所有分布式锁，分布式对象等功能框架-->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.17.6</version>
+        </dependency>
+
         <!--阿里云 OSS-->
         <!--<dependency>
             <groupId>com.aliyun.oss</groupId>

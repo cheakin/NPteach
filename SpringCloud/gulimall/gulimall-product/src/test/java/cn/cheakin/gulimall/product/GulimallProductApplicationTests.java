@@ -7,6 +7,7 @@ import cn.cheakin.gulimall.product.vo.Catelog2Vo;
 import cn.hutool.json.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -29,6 +30,15 @@ class GulimallProductApplicationTests {
 
     @Autowired
     StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    RedissonClient redissonClient;
+
+    @Test
+    public void redission() {
+        System.out.println(redissonClient);
+    }
+
     @Test
     public void teststringRedisTemplate() {
         // hello world

@@ -6564,6 +6564,183 @@ public Map<String, List<Catelog2Vo>> getCatalogJsonFromDB() {
 给实例加锁的方式在单体应用中可以, 但在分布式中就无法有效的锁住了
 ![](./assets/GuliMall.md/GuliMall_high/1661960337842.jpg)
 
+### 分布式锁
+#### 分布式锁原理与原理
+redis 中有一个 SETNX 命令，该命令会向 redis 中保存一条数据，如果不存在则保存成功，存在则返回失败。
+我们约定保存成功即为加锁成功，之后加锁成功的线程才能执行真正的业务操作。
+![](./assets/GuliMall.md/GuliMall_high/1662036584048.jpg)
+
+`CategoryServiceImpl`
+``` java
+public Map<String, List<Catelog2Vo>> getCatalogJsonFromDbWithRedisLock() {
+
+    //1、占分布式锁。去redis占坑      设置过期时间必须和加锁是同步的，保证原子性（避免死锁）
+    String uuid = UUID.randomUUID().toString();
+    Boolean lock = redisTemplate.opsForValue().setIfAbsent("lock", uuid, 300, TimeUnit.SECONDS);
+    if (lock) {
+        System.out.println("获取分布式锁成功...");
+        Map<String, List<Catelog2Vo>> dataFromDb = null;
+        try {
+            //加锁成功...执行业务
+            //2、设置过期时间，必须和加锁是同步的，是原子的
+            //redisTemplate.expire("lock", 30, TimeUnit.SECONDS);
+            dataFromDb = getDataFromDb();
+        } finally {
+            // lua 脚本解锁
+            String script = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            // 删除锁
+            redisTemplate.execute(new DefaultRedisScript<>(script, Long.class), Arrays.asList("lock"), uuid);
+        }
+        //先去redis查询下保证当前的锁是自己的
+        //获取值对比，对比成功删除=原子性  lua脚本解锁
+          /*String lockValue = redisTemplate.opsForValue().get("lock");
+          if (uuid.equals(lockValue)) {
+              //删除我自己的锁
+              redisTemplate.delete("lock");
+          }*/
+        return dataFromDb;
+    } else {
+        System.out.println("获取分布式锁失败...等待重试...");
+        //加锁失败...重试机制
+        //休眠一百毫秒
+        try {
+            TimeUnit.MILLISECONDS.sleep(100);
+        } catch (Exception e) {
+
+        }
+        return getCatalogJsonFromDbWithRedisLock();     //自旋的方式
+    }
+}
+
+private Map<String, List<Catelog2Vo>> getDataFromDb() {
+    String catalogJson = redisTemplate.opsForValue().get("catalogJson");
+    if (!StringUtils.isEmpty(catalogJson)) {
+        Map<String, List<Catelog2Vo>> result = JSONUtil.toBean(catalogJson, new TypeReference<Map<String, List<Catelog2Vo>>>() {
+        }, true);
+        return result;
+    }
+    System.out.println("查询了数据库......");
+
+    List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+
+    List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+    //封装数据
+    Map<String, List<Catelog2Vo>> parentCid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+        //1、每一个的一级分类,查到这个一级分类的二级分类
+        List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+        //2、封装上面的结果
+        List<Catelog2Vo> catalogs2Vos = null;
+        if (categoryEntities != null) {
+            catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+
+                //1、找当前二级分类的三级分类封装成vo
+                List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+
+                if (level3Catelog != null) {
+                    List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                        //2、封装成指定格式
+                        Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+
+                        return category3Vo;
+                    }).collect(Collectors.toList());
+                    catalogs2Vo.setCatalog3List(category3Vos);
+                }
+
+                return catalogs2Vo;
+            }).collect(Collectors.toList());
+        }
+
+        return catalogs2Vos;
+    }));
+
+    String s = JSONUtil.toJsonStr(parentCid);
+    redisTemplate.opsForValue().set("catalogJSON", JSONUtil.toJsonStr(parentCid), 1, TimeUnit.DAYS);
+
+    return parentCid;
+}
+```
+压测, 访问`localhost:10000/index/catalog.json`, 发现四个服务仅查询了一次数据库
+
+#### Redisson简介&整合 & lock锁测试 & lock看门狗原理-redisson如何解决死锁
+Redisson官方文档: https://github.com/redisson/redisson/wiki
+1. 引入依赖
+    `pom.yml`中引入redisson
+    ``` yml
+    <dependency>
+      <groupId>org.redisson</groupId>
+      <artifactId>redisson</artifactId>
+      <version>3.17.6</version>
+    </dependency>
+    ```
+2. 配置 redisson
+    创建`MyRedissonConfig`类
+    ``` java
+    @Configuration
+    public class MyRedissonConfig {
+
+        /**
+        * 所有对 Redisson 的使用都是通过 RedissonClient
+        *
+        * @return
+        * @throws IOException
+        */
+        @Bean(destroyMethod = "shutdown")
+        public RedissonClient redisson() throws IOException {
+            // 1、创建配置
+            Config config = new Config();
+            // Redis url should start with redis:// or rediss://
+            config.useSingleServer().setAddress("redis://192.168.56.10:6379");
+
+            // 2、根据 Config 创建出 RedissonClient 实例
+            return Redisson.create(config);
+        }
+
+    }
+    ```
+3. 使用
+    基于Redis的Redisson分布式可重入锁RLock Java对象实现了java.util.concurrent.locks.Lock接口。同时还提供了异步（Async）、反射式（Reactive）和RxJava2标准的接口。
+    
+    在`/hello`接口中测试
+    `IndexController`
+    ``` java
+    @ResponseBody
+    @GetMapping(value = "/hello")
+    public String hello() {
+        //1、获取一把锁，只要锁的名字一样，就是同一把锁
+        RLock myLock = redisson.getLock("my-lock");
+        //2、加锁
+        myLock.lock();      //阻塞式等待。默认加的锁都是30s
+        //1）、锁的自动续期，如果业务超长，运行期间自动锁上新的30s。不用担心业务时间长，锁自动过期被删掉
+        //2）、加锁的业务只要运行完成，就不会给当前锁续期，即使不手动解锁，锁默认会在30s内自动过期，不会产生死锁问题
+        
+        // myLock.lock(10,TimeUnit.SECONDS);   //10秒钟自动解锁,自动解锁时间一定要大于业务执行时间
+        //问题：在锁时间到了以后，不会自动续期
+        //1、如果我们传递了锁的超时时间，就发送给redis执行脚本，进行占锁，默认超时就是 我们制定的时间
+        //2、如果我们指定锁的超时时间，就使用 lockWatchdogTimeout = 30 * 1000 【看门狗默认时间】
+        //只要占锁成功，就会启动一个定时任务【重新给锁设置过期时间，新的过期时间就是看门狗的默认时间】,每隔10秒都会自动的再次续期，续成30秒
+        // internalLockLeaseTime 【看门狗时间】 / 3， 10s
+        try {
+            System.out.println("加锁成功，执行业务..." + Thread.currentThread().getId());
+            try { TimeUnit.SECONDS.sleep(20); } catch (InterruptedException e) { e.printStackTrace(); }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        } finally {
+            //3、解锁  假设解锁代码没有运行，Redisson会不会出现死锁
+            System.out.println("释放锁..." + Thread.currentThread().getId());
+            myLock.unlock();
+        }
+        return "hello";
+    }
+    ```
+
+4. 
+
+
+
+
 
 
 
