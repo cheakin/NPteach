@@ -4,17 +4,20 @@ import cn.cheakin.gulimall.product.entity.CategoryEntity;
 import cn.cheakin.gulimall.product.service.CategoryService;
 import cn.cheakin.gulimall.product.vo.Catelog2Vo;
 import org.checkerframework.checker.units.qual.A;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
+import org.redisson.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -26,6 +29,8 @@ public class IndexController {
     CategoryService categoryService;
     @Autowired
     RedissonClient redisson;
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
 
     @GetMapping({"/", "/index.html"})   // thymeleaf中自动自动配置前缀`classpath:/templates/`
     public String indexPage(Model model) {
@@ -75,6 +80,106 @@ public class IndexController {
             myLock.unlock();
         }
         return "hello";
+    }
+
+
+
+    /**
+     * 保证一定能读到最新数据，修改期间，写锁是一个排它锁（互斥锁、独享锁），读锁是一个共享锁
+     * 写锁没释放读锁必须等待
+     * 读 + 读 ：相当于无锁，并发读，只会在Redis中记录好，所有当前的读锁。他们都会同时加锁成功
+     * 写 + 读 ：必须等待写锁释放
+     * 写 + 写 ：阻塞方式
+     * 读 + 写 ：有读锁。写也需要等待
+     * 只要有读或者写的存都必须等待
+     * @return
+     */
+    @GetMapping(value = "/write")
+    @ResponseBody
+    public String writeValue() {
+        String s = "";
+        RReadWriteLock readWriteLock = redisson.getReadWriteLock("rw-lock");
+        RLock rLock = readWriteLock.writeLock();
+        rLock.lock();
+        try {
+            //1、改数据加写锁，读数据加读锁
+            s = UUID.randomUUID().toString();
+            TimeUnit.SECONDS.sleep(3000);
+            stringRedisTemplate.opsForValue().set("writeValue",s);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            rLock.unlock();
+        }
+        return s;
+    }
+    @GetMapping(value = "/read")
+    @ResponseBody
+    public String readValue() {
+        String s = "";
+        RReadWriteLock readWriteLock = redisson.getReadWriteLock("rw-lock");
+        //加读锁
+        RLock rLock = readWriteLock.readLock();
+        rLock.lock();
+        try {
+            //TimeUnit.SECONDS.sleep(3000);
+            s = stringRedisTemplate.opsForValue().get("writeValue");
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            rLock.unlock();
+        }
+        return s;
+    }
+
+
+    /**
+     * 车库停车
+     * 3车位
+     * 信号量也可以做分布式限流
+     */
+    @GetMapping(value = "/park")
+    @ResponseBody
+    public String park() throws InterruptedException {
+        RSemaphore park = redisson.getSemaphore("park");
+        park.acquire();     //获取一个信号、获取一个值,占一个车位
+        boolean flag = park.tryAcquire();
+        if (flag) {
+            //执行业务
+        } else {
+            return "error";
+        }
+        return "ok=>" + flag;
+    }
+    @GetMapping(value = "/go")
+    @ResponseBody
+    public String go() {
+        RSemaphore park = redisson.getSemaphore("park");
+        park.release();     //释放一个车位
+        return "ok";
+    }
+
+
+    /**
+     * 放假、锁门
+     * 1班没人了
+     * 5个班，全部走完，我们才可以锁大门
+     * 分布式闭锁
+     */
+    @GetMapping(value = "/lockDoor")
+    @ResponseBody
+    public String lockDoor() throws InterruptedException {
+        RCountDownLatch door = redisson.getCountDownLatch("door");
+        door.trySetCount(5);
+        door.await();       //等待闭锁完成
+        return "放假了...";
+    }
+    @GetMapping(value = "/gogogo/{id}")
+    @ResponseBody
+    public String gogogo(@PathVariable("id") Long id) {
+        RCountDownLatch door = redisson.getCountDownLatch("door");
+        door.countDown();       //计数-1
+        return id + "班的人都走了...";
     }
 
 
