@@ -6855,16 +6855,62 @@ public String go() {
 ```
 
 #### 缓存一致性
+**双写模式**
+![](./assets/GuliMall.md/GuliMall_high/1662216036683.jpg)
 
+**失效模式**
+![](./assets/GuliMall.md/GuliMall_high/1662216345680.jpg)
 
+* 无论是双写模式还是失效模式，都会导致缓存的不一致问题。即多个实例同时更新会出事。怎么办？
+  1. 如果是用户维度数据（订单数据、用户数据），这种并发几率非常小，不用考虑这个问题，缓存数据加 上过期时间，每隔一段时间触发读的主动更新即可
+  2. 如果是菜单，商品介绍等基础数据，也可以去使用canal订阅binlog的方式。
+  3. 缓存数据+过期时间也足够解决大部分业务对于缓存的要求。
+  4. 通过加锁保证并发读写，写写的时候按顺序排好队。读读无所谓。所以适合使用读写锁。（业务不关心 脏数据，允许临时脏数据可忽略）；
 
+* 总结：
+  * 我们能放入缓存的数据本就不应该是实时性、一致性要求超高的。所以缓存数据的时候加上过期时间，保 证每天拿到当前最新数据即可。
+  * 我们不应该过度设计，增加系统的复杂性
+  * 遇到实时性、一致性要求高的数据，就应该查数据库，即使慢点。
 
+**Cannal**
+![](./assets/GuliMall.md/GuliMall_high/1662217400314.jpg)
 
+`CategoryServiceImpl`
+``` java
+@Autowired
+RedissonClient redisson;
 
+/**
+  * 缓存里的数据如何和数据库的数据保持一致？？
+  * 缓存数据一致性
+  * 1)、双写模式
+  * 2)、失效模式
+  * @return
+  */
+public Map<String, List<Catelog2Vo>> getCatalogJsonFromDbWithRedissonLock() {
 
+    //1、占分布式锁。去redis占坑
+    //（锁的粒度，越细越快:具体缓存的是某个数据，11号商品） product-11-lock
+    RLock lock = redisson.getLock("catalogJson-lock");
+    lock.lock();
 
+    Map<String, List<Catelog2Vo>> dataFromDb = null;
+    try {
+        dataFromDb = getDataFromDb();
+    } finally {
+        lock.unlock();
+    }
 
+    return dataFromDb;
+}
+```
 
+### SpringCache
+#### 简介
+官方文档: https://docs.spring.io/spring-framework/docs/5.2.22.RELEASE/spring-framework-reference/integration.html#cache
+
+**基础概念**
+![](./assets/GuliMall.md/GuliMall_high/1662219184233.jpg)
 
 # 谷粒商城-集群篇(cluster)
 包括k8s集群，CI/CD(持续集成)，DevOps等

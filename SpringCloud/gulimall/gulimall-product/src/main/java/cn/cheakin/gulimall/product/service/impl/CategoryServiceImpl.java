@@ -6,6 +6,8 @@ import cn.hutool.core.lang.TypeReference;
 import cn.hutool.json.JSON;
 import cn.hutool.json.JSONUtil;
 import org.apache.commons.lang.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -33,6 +35,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
     CategoryBrandRelationService categoryBrandRelationService;
     @Autowired
     StringRedisTemplate redisTemplate;
+    @Autowired
+    RedissonClient redisson;
 
     private Map<String, Object> cache = new HashMap<>();
 
@@ -107,6 +111,9 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
     public void updateCascade(CategoryEntity category) {
         this.updateById(category);
         categoryBrandRelationService.updateCategory(category.getCatId(), category.getName());
+
+        // 同修改缓存中的数据
+        //redis.del('catelogJson'); 等待下次主动查询时更新
     }
 
     @Override
@@ -249,6 +256,30 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
             return catelog2Vos;
         }));
         return parent_cid;*/
+    }
+
+    /**
+     * 缓存里的数据如何和数据库的数据保持一致？？
+     * 缓存数据一致性
+     * 1)、双写模式
+     * 2)、失效模式
+     * @return
+     */
+    public Map<String, List<Catelog2Vo>> getCatalogJsonFromDbWithRedissonLock() {
+
+        //1、占分布式锁。去redis占坑
+        //（锁的粒度，越细越快:具体缓存的是某个数据，11号商品） product-11-lock
+        RLock lock = redisson.getLock("catalogJson-lock");
+        lock.lock();
+
+        Map<String, List<Catelog2Vo>> dataFromDb = null;
+        try {
+            dataFromDb = getDataFromDb();
+        } finally {
+            lock.unlock();
+        }
+
+        return dataFromDb;
     }
 
     public Map<String, List<Catelog2Vo>> getCatalogJsonFromDbWithRedisLock() {
