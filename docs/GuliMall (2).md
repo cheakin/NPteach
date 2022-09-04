@@ -6912,5 +6912,51 @@ public Map<String, List<Catelog2Vo>> getCatalogJsonFromDbWithRedissonLock() {
 **基础概念**
 ![](./assets/GuliMall.md/GuliMall_high/1662219184233.jpg)
 
+#### 整合&体验@Cache
+**引入依赖**
+redis(已引入), cache, 在`gulimall-product`的`pom.xml`中引入
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-cache</artifactId>
+</dependency>
+```
+
+**写配置**
+* 自动配置了：
+  - CacheAutoConfiguration 会导入 RedisCacheConfiguration;
+  - 会自动装配缓存管理器 RedisCacheManager;
+* 手动配置：
+  新建`application.properties`
+  ``` yml
+  spring.cache.type=redis
+
+  #spring.cache.cache-names=qq
+  ```
+**测试使用缓存**
+1. 常用注解:  
+  `@Cacheable` ：触发将数据保存到缓存的操作
+  `@CacheEvict`: 触发将数据从缓存删除的操作；
+  `@CachePut`：不影响方法执行更新缓存；
+  `@Cacheing`：组合以上多个操作；
+  `@CacheConfig`：在类级别共享缓存的相同配置；
+2. 开启缓存功能
+   在启动类上使用`@@EnableCaching`注解
+3. 只需要注解就能完成缓存操作
+   `CategoryServiceImpl`
+   ``` java
+   //每一个需要缓存的数据我们都来指定要放到那个名字的缓存。【缓存的分区(按照业务类型分)】
+   @Cacheable(value = {"category"}, key = "#root.method.name", sync = true)  //代表当前方法的结果需要缓存，如果缓存中有，方法都不用调用，如果缓存中没有，会调用方法。最后将方法的结果放入缓存
+   @Override
+   public List<CategoryEntity> getLevel1Categorys() {
+       List<CategoryEntity> categoryEntities = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", 0));
+       return categoryEntities;
+   }
+   ```
+   测试, 访问`localhost:10000`, 首页出现后, 查看redis就会出现响应的缓存数据了
+  
+
+
+
 # 谷粒商城-集群篇(cluster)
 包括k8s集群，CI/CD(持续集成)，DevOps等
