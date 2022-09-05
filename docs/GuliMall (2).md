@@ -6946,7 +6946,7 @@ redis(已引入), cache, 在`gulimall-product`的`pom.xml`中引入
    `CategoryServiceImpl`
    ``` java
    //每一个需要缓存的数据我们都来指定要放到那个名字的缓存。【缓存的分区(按照业务类型分)】
-   @Cacheable(value = {"category"}, key = "#root.method.name", sync = true)  //代表当前方法的结果需要缓存，如果缓存中有，方法都不用调用，如果缓存中没有，会调用方法。最后将方法的结果放入缓存
+   @Cacheable(value = {"category"})  //代表当前方法的结果需要缓存，如果缓存中有，方法都不用调用，如果缓存中没有，会调用方法。最后将方法的结果放入缓存
    @Override
    public List<CategoryEntity> getLevel1Categorys() {
        List<CategoryEntity> categoryEntities = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", 0));
@@ -6955,6 +6955,251 @@ redis(已引入), cache, 在`gulimall-product`的`pom.xml`中引入
    ```
    测试, 访问`localhost:10000`, 首页出现后, 查看redis就会出现响应的缓存数据了
   
+#### @Cacheeable细节设置
+`pom.xml`中设置过期时间
+``` xml
+spring.cache.redis.time-to-live=3600000
+```
+``
+``` java
+/**
+  * 1、每一个需要缓存的数据我们都来指定要放到那个名字的缓存。【缓存的分区(按照业务类型分)】
+  * 2、@Cacheable(value = {"category"})
+  *      代表当前方法的结果需要缓存，
+  *      如果缓存中有，方法都不用调用，如果缓存中没有，会调用方法。最后将方法的结果放入缓存
+  * 3、默认行为
+  *   3.1 如果缓存中有，方法不再调用
+  *   3.2 key是默认生成的:缓存的名字::SimpleKey::[](自动生成key值)
+  *   3.3 缓存的value值，默认使用jdk序列化机制，将序列化的数据存到redis中
+  *   3.4 默认ttl时间是 -1：
+  *
+  *   自定义操作：key的生成
+  *    1. 指定生成缓存的key：        key属性指定，接收一个 SpEl
+  *    2. 指定缓存的数据的存活时间:  配置文档中修改存活时间 ttl
+  *    3. 将数据保存为json格式:     自定义配置类 MyCacheManager
+  */
+@Cacheable(value = {"category"}, key = "#root.method.name")
+@Override
+public List<CategoryEntity> getLevel1Categorys() {
+    List<CategoryEntity> categoryEntities = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", 0));
+    return categoryEntities;
+}
+```
+
+#### 自定义缓存配置
+新建`MyCacheConfig`配置类
+``
+``` java
+@EnableConfigurationProperties(CacheProperties.class)
+@Configuration
+@EnableCaching
+public class MyCacheConfig {
+
+//    @Autowired
+//    CacheProperties cacheProperties;
+
+    /**
+     * 配置文件的配置没有用上
+     * 1. 原来和配置文件绑定的配置类为：@ConfigurationProperties(prefix = "spring.cache")
+     *                                public class CacheProperties
+     * 2. 要让他生效，要加上 @EnableConfigurationProperties(CacheProperties.class)
+     */
+    @Bean
+    public RedisCacheConfiguration redisCacheConfiguration(CacheProperties cacheProperties) {
+
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig();
+        // config = config.entryTtl();
+        config = config.serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()));
+        config = config.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+
+        CacheProperties.Redis redisProperties = cacheProperties.getRedis();
+        //将配置文件中所有的配置都生效
+        if (redisProperties.getTimeToLive() != null) {
+            config = config.entryTtl(redisProperties.getTimeToLive());
+        }
+        if (redisProperties.getKeyPrefix() != null) {
+            config = config.prefixKeysWith(redisProperties.getKeyPrefix());
+        }
+        if (!redisProperties.isCacheNullValues()) {
+            config = config.disableCachingNullValues();
+        }
+        if (!redisProperties.isUseKeyPrefix()) {
+            config = config.disableKeyPrefix();
+        }
+        return config;
+    }
+
+}
+```
+`application.yml`新增配置
+``` yml
+#如果指定了前缀就用我们指定的前缀，如果没有就默认使用缓存的名字作为前缀
+spring.cache.redis.key-prefix=CACHE_
+spring.cache.redis.use-key-prefix=false
+
+#是否缓存空值，防止缓存穿透
+spring.cache.redis.cache-null-values=true
+```
+
+#### @CacheEvict
+`CategoryServiceImpl`
+``` java
+/**
+  * 级联更新所有关联的数据
+  * @CacheEvict: 失效模式
+  * @param category
+  */
+@CacheEvict(value = "category", key = "getLevel1Categorys")
+@Transactional
+@Override
+public void updateCascade(CategoryEntity category) {
+    this.updateById(category);
+    categoryBrandRelationService.updateCategory(category.getCatId(), category.getName());
+
+    // 同修改缓存中的数据
+    //redis.del('catelogJson'); 等待下次主动查询时更新
+}
+
+@Cacheable(value = "category", key = "#root.methodName")
+@Override
+public Map<String, List<Catelog2Vo>> getCatalogJson() {
+    System.out.println("查询了数据库");
+    List<CategoryEntity> selectList = this.baseMapper.selectList(null);
+    List<CategoryEntity> level1Categories = getParentCid(selectList, 0L);
+
+    //封装数据
+    Map<String, List<Catelog2Vo>> parent_cid = level1Categories.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+        //1、每一个的一级分类,查到这个一级分类的二级分类
+        List<CategoryEntity> categoryEntities = getParentCid(selectList, v.getCatId());
+
+        //2、封装上面的结果
+        List<Catelog2Vo> catalogs2Vos = null;
+        if (categoryEntities != null) {
+            catalogs2Vos = categoryEntities.stream().map(l2 -> {
+                Catelog2Vo catalogs2Vo = new Catelog2Vo(v.getCatId().toString(), null, l2.getCatId().toString(), l2.getName().toString());
+                //1、找当前二级分类的三级分类封装成vo
+                List<CategoryEntity> level3Catelog = getParentCid(selectList, l2.getCatId());
+                if (level3Catelog != null) {
+                    List<Catelog2Vo.Category3Vo> category3Vos = level3Catelog.stream().map(l3 -> {
+                        //2、封装成指定格式
+                        Catelog2Vo.Category3Vo category3Vo = new Catelog2Vo.Category3Vo(l2.getCatId().toString(), l3.getCatId().toString(), l3.getName());
+                        return category3Vo;
+                    }).collect(Collectors.toList());
+                    catalogs2Vo.setCatalog3List(category3Vos);
+                }
+
+                return catalogs2Vo;
+            }).collect(Collectors.toList());
+        }
+
+        return catalogs2Vos;
+    }));
+
+    return parent_cid;
+}
+
+//    @Override
+public Map<String, List<Catelog2Vo>> getCatalogJson2() {
+    //1、加入缓存逻辑
+    String catalogJson = redisTemplate.opsForValue().get("catalogJson");
+    if (StringUtils.isEmpty(catalogJson)) {
+        System.out.println("缓存未命中,即将查数据库");
+        //2、缓存中没有
+        Map<String, List<Catelog2Vo>> catalogJsonFromDB = getCatalogJsonFromDbWithRedisLock();
+        return catalogJsonFromDB;
+    }
+    TypeReference<Map<String, List<Catelog2Vo>>> typeReference = new TypeReference<Map<String, List<Catelog2Vo>>>() {
+    };
+    Map<String, List<Catelog2Vo>> result = JSONUtil.toBean(catalogJson, typeReference, true);
+    return result;
+}
+```
+测试, 访问`gulimall.com`, 可以看到redis中缓存了两个对应的数据, 且刷新页面时不会再次查询数据库
+
+**一次操作多个缓存**
+`CategoryServiceImpl`
+``` java
+/**
+  * 级联更新所有关联的数据
+  * @CacheEvict: 失效模式
+  * 1. 同时进行多个缓存操作： @Caching
+  * 2. 指定删除某个分区下的所有数据    @CacheEvict(value = {"category"}, allEntries = true)
+  * 3. 存储统一类型的数据, 都可以指定成统一分区. 分区名默认就是缓存的前缀
+  * @param category
+  */
+//    @CacheEvict(value = "category", key = "'getLevel1Categorys'")
+/*@Caching(evict = {
+        @CacheEvict(value = "category", key = "'getLevel1Categorys'"),
+        @CacheEvict(value = "category", key = "'getCatalogJson'")
+})*/
+@CacheEvict(value = {"category"}, allEntries = true)    //清除模式
+//    @CachePut   //双写模式
+@Transactional
+@Override
+public void updateCascade(CategoryEntity category) {
+    this.updateById(category);
+    categoryBrandRelationService.updateCategory(category.getCatId(), category.getName());
+
+    // 同修改缓存中的数据
+    //redis.del('catelogJson'); 等待下次主动查询时更新
+}
+```
+`application.yml`
+``` yml
+#如果指定了前缀就用我们指定的前缀，如果没有就默认使用缓存的名字作为前缀
+#spring.cache.redis.key-prefix=CACHE_
+spring.cache.redis.use-key-prefix=true
+
+#是否缓存空值，防止缓存穿透
+spring.cache.redis.cache-null-values=true
+```
+
+#### 原理与不足
+``
+``` java
+/**
+  * 1、每一个需要缓存的数据我们都来指定要放到那个名字的缓存。【缓存的分区(按照业务类型分)】
+  * 2、@Cacheable(value = {"category"})
+  *      代表当前方法的结果需要缓存，
+  *      如果缓存中有，方法都不用调用，如果缓存中没有，会调用方法。最后将方法的结果放入缓存
+  * 3、默认行为
+  *   3.1 如果缓存中有，方法不再调用
+  *   3.2 key是默认生成的:缓存的名字::SimpleKey::[](自动生成key值)
+  *   3.3 缓存的value值，默认使用jdk序列化机制，将序列化的数据存到redis中
+  *   3.4 默认ttl时间是 -1：
+  *
+  *   自定义操作：key的生成
+  *    1. 指定生成缓存的key：        key属性指定，接收一个 SpEl
+  *    2. 指定缓存的数据的存活时间:  配置文档中修改存活时间 ttl
+  *    3. 将数据保存为json格式:     自定义配置类 MyCacheManager
+  * <p>
+  * 4、Spring-Cache的不足之处：
+  *  1）、读模式
+  *      缓存穿透：查询一个null数据。解决方案：缓存空数据
+  *      缓存击穿：大量并发进来同时查询一个正好过期的数据。解决方案：加锁 ? 默认是无加锁的;使用sync = true来解决击穿问题
+  *      缓存雪崩：大量的key同时过期。解决：加随机时间。加上过期时间
+  *  2)、写模式：（缓存与数据库一致）
+  *      1）、读写加锁。
+  *      2）、引入Canal,感知到MySQL的更新去更新Redis
+  *      3）、读多写多，直接去数据库查询就行
+  * <p>
+  * 总结：
+  * 常规数据（读多写少，即时性，一致性要求不高的数据，完全可以使用Spring-Cache）：写模式(只要缓存的数据有过期时间就足够了)
+  * 特殊数据：特殊设计
+  * <p>
+  * 原理：
+  * CacheManager(RedisCacheManager)->Cache(RedisCache)->Cache负责缓存的读写
+  *
+  * @return
+  */
+@Cacheable(value = {"category"}, key = "#root.method.name", sync = true)
+@Override
+public List<CategoryEntity> getLevel1Categorys() {
+    List<CategoryEntity> categoryEntities = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", 0));
+    return categoryEntities;
+}
+```
+
 
 
 
