@@ -57,4 +57,9 @@ spring:
         - id: gulimall_host_rout  #需要放在后面, 优先匹配api/**请求
           uri: lb://gulimall-product
           predicates:
-            - Host=**.gulimall.com
+            - Host=gulimall.com
+
+        - id: gulimall_search_rout
+          uri: lb://gulimall-search
+          predicates:
+            - Host=search.gulimall.com

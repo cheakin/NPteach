@@ -7200,6 +7200,52 @@ public List<CategoryEntity> getLevel1Categorys() {
 }
 ```
 
+## 商城业务
+### 检索服务
+#### 搭建页面环境
+**添加模板页面**
+在`gulimall-search`的`pom.xml`中引入模板引擎
+``` xml
+<!-- 模板引擎 -->
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+```
+将资料中的前端页面放到`search`服务模块下的`resource/templates`下, 
+在`index.html`中加上命名空间`xmlns:th="http://www.thymeleaf.org"`, 
+把所有的资源引用修改到`/static/search/`下
+
+拷贝修改好的静态资源到虚拟机的`mydata/nginx/html/search/`目录下
+
+**配置域名转发**
+在`host`中添加`192.168.56.10 search.gulimall.com`
+修改虚拟机中`/mydata/nginx/conf/conf.d/gulimall.conf`nginx转发配置, 将所有 *.gulimall.com 的请求都经由nginx转发给网关
+``` shell
+server {
+  listen       80;
+  server_name  gulimall.com *.gulimall.com;
+  ...
+}
+```
+修改完后, 重启nginx: `docker restart nginx`
+
+**配置网关服务转发到 search 服务**
+修改`gulimall-gateway`的`application.yml`
+``` yml
+- id: gulimall_host_rout  #需要放在后面, 优先匹配api/**请求
+  uri: lb://gulimall-product
+  predicates:
+    - Host=gulimall.com
+
+- id: gulimall_search_rout
+  uri: lb://gulimall-search
+  predicates:
+    - Host=search.gulimall.com
+```
+![](./assets/GuliMall.md/GuliMall_high/1662477474041.jpg)
+
+测试, 访问`search.gulimall.com`, 能正常访问返回页面表示正常
 
 
 
