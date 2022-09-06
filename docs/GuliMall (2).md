@@ -7216,7 +7216,7 @@ public List<CategoryEntity> getLevel1Categorys() {
 在`index.html`中加上命名空间`xmlns:th="http://www.thymeleaf.org"`, 
 把所有的资源引用修改到`/static/search/`下
 
-拷贝修改好的静态资源到虚拟机的`mydata/nginx/html/search/`目录下
+利用nginx的动静分离, 移动静态资源到虚拟机的`mydata/nginx/html/search/`目录下
 
 **配置域名转发**
 在`host`中添加`192.168.56.10 search.gulimall.com`
@@ -7247,7 +7247,75 @@ server {
 
 测试, 访问`search.gulimall.com`, 能正常访问返回页面表示正常
 
+#### 调整页面跳转
+`gulimall-search`的`pom.xml`中加上热启动依赖
+``` xml
+<!--使用热加载-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <optional>true</optional>
+</dependency>
+```
+`application.yml`中将页面缓存关闭`spring.thymeleaf.cache=false`
+修改静态文件`index.html`首页的跳转路径为:`http://gulimall.com`(标题图片)
 
+点击首页仍然跳转不了, 需要看一下nginx中`gulimall.conf`的配置(上面给你修改过正确就不需要改了),
+*也有可能是没有启动product服务*
+``` shell
+server {
+  listen       80;
+  server_name  gulimall.com *.gulimall.com;
+  ...
+}
+```
+
+在首页使用搜索功能, 发现跳转到`list.html`页面, 将`search`服务中的`index.html`文件名修改问`list.html`
+`search`服务中新建`SearchController`
+``` java
+@Controller
+public class SearchController {
+    
+    @GetMapping("/list.html")
+    public String listPage() {
+        return "list";
+    }
+    
+}
+```
+
+发现在首页点击搜索后无法正常跳转, 修改`product`服务的`index.html`中的搜索事件
+``` html
+...
+<a href="javascript:search();"><img src="/static/index/img/img_09.png" /></a>
+...
+function search() {
+      var keyword=$("#searchText").val()
+      window.location.href="/static/http://search.gulimall.com/list.html?keyword="+keyword;
+  }
+```
+为了方便热加载, 需要再把`product`服务中`application.yml`的缓存关了
+``` yml
+spring:
+  thymeleaf:
+    cache: false
+```
+
+
+
+
+
+### 异步
+### 商品详情
+### 认证服务
+### 购物车
+### 消息队列
+### 订单服务
+### 分布式事务
+### 订单服务
+### 支付
+### 订单服务
+### 秒杀服务
 
 # 谷粒商城-集群篇(cluster)
 包括k8s集群，CI/CD(持续集成)，DevOps等
