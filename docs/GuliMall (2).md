@@ -7301,6 +7301,198 @@ spring:
     cache: false
 ```
 
+#### 检索查询参数模型分析 & 检索返回结果模型分析抽取
+`SearchParam`
+``` java
+/**
+ * 封装页面所有可能传递过来的查询条件
+ **/
+@Data
+public class SearchParam {
+
+    /**
+     * 页面传递过来的全文匹配关键字
+     */
+    private String keyword;
+
+    /**
+     * 三级分类id
+     */
+    private Long catalog3Id;
+
+    /**
+     * 排序条件：sort=[price/salecount/hotscore]_[desc/asc]
+     */
+    private String sort;
+
+    /**
+     * 过滤条件：是否显示有货, 0/1
+     */
+    private Integer hasStock;
+
+    /**
+     * 过滤条件：价格区间查询, 1_500/_500/500_
+     */
+    private String skuPrice;
+
+    /**
+     * 品牌id,可以多选
+     */
+    private List<Long> brandId;
+
+    /**
+     * 按照属性进行筛选
+     */
+    private List<String> attrs;
+
+    /**
+     * 页码
+     */
+    private Integer pageNum = 1;
+
+    /**
+     * 原生的所有查询条件
+     */
+    private String _queryString;
+    
+}
+```
+`SearchResponse`
+``` java
+@Data
+public class SearchResponse {
+
+    /**
+     * 查询到的所有商品信息
+     */
+    private List<SkuEsModel> product;
+
+    /**
+     * 当前页码
+     */
+    private Integer pageNum;
+
+    /**
+     * 总记录数
+     */
+    private Long total;
+
+    /**
+     * 总页码
+     */
+    private Integer totalPages;
+
+    private List<Integer> pageNavs;
+
+    /**
+     * 当前查询到的结果，所有涉及到的品牌
+     */
+    private List<BrandVo> brands;
+
+    /**
+     * 当前查询到的结果，所有涉及到的所有分类
+     */
+    private List<CatalogVo> catalogs;
+
+    /**
+     * 当前查询到的结果，所有涉及到的所有属性
+     */
+    private List<AttrVo> attrs;
+
+
+    //===========================以上是返回给页面的所有信息============================//
+
+
+    /* 面包屑导航数据 */
+    private List<NavVo> navs;
+
+    @Data
+    public static class NavVo {
+        private String navName;
+        private String navValue;
+        private String link;
+    }
+
+    @Data
+    public static class BrandVo {
+        private Long brandId;
+        private String brandName;
+        private String brandImg;
+    }
+
+    @Data
+    public static class CatalogVo {
+        private Long catalogId;
+        private String catalogName;
+    }
+
+    @Data
+    public static class AttrVo {
+        private Long attrId;
+        private String attrName;
+        private List<String> attrValue;
+    }
+
+}
+```
+`SearchController`
+``` java
+@Autowired
+private MallSearchService mallSearchService;
+
+/**
+  * 自动将页面提交过来的所有请求参数封装成我们指定的对象
+  */
+@GetMapping(value = "/list.html")
+public String listPage(SearchParam param, Model model, HttpServletRequest request) {
+
+    param.set_queryString(request.getQueryString());
+
+    //1、根据传递来的页面的查询参数，去es中检索商品
+    SearchResult result = mallSearchService.search(param);
+
+    model.addAttribute("result", result);
+
+    return "list";
+}
+```
+`MallSearchService`
+``` java
+public interface MallSearchService {
+
+    /**
+     * 搜索
+     *
+     * @param param 检索的所有参数
+     * @return 返回检索的结果，里面包含页面需要的所有信息
+     */
+    SearchResult search(SearchParam param);
+
+}
+```
+`MallSearchServiceImpl`
+``` java
+@Service
+public class MallSearchServiceImpl implements MallSearchService {
+
+    @Override
+    public SearchResult search(SearchParam param) {
+        return null;
+    }
+
+}
+```
+![](./assets/GuliMall.md/GuliMall_high/1662570156688.jpg)
+
+
+
+
+
+
+
+
+
+
 
 
 
