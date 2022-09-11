@@ -7353,7 +7353,7 @@ public class SearchParam {
     /**
      * 原生的所有查询条件
      */
-    private String _queryString;
+    private String queryString;
     
 }
 ```
@@ -7436,7 +7436,7 @@ private MallSearchService mallSearchService;
 @GetMapping(value = "/list.html")
 public String listPage(SearchParam param, Model model, HttpServletRequest request) {
 
-    param.set_queryString(request.getQueryString());
+    param.setqueryString(request.getQueryString());
 
     //1、根据传递来的页面的查询参数，去es中检索商品
     SearchResult result = mallSearchService.search(param);
@@ -7945,6 +7945,18 @@ GET gulimall_product/_search
 }
 ```
 
+#### SearchRequset构建-检索 & 排序、分页、高亮&测试 & 聚合 & 分析&封装
+**SearchRequset构建-检索**
+`search`服务的`SearchParam`中；默认显示有货状态，分页默认第一页
+``` java
+private Integer hasStock = 1;
+
+private Integer pageNum = 1;
+```
+将分页的页大小设置在常量中定义，在`EsConstant`中
+``` java
+public static final Integer PRODUCT_PAGE_SIZE = 2;
+```
 
 
 
