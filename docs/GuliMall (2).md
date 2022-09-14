@@ -5514,7 +5514,7 @@ public class EsConstant {
     /**
      * 在es中的索引, 已经修改完映射并数据迁移
      */
-    public static final String PRODUCT_INDEX = "mall_product";
+    public static final String PRODUCT_INDEX = "gulimall_product";
 
     public static final Integer PRODUCT_PAGE_SIZE = 2;
 }
@@ -7365,7 +7365,7 @@ public class SearchResponse {
     /**
      * 查询到的所有商品信息
      */
-    private List<SkuEsModel> product;
+    private List<SkuEsModel> products;
 
     /**
      * 当前页码
@@ -7717,7 +7717,7 @@ POST _reindex
 ```
 修改`search`服务的`EsConstant`配置中的索引名·
 ``` java
-public static final String PRODUCT_INDEX = "mall_product";
+public static final String PRODUCT_INDEX = "gulimall_product";
 ```
 
 **测试聚合**
@@ -8122,8 +8122,8 @@ private SearchRequest buildSearchRequest(SearchParam param) {
 ```
 测试：通过`http://localhost:12000/list.html`接口，将生成的查询json拷贝出来，再使用`kibana`测试
 
-#### SearchResponse分析&封装
-``
+#### SearchResponse分析&封装 & 验证封装正确性
+`MallSearchServiceImpl`
 ``` java
 /**
   * 构建结果数据
@@ -8146,9 +8146,9 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
             //判断是否按关键字检索，若是就显示高亮，否则不显示
             if (!StringUtils.isEmpty(param.getKeyword())) {
                 //拿到高亮信息显示标题
-                /*HighlightFie ld skuTitle = hit.getHighlightFields().get("skuTitle");
+                HighlightFie ld skuTitle = hit.getHighlightFields().get("skuTitle");
                 String skuTitleValue = skuTitle.getFragments()[0].string();
-                esModel.setSkuTitle(skuTitleValue);*/
+                esModel.setSkuTitle(skuTitleValue);
             }
             esModels.add(esModel);
         }
@@ -8234,6 +8234,8 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
     return result;
 }
 ```
+
+#### 页面基本数据选软
 
 
 

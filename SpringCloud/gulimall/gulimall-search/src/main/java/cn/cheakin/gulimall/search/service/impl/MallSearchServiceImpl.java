@@ -226,14 +226,14 @@ public class MallSearchServiceImpl implements MallSearchService {
                 //判断是否按关键字检索，若是就显示高亮，否则不显示
                 if (!StringUtils.isEmpty(param.getKeyword())) {
                     //拿到高亮信息显示标题
-                    /*HighlightFie ld skuTitle = hit.getHighlightFields().get("skuTitle");
+                    HighlightField skuTitle = hit.getHighlightFields().get("skuTitle");
                     String skuTitleValue = skuTitle.getFragments()[0].string();
-                    esModel.setSkuTitle(skuTitleValue);*/
+                    esModel.setSkuTitle(skuTitleValue);
                 }
                 esModels.add(esModel);
             }
         }
-        result.setProduct(esModels);
+        result.setProducts(esModels);
 
         //2、当前商品涉及到的所有属性信息
         List<SearchResult.AttrVo> attrVos = new ArrayList<>();

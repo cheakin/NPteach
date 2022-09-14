@@ -27,9 +27,9 @@ public class SearchParam {
     private String sort;
 
     /**
-     * 过滤条件：是否显示有货, 0/1
+     * 过滤条件：是否显示有货, 0/1；为方便测试，就不默认1了
      */
-    private Integer hasStock = 1;
+    private Integer hasStock;
 
     /**
      * 过滤条件：价格区间查询, 1_500/_500/500_
