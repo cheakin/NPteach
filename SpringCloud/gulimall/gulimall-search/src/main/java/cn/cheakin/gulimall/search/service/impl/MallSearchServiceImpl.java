@@ -311,13 +311,13 @@ public class MallSearchServiceImpl implements MallSearchService {
                 (int) total / EsConstant.PRODUCT_PAGE_SIZE : ((int) total / EsConstant.PRODUCT_PAGE_SIZE + 1);
         result.setTotalPages(totalPages);
 
-        /*List<Integer> pageNavs = new ArrayList<>();
+        List<Integer> pageNavs = new ArrayList<>();
         for (int i = 1; i <= totalPages; i++) {
             pageNavs.add(i);
         }
         result.setPageNavs(pageNavs);
 
-        //6、构建面包屑导航
+        /*//6、构建面包屑导航
         if (param.getAttrs() != null && param.getAttrs().size() > 0) {
             List<SearchResult.NavVo> collect = param.getAttrs().stream().map(attr -> {
                 //1、分析每一个attrs传过来的参数值
