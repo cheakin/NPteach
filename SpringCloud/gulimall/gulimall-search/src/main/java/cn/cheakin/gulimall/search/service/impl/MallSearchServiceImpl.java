@@ -1,11 +1,15 @@
 package cn.cheakin.gulimall.search.service.impl;
 
 import cn.cheakin.common.to.es.SkuEsModel;
+import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.search.config.GulimallElasticSearchConfig;
 import cn.cheakin.gulimall.search.constant.EsConstant;
+import cn.cheakin.gulimall.search.fiegh.ProductFeignService;
 import cn.cheakin.gulimall.search.service.MallSearchService;
+import cn.cheakin.gulimall.search.vo.AttrResponseVo;
 import cn.cheakin.gulimall.search.vo.SearchParam;
 import cn.cheakin.gulimall.search.vo.SearchResult;
+import cn.hutool.core.lang.TypeReference;
 import cn.hutool.json.JSONUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.lucene.search.join.ScoreMode;
@@ -34,6 +38,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -45,6 +51,8 @@ import java.util.stream.Collectors;
 public class MallSearchServiceImpl implements MallSearchService {
     @Autowired
     private RestHighLevelClient client;
+    @Autowired
+    ProductFeignService productFeignService;
 
 
     @Override
@@ -317,11 +325,12 @@ public class MallSearchServiceImpl implements MallSearchService {
         }
         result.setPageNavs(pageNavs);
 
-        /*//6、构建面包屑导航
+        //6、构建面包屑导航
         if (param.getAttrs() != null && param.getAttrs().size() > 0) {
             List<SearchResult.NavVo> collect = param.getAttrs().stream().map(attr -> {
                 //1、分析每一个attrs传过来的参数值
                 SearchResult.NavVo navVo = new SearchResult.NavVo();
+                // attrd=2.5寸:6寸
                 String[] s = attr.split("_");
                 navVo.setNavValue(s[1]);
                 R r = productFeignService.attrInfo(Long.parseLong(s[0]));
@@ -342,14 +351,14 @@ public class MallSearchServiceImpl implements MallSearchService {
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
-                String replace = param.get_queryString().replace("&attrs=" + attr, "");
+                String replace = param.get_queryString().replace("&attrs=" + encode, "");
                 navVo.setLink("http://search.gulimall.com/list.html?" + replace);
 
                 return navVo;
             }).collect(Collectors.toList());
 
             result.setNavs(collect);
-        }*/
+        }
 
         return result;
     }

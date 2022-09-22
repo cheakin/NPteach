@@ -24,6 +24,13 @@ import java.util.Map;
 public class R extends HashMap<String, Object> {
 	private static final long serialVersionUID = 1L;
 
+	public <T> T getData(String name , TypeReference<T> typeReference) {
+		Object data = this.get(name);	// 默认返回是map类型的
+		String s = JSONUtil.toJsonStr(data);
+		T t = JSONUtil.toBean(s, typeReference, false);
+		return t;
+	}
+
 	public <T> T getData(TypeReference<T> typeReference) {
 		Object data = this.get("data");	// 默认返回是map类型的
 		String s = JSONUtil.toJsonStr(data);
