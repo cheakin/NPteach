@@ -9023,9 +9023,9 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
                 <h3><b>手机</b><em>商品筛选</em></h3>
                 <div class="st-ext">共&nbsp;<span>10135</span>个商品</div>
             </div>
-            <div class="JD_nav_logo">
+            <div class="JD_nav_logo" th:with="brandid = ${param.getBrandId}">
                 <!--品牌-->
-                <div class="JD_nav_wrap">
+                <div class="JD_nav_wrap" th:if="${#strings.isEmpty(brandid)}">
                     <div class="sl_key">
                         <span><b>品牌：</b></span>
                     </div>
@@ -9087,7 +9087,7 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
                 </div>
 
                 <!--其他的所有需要展示的属性-->
-                <div class="JD_pre" th:each="attr : ${result.attrs}">
+                <div class="JD_pre" th:each="attr : ${result.attrs}" th:if="${!#lists.contains(result.attrIds, attr.attrId)}">
                     <div class="sl_key">
                         <span th:text="${attr.attrName}">屏幕尺寸：</span>
                     </div>
@@ -10298,7 +10298,7 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
             location.href = location.href + "?" + name + "=" + value;
         }*/
 
-        location.href = replaceAndAddParamVal(location.href, name, value, true);
+        location.href = replaceAndAddParamVal(location.href, name, value, false);
     }
 
     function searchByKeyword() {
@@ -10311,7 +10311,7 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
         var href = location.href;
         if (href.indexOf("pageNum") != -1) {
             //替换pageNum
-            location.href = replaceAndAddParamVal(href, "pageNum", pn);
+            location.href = replaceAndAddParamVal(href, "pageNum", pn, false);
         } else {
             location.href = location.href + "&pageNum=" + pn;
         }
@@ -10328,8 +10328,8 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
     function replaceAndAddParamVal(url, paramName, replaceVal, forceAdd) {
         var oUrl = url.toString();
         // 如果欸有就添加, 有就替换
+        var nUrl = "";
         if (oUrl.indexOf(paramName) != -1) {
-            var nUrl = "";
             if (forceAdd) {
                 if (oUrl.indexOf("?") != -1) {
                     nUrl = oUrl + "&" + paramName + "=" + replaceVal;
@@ -10340,7 +10340,6 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
                 var re = eval('/(' + paramName + '=)([^&]*)/gi');
                 nUrl = oUrl.replace(re, paramName + '=' + replaceVal);
             }
-            return nUrl;
         } else {
             var nUrl = "";
             if (oUrl.indexOf("?") != -1) {
@@ -10348,8 +10347,8 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
             } else {
                 nUrl = oUrl + "?" + paramName + "=" + replaceVal;
             }
-            return nUrl;
         }
+        return nUrl;
     };
 
     $(".sort_a").click(function () {
@@ -10361,7 +10360,7 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
         // 2.跳转到指定位置
         var sort = $(this).attr("sort");
         sort = $(this).hasClass("desc") ? sort + "_desc" : sort + "_asc";
-        location.href = replaceAndAddParamVal(location.href, "sort", sort);
+        location.href = replaceAndAddParamVal(location.href, "sort", sort, false);
 
         // 禁用默认行为
         return false;
@@ -10401,13 +10400,13 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
         let to = $(`#skuPriceTo`).val();
 
         let query = from + "_" + to;
-        location.href = replaceAndAddParamVal(location.href, "skuPrice", query);
+        location.href = replaceAndAddParamVal(location.href, "skuPrice", query, false);
     });
 
     $("#showHasStock").change(function () {
         alert($(this).prop("checked"));
         if ($(this).prop("checked")) {
-            location.href = replaceAndAddParamVal(location.href, "hasStock", 1);
+            location.href = replaceAndAddParamVal(location.href, "hasStock", 1, false);
         } else {
             let re = eval('/(hasStock=)([^&]*)/gi');
             location.href = (location.href + "").replace(re, "");
@@ -10425,7 +10424,8 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
 `SearchResult`
 ``` java
  /* 面包屑导航数据 */
-private List<NavVo> navs;
+private List<NavVo> navs = new ArrayList<>();
+private List<Long> attrIds = new ArrayList<>();
 
 @Data
 public static class NavVo {
@@ -10442,7 +10442,59 @@ public interface ProductFeignService {
     @GetMapping("/product/attr/info/{attrId}")
     R attrInfo(@PathVariable("attrId") Long attrId);
 
+    @GetMapping("/product/brand/infos")
+    public R brandsInfo(@RequestParam("brandIds") List<Long> brandIds);
 }
+```
+新建`BrandVo`
+``` java
+@Data
+public class BrandVo {
+
+    private Long brandId;
+    private String  name;
+
+}
+```
+`product`服务的`BrandController`中新增对应接口
+``` java
+/**
+  * 信息
+  */
+@GetMapping("/infos")
+public R infos(@RequestParam("brandIds") List<Long> brandIds) {
+    List<BrandEntity> brand = brandService.getBrandsByIds(brandIds);
+
+    return R.ok().put("brand", brand);
+}
+```
+`product`服务的`BrandServiceImpl`中对应查询  
+``` java
+@Override
+public List<BrandEntity> getBrandsByIds(List<Long> brandIds) {
+    return baseMapper.selectList(new QueryWrapper<BrandEntity>().in("brand_id", brandIds));
+}
+```
+并且在`product`服务中为`AttrServiceImpl`的`getAttrInfo()`加入缓存
+``` java
+@Cacheable(value = "attr", key = "'attrinfo:'+ #root.args[0]")
+@Override
+public AttrRespVo getAttrInfo(Long attrId) {
+    AttrRespVo respVo = new AttrRespVo();
+    AttrEntity attrEntity = this.getById(attrId);
+    BeanUtils.copyProperties(attrEntity, respVo);
+
+    if (attrEntity.getAttrType() == ProductConstant.AttrEnum.ATTR_TYPE_BASE.getCode()) {
+        //1、设置分组信息
+        AttrAttrgroupRelationEntity attrgroupRelation = relationDao.selectOne(new QueryWrapper<AttrAttrgroupRelationEntity>().eq("attr_id", attrId));
+        if (attrgroupRelation != null) {
+            respVo.setAttrGroupId(attrgroupRelation.getAttrGroupId());
+            AttrGroupEntity attrGroupEntity = attrGroupDao.selectById(attrgroupRelation.getAttrGroupId());
+            if (attrGroupEntity != null) {
+                respVo.setGroupName(attrGroupEntity.getAttrGroupName());
+            }
+        }
+    }
 ```
 `common`服务中重载`R`的`getData()`方法
 ``` java
@@ -10653,6 +10705,7 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
             String[] s = attr.split("_");
             navVo.setNavValue(s[1]);
             R r = productFeignService.attrInfo(Long.parseLong(s[0]));
+            result.getAttrIds().add(Long.parseLong(s[0]));
             if (r.getCode() == 0) {
                 AttrResponseVo data = r.getData("attr", new TypeReference<AttrResponseVo>() {
                 });
@@ -10663,14 +10716,7 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
 
             //2、取消了这个面包屑以后，我们要跳转到哪个地方，将请求的地址url里面的当前置空
             //拿到所有的查询条件，去掉当前
-            String encode = null;
-            try {
-                encode = URLEncoder.encode(attr, "UTF-8");
-                encode.replace("+", "%20");  //浏览器对空格的编码和Java不一样，差异化处理
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-            String replace = param.get_queryString().replace("&attrs=" + encode, "");
+            String replace = replaceQueryString(param, attr, "attrs");
             navVo.setLink("http://search.gulimall.com/list.html?" + replace);
 
             return navVo;
@@ -10679,7 +10725,44 @@ private SearchResult buildSearchResult(SearchResponse response, SearchParam para
         result.setNavs(collect);
     }
 
+    //品牌，分类
+    if (param.getBrandId() != null && param.getBrandId().size() > 0) {
+        List<SearchResult.NavVo> navs = result.getNavs();
+        SearchResult.NavVo navVo = new SearchResult.NavVo();
+
+        navVo.setNavName("品牌");
+        //TODO 远程查询所有品牌
+        R r = productFeignService.brandsInfo(param.getBrandId());
+        if (r.getCode() == 0) {
+            List<BrandVo> brand = r.getData("brand", new TypeReference<List<BrandVo>>() {
+            });
+            StringBuffer buffer = new StringBuffer();
+            String replace = "";
+            for (BrandVo brandVo : brand) {
+                buffer.append(brandVo.getName() + ";");
+                replace = replaceQueryString(param, brandVo.getName() + "", "brandId");
+            }
+            navVo.setNavValue(buffer.toString());
+            navVo.setLink("http://search.gulimall.com/list.html?" + replace);
+        }
+        navs.add(navVo);
+    }
+
+    //TODO 分类：不需要导航取消
+
     return result;
+}
+
+private static String replaceQueryString(SearchParam param, String value, String key) {
+    String encode = null;
+    try {
+        encode = URLEncoder.encode(value, "UTF-8");
+        encode.replace("+", "%20");  //浏览器对空格的编码和Java不一样，差异化处理
+    } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
+    }
+    String replace = param.get_queryString().replace("&" + key + "=" + encode, "");
+    return replace;
 }
 ```
 

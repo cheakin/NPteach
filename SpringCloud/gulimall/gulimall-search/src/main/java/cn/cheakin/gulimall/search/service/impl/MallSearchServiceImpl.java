@@ -7,6 +7,7 @@ import cn.cheakin.gulimall.search.constant.EsConstant;
 import cn.cheakin.gulimall.search.fiegh.ProductFeignService;
 import cn.cheakin.gulimall.search.service.MallSearchService;
 import cn.cheakin.gulimall.search.vo.AttrResponseVo;
+import cn.cheakin.gulimall.search.vo.BrandVo;
 import cn.cheakin.gulimall.search.vo.SearchParam;
 import cn.cheakin.gulimall.search.vo.SearchResult;
 import cn.hutool.core.lang.TypeReference;
@@ -334,6 +335,7 @@ public class MallSearchServiceImpl implements MallSearchService {
                 String[] s = attr.split("_");
                 navVo.setNavValue(s[1]);
                 R r = productFeignService.attrInfo(Long.parseLong(s[0]));
+                result.getAttrIds().add(Long.parseLong(s[0]));
                 if (r.getCode() == 0) {
                     AttrResponseVo data = r.getData("attr", new TypeReference<AttrResponseVo>() {
                     });
@@ -344,14 +346,7 @@ public class MallSearchServiceImpl implements MallSearchService {
 
                 //2、取消了这个面包屑以后，我们要跳转到哪个地方，将请求的地址url里面的当前置空
                 //拿到所有的查询条件，去掉当前
-                String encode = null;
-                try {
-                    encode = URLEncoder.encode(attr, "UTF-8");
-                    encode.replace("+", "%20");  //浏览器对空格的编码和Java不一样，差异化处理
-                } catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
-                String replace = param.get_queryString().replace("&attrs=" + encode, "");
+                String replace = replaceQueryString(param, attr, "attrs");
                 navVo.setLink("http://search.gulimall.com/list.html?" + replace);
 
                 return navVo;
@@ -360,7 +355,44 @@ public class MallSearchServiceImpl implements MallSearchService {
             result.setNavs(collect);
         }
 
+        //品牌，分类
+        if (param.getBrandId() != null && param.getBrandId().size() > 0) {
+            List<SearchResult.NavVo> navs = result.getNavs();
+            SearchResult.NavVo navVo = new SearchResult.NavVo();
+
+            navVo.setNavName("品牌");
+            //TODO 远程查询所有品牌
+            R r = productFeignService.brandsInfo(param.getBrandId());
+            if (r.getCode() == 0) {
+                List<BrandVo> brand = r.getData("brand", new TypeReference<List<BrandVo>>() {
+                });
+                StringBuffer buffer = new StringBuffer();
+                String replace = "";
+                for (BrandVo brandVo : brand) {
+                    buffer.append(brandVo.getName() + ";");
+                    replace = replaceQueryString(param, brandVo.getName() + "", "brandId");
+                }
+                navVo.setNavValue(buffer.toString());
+                navVo.setLink("http://search.gulimall.com/list.html?" + replace);
+            }
+            navs.add(navVo);
+        }
+
+        //TODO 分类：不需要导航取消
+
         return result;
+    }
+
+    private static String replaceQueryString(SearchParam param, String value, String key) {
+        String encode = null;
+        try {
+            encode = URLEncoder.encode(value, "UTF-8");
+            encode.replace("+", "%20");  //浏览器对空格的编码和Java不一样，差异化处理
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        String replace = param.get_queryString().replace("&" + key + "=" + encode, "");
+        return replace;
     }
 
 }
