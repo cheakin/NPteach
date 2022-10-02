@@ -11087,23 +11087,4 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 }
 ```
 
-### 商品详情
-#### 环境搭建
-
-#### 模型抽取
-
-#### 规格参数
-
-
-### 认证服务
-### 购物车
-### 消息队列
-### 订单服务
-### 分布式事务
-### 订单服务
-### 支付
-### 订单服务
-### 秒杀服务
-
-# 谷粒商城-集群篇(cluster)
 包括k8s集群，CI/CD(持续集成)，DevOps等
