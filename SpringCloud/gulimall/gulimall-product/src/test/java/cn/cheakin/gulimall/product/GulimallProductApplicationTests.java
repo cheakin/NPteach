@@ -2,8 +2,11 @@ package cn.cheakin.gulimall.product;
 
 import cn.cheakin.gulimall.product.entity.BrandEntity;
 import cn.cheakin.gulimall.product.entity.CategoryEntity;
+import cn.cheakin.gulimall.product.service.AttrGroupService;
 import cn.cheakin.gulimall.product.service.BrandService;
+import cn.cheakin.gulimall.product.service.SkuSaleAttrValueService;
 import cn.cheakin.gulimall.product.vo.Catelog2Vo;
+import cn.cheakin.gulimall.product.vo.SkuItemVo;
 import cn.hutool.json.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.junit.jupiter.api.Test;
@@ -23,14 +26,26 @@ import java.util.stream.Collectors;
 class GulimallProductApplicationTests {
 
     @Autowired
-    BrandService brandService;
+    SkuSaleAttrValueService skuSaleAttrValueService;
+    @Test
+    public void testSkuSaleAttrValueService() {
+        List<SkuItemVo.SkuItemSaleAttrVo> saleAttrBySpuId = skuSaleAttrValueService.getSaleAttrBySpuId(13L);
+        System.out.println("saleAttrBySpuId = " + saleAttrBySpuId);
+    }
 
-    /*@Autowired
-    OSSClient ossClient;*/
+
+    @Autowired
+    AttrGroupService attrGroupService;
+    @Test
+    public void testAttrGroupService() {
+        List<SkuItemVo.SpuItemAttrGroupVo> attrGroupWithAttrsBySpuId = attrGroupService.getAttrGroupWithAttrsBySpuId(13L, 225L);
+        System.out.println("attrGroupWithAttrsBySpuId = " + attrGroupWithAttrsBySpuId);
+    }
+
+
 
     @Autowired
     StringRedisTemplate stringRedisTemplate;
-
     @Autowired
     RedissonClient redissonClient;
 
@@ -50,6 +65,10 @@ class GulimallProductApplicationTests {
         // 查询
         ops.get("hello");
     }
+
+
+    @Autowired
+    BrandService brandService;
 
     @Test
     void add() {
@@ -77,6 +96,10 @@ class GulimallProductApplicationTests {
             System.out.println("item = " + item);
         });
     }
+
+
+    /*@Autowired
+    OSSClient ossClient;*/
 
     /*@Test
     void testUpload() {

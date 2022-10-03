@@ -1835,7 +1835,7 @@ public class ItemController {
 </p>
 ```
 
-#### 模型抽取 & 规格参数
+#### 模型抽取 & 规格参数 & 销售属性组合
 `ItemController`
 ``` java
 @Controller
@@ -1858,11 +1858,192 @@ public class ItemController {
 
 }
 ```
-``
+`SkuItemVo`
 ``` java
+@ToString
+@Data
+public class SkuItemVo {
 
+    //1、sku基本信息的获取  pms_sku_info
+    private SkuInfoEntity info;
+
+    private boolean hasStock = true;
+
+    //2、sku的图片信息    pms_sku_images
+    private List<SkuImagesEntity> images;
+
+    //3、获取spu的销售属性组合
+    private List<SkuItemSaleAttrVo> saleAttr;
+
+    //4、获取spu的介绍
+    private SpuInfoDescEntity desc;
+
+    //5、获取spu的规格参数信息
+    private List<SpuItemAttrGroupVo> groupAttrs;
+
+    @Data
+    public static class SkuItemSaleAttrVo {
+        private Long attrId;
+        private String attrName;
+        private List<String> attrValues;
+    }
+
+    @ToString
+    @Data
+    public static class SpuItemAttrGroupVo {
+        private String groupName;
+        //private List<SpuBaseAttrVo> attrs;
+        private List<Attr> attrs;
+    }
+
+    /*@ToString
+    @Data
+    public static class SpuBaseAttrVo {
+        private String attrName;
+        private String attrValue;
+    }*/
+
+}
+```
+`SkuInfoServiceImpl`
+``` java
+@Autowired
+SkuImagesService skuImagesService;
+@Autowired
+SpuInfoDescService spuInfoDescService;
+@Autowired
+AttrGroupService attrGroupService;
+@Autowired
+SkuSaleAttrValueService skuSaleAttrValueService;
+
+@Override
+public SkuItemVo item(Long skuId) {
+    SkuItemVo skuItemVo = new SkuItemVo();
+
+    //1、sku基本信息的获取  pms_sku_info
+    SkuInfoEntity info = this.getById(skuId);
+    skuItemVo.setInfo(info);
+    Long spuId = info.getSpuId();
+    Long catalogId = info.getCatalogId();
+
+    //2、sku的图片信息    pms_sku_images
+    List<SkuImagesEntity> imagesEntities = skuImagesService.getImagesBySkuId(skuId);
+    skuItemVo.setImages(imagesEntities);
+
+    //3、获取spu的销售属性组合
+    List<SkuItemVo.SkuItemSaleAttrVo> saleAttrVos = skuSaleAttrValueService.getSaleAttrBySpuId(spuId);
+    skuItemVo.setSaleAttr(saleAttrVos);
+
+    //4、获取spu的介绍    pms_spu_info_desc
+    SpuInfoDescEntity spuInfoDescEntity = spuInfoDescService.getById(spuId);
+    skuItemVo.setDesc(spuInfoDescEntity);
+
+    //5、获取spu的规格参数信息
+    List<SkuItemVo.SpuItemAttrGroupVo> attrGroupVos = attrGroupService.getAttrGroupWithAttrsBySpuId(spuId, catalogId);
+    skuItemVo.setGroupAttrs(attrGroupVos);
+
+    return skuItemVo;
+}
 ```
 
+`SkuImagesServiceImpl`
+``` java
+@Override
+public List<SkuImagesEntity> getImagesBySkuId(Long skuId) {
+    return this.baseMapper.selectList(new QueryWrapper<SkuImagesEntity>().eq("sku_id", skuId));
+}
+```
+
+`AttrGroupServiceImpl`
+``` java
+@Override
+public List<SkuItemVo.SpuItemAttrGroupVo> getAttrGroupWithAttrsBySpuId(Long spuId, Long catalogId) {
+    //1、查出当前spu对应的所有属性的分组信息以及当前分组下的所有属性对应的值
+    AttrGroupDao baseMapper = this.getBaseMapper();
+    return baseMapper.getAttrGroupWithAttrsBySpuId(spuId, catalogId);
+}
+```
+`AttrGroupDao`
+``` java
+List<SkuItemVo.SpuItemAttrGroupVo> getAttrGroupWithAttrsBySpuId(@Param("spuId") Long spuId, @Param("catalogId") Long catalogId);
+```
+`AttrGroupDao.xml`
+``` xml
+<!--返回集合里面元素的类型， 只要有嵌套属性就要封装自定义结果-->
+<resultMap id="spuItemAttrGroupVo" type="cn.cheakin.gulimall.product.vo.SkuItemVo$SpuItemAttrGroupVo">
+    <result property="groupName" column="attr_group_name"/>
+    <collection property="attrs" ofType="cn.cheakin.gulimall.product.vo.Attr">
+        <result property="attrId" column="attr_id"/>
+        <result property="attrName" column="attr_name"/>
+        <result property="attrValue" column="attr_value"/>
+    </collection>
+</resultMap>
+<select id="getAttrGroupWithAttrsBySpuId" resultMap="spuItemAttrGroupVo">
+    SELECT product.spu_id,
+            pag.attr_group_id,
+            pag.attr_group_name,
+            product.attr_id,
+            product.attr_name,
+            product.attr_value
+    FROM pms_product_attr_value product
+              LEFT JOIN pms_attr_attrgroup_relation paar ON product.attr_id = paar.attr_id
+              LEFT JOIN pms_attr_group pag ON paar.attr_group_id = pag.attr_group_id
+    WHERE product.spu_id = #{spuId}
+      AND pag.catelog_id = #{catalogId}
+</select>
+```
+`GulimallProductApplicationTests`(单元测试), 获取spu的规格参数信息 
+``` java
+@Autowired
+AttrGroupService attrGroupService;
+@Test
+public void testAttrGroupService() {
+    List<SkuItemVo.SpuItemAttrGroupVo> attrGroupWithAttrsBySpuId = attrGroupService.getAttrGroupWithAttrsBySpuId(13L, 225L);
+    System.out.println("attrGroupWithAttrsBySpuId = " + attrGroupWithAttrsBySpuId);
+}
+```
+
+`SkuSaleAttrValueServiceImpl`
+``` java
+@Override
+public List<SkuItemVo.SkuItemSaleAttrVo> getSaleAttrBySpuId(Long spuId) {
+    SkuSaleAttrValueDao baseMapper = this.getBaseMapper();
+    return baseMapper.getSaleAttrBySpuId(spuId);
+}
+```
+`SkuSaleAttrValueDao`
+``` java
+List<SkuItemVo.SkuItemSaleAttrVo> getSaleAttrBySpuId(Long spuId);
+```
+`SkuSaleAttrValueDao.xml`
+``` xml
+<select id="getSaleAttrBySpuId" resultType="cn.cheakin.gulimall.product.vo.SkuItemVo$SkuItemSaleAttrVo">
+    SELECT
+        ssav.attr_id attr_id,
+        ssav.attr_name attr_name,
+        ssav.attr_value,
+        group_concat( DISTINCT info.sku_id ) sku_ids
+    FROM
+        pms_sku_info info
+            LEFT JOIN pms_sku_sale_attr_value ssav ON ssav.sku_id = info.sku_id
+    WHERE
+        info.spu_id = #{spuId}
+    GROUP BY
+        ssav.attr_id,
+        ssav.attr_name,
+        ssav.attr_value
+</select>
+```
+`GulimallProductApplicationTests`(单元测试), 获取spu的销售属性组合
+``` java
+@Autowired
+SkuSaleAttrValueService skuSaleAttrValueService;
+@Test
+public void testSkuSaleAttrValueService() {
+    List<SkuItemVo.SkuItemSaleAttrVo> saleAttrBySpuId = skuSaleAttrValueService.getSaleAttrBySpuId(13L);
+    System.out.println("saleAttrBySpuId = " + saleAttrBySpuId);
+}
+```
 
 ### 认证服务
 ### 购物车
