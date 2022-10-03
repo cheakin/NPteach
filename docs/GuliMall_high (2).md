@@ -1850,7 +1850,7 @@ public class ItemController {
      * @return
      */
     @GetMapping("/{skuId}.html")
-    public String skuItem(@PathVariable("skuId") Long skuId) {
+    public String skuItem(@PathVariable("skuId") Long skuId, Model model) {
         SkuItemVo vos = skuInfoService.item(skuId);
         model.addAttribute("item", vos);
         return "item";
