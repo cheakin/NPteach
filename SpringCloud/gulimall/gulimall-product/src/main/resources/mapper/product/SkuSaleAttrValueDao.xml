@@ -13,7 +13,15 @@
         <result property="attrSort" column="attr_sort"/>
     </resultMap>
 
-    <select id="getSaleAttrBySpuId" resultType="cn.cheakin.gulimall.product.vo.SkuItemVo$SkuItemSaleAttrVo">
+    <resultMap id="skuItemSaleAttrVo" type="cn.cheakin.gulimall.product.vo.SkuItemVo$SkuItemSaleAttrVo">
+        <result column="attr_id" property="attrId"></result>
+        <result column="attr_name" property="attrName"></result>
+        <collection property="attrValues" ofType="cn.cheakin.gulimall.product.vo.AttrValueWithSkuIdVO">
+            <result column="attr_value" property="attrValue"></result>
+            <result column="sku_ids" property="skuIds"></result>
+        </collection>
+    </resultMap>
+    <select id="getSaleAttrBySpuId" resultMap="skuItemSaleAttrVo">
         SELECT
             ssav.attr_id attr_id,
             ssav.attr_name attr_name,

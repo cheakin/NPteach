@@ -38,14 +38,19 @@ public class SkuItemVo {
     @Data
     public static class SkuItemSaleAttrVo {
         private Long attrId;
+
         private String attrName;
-        private List<String> attrValues;
+
+        //private List<String> attrValues;
+        //private String attrValues;
+        private List<AttrValueWithSkuIdVO> attrValues;
     }
 
     @ToString
     @Data
     public static class SpuItemAttrGroupVo {
         private String groupName;
+
         //private List<SpuBaseAttrVo> attrs;
         private List<Attr> attrs;
     }
@@ -54,6 +59,7 @@ public class SkuItemVo {
     @Data
     public static class SpuBaseAttrVo {
         private String attrName;
+
         private String attrValue;
     }*/
 
