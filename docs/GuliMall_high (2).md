@@ -1758,6 +1758,128 @@ public SkuItemVo item(Long skuId) throws ExecutionException, InterruptedExceptio
 Controller层页需要将异常抛出
 
 ### 认证服务
+#### 环境搭建
+##### 服务搭建
+新建`认证中心`服务`gulimall-auth-server`, 我和视频中有差异，此处仅供参考
+`auth-server`的`pom.xml`
+``` xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>gulimall</artifactId>
+        <groupId>cn.cheakin</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>cn.cheakin</groupId>
+    <artifactId>gulimall.auth</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>gulimall-auth-server</name>
+    <description>认证服务（社交登录、Oauth2.0、单点登录）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>cn.cheakin</groupId>
+            <artifactId>gulimall-common</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.baomidou</groupId>
+                    <artifactId>mybatis-plus-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- thymeleaf 模板引擎 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <!--使用热加载-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
+`application.yml`
+``` yml
+spring:
+  application:
+    name: mall-auth-server
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+  thymeleaf:
+    cache: false
+server:
+  port: 20000
+```
+
+启动类上使用`@EnableDiscoveryClient`和`@EnableFeignClients`
+``` java
+@EnableFeignClients
+@EnableDiscoveryClient
+@SpringBootApplication
+public class GulimallAuthServerApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(GulimallAuthServerApplication.class, args);
+    }
+
+}
+```
+
+验证：启动服务，能在 nacos 中发现`auth-server`服务
+
+##### 引入静态文件
+* 登录页面
+  将资料里的登录页中 index.html 放到 templates 目录下并重命名为`login.html`
+  + 将`src="`全部替换为`src="/static/login/`
+  + 将`href="`全部替换为`href="/static/login/`
+	资料中的其他静态文件上传到服务器（虚拟机）的`/mydata/nginx/html/static/login/`目录下
+	将
+* 注册页面
+  将资料里的注册页中 index.html 放到 templates 目录下并重命名为`reg.html`，  
+	+ 将`src="`全部替换为`src="/static/reg/`
+  + 将`href="`全部替换为`href="/static/reg/`
+  资料中的其他静态文件上传到服务器（虚拟机）的`/mydata/nginx/html/static/login/`目录下
+
+##### 修改hosts实现域名访问
+在host文件中追加
+``` json
+192.168.56.10 auth.gulimall.com
+```
+
+##### 配置网关转发
+`gateway`的`application.yml`中添加
+``` yml
+- id: gulimall_auth_route
+	uri: lb://gulimall-auth-server
+	predicates:
+		- Host=auth.gulimall.com
+```
+
+
+
 ### 购物车
 ### 消息队列
 ### 订单服务
