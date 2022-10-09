@@ -1,6 +1,6 @@
 spring:
   application:
-    name: mall-auth-server
+    name: gulimall-auth-server
   cloud:
     nacos:
       discovery:

@@ -14,4 +14,5 @@ public class GulimallAuthServerApplication {
         SpringApplication.run(GulimallAuthServerApplication.class, args);
     }
 
+
 }

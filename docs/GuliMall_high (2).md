@@ -1823,7 +1823,7 @@ Controller层页需要将异常抛出
 ``` yml
 spring:
   application:
-    name: mall-auth-server
+    name: gulimall-auth-server
   cloud:
     nacos:
       discovery:
@@ -1878,6 +1878,35 @@ public class GulimallAuthServerApplication {
 		- Host=auth.gulimall.com
 ```
 
+#### 验证码倒计时 & 整合短信验证码 &
+`product`服务的`index.html`中修改登录页和注册页的地址
+``` html
+<li>
+	<a href="http://auth.gulimall.com/login.html">你好，请登录</a>
+</li>
+<li>
+	<a href="http://auth.gulimall.com/reg.html" class="li_2">免费注册</a>
+</li>
+```
+
+**设置视图映射**
+`GulimallWebConfig`
+``` java
+@Configuration
+public class GulimallWebConfig implements WebMvcConfigurer {
+
+    /**·
+     * 视图映射:发送一个请求，直接跳转到一个页面
+     * @param registry
+     */
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+
+         registry.addViewController("/login.html").setViewName("login");
+        registry.addViewController("/reg.html").setViewName("reg");
+    }
+}
+```
 
 
 ### 购物车
@@ -1890,3 +1919,4 @@ public class GulimallAuthServerApplication {
 ### 秒杀服务
 
 # 谷粒商城-集群篇(cluster)
+
