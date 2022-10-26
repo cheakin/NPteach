@@ -403,7 +403,8 @@ esac
       echo $pid
       kill -9 $pid
       nohup java -jar -Duser.timezone=GMT+08 $PROJECT_ROOT/$JAR_NAME.jar --spring.profiles.active=$ENV > $PROJECT_ROOT/$JAR_NAME.log &
-      ```
+```
+
 
 ### 远程执行命令
 > 参考: [Linux远程执行脚本](ssh root@192.168.1.1 "cd /opt/sys; /opt/misroservice/gzcx/travel-api/docker_run.sh")
@@ -411,6 +412,37 @@ esac
 ssh root@192.168.1.1 "cd /opt/sys; /opt/misroservice/gzcx/travel-api/docker_run.sh"
 ```
 其中一定注意  引号内是两条命令, 已分号分隔
+
+### 安装V2ray
+> 网上已经有很多人写了一键安装的脚本，这里记录两个:
+> 1. [V2ray服务器搭建教程图文版 - 菠菜园 (zkii.net)](https://www.zkii.net/system/environment/4366.html)
+> 2. [233boy/v2ray: 最好用的 V2Ray 一键安装脚本 & 管理脚本 (github.com)](https://github.com/233boy/v2ray)
+
+* 方式一
+```shell
+安装命令：
+source <(curl -sL https://multi.netlify.app/v2ray.sh) --zh
+
+升级命令(保留配置文件更新)：
+source <(curl -sL https://multi.netlify.app/v2ray.sh) -k
+
+卸载命令：
+source <(curl -sL https://multi.netlify.app/v2ray.sh) --remove
+
+
+如果输入安装命令没反应，那是因为服务器系统没有自带curl命令，安装一下curl。
+CentOS系统安装curl命令: yum install -y curl 
+Debian/Ubuntu系统安装curl命令: apt-get install -y curl
+```
+* 方式二
+``` shell
+bash <(curl -s -L https://git.io/v2ray.sh)
+
+
+如果提示 curl: command not found ，那是因为你的 VPS 没装 Curl  
+ubuntu/debian 系统安装 Curl 方法: `apt-get update -y && apt-get install curl -y`  
+centos 系统安装 Curl 方法: `yum update -y && yum install curl -y`
+```
 
 
 
@@ -434,6 +466,7 @@ source /etc/profile
 这样脚本就会先去加载`/etc/profile`的内容了, 这个文件是环境变量的配置
 当然也可以用到什么环境加什么环境变量
 
+
 ### No usable temporary directory found in ['/tmp', '/var/tmp', '/usr/tmp', '/home/vagrant']
 在运行一些命令时,找不到这些文件夹, 一般是由于系统没有足够的空间了, 所以无法创建这些文件
 
@@ -448,6 +481,7 @@ du -sh *
 # 删除较大的文件
 sudo rm -rf 文件(夹)名
 ```
+
 
 ### vagrant可能会遇到磁盘爆满的情况
 > 参考: [Vagrant 磁盘爆满](https://blog.csdn.net/weixin_45518808/article/details/122429563)
