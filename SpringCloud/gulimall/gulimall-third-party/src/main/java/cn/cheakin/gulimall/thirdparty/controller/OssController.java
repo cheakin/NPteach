@@ -2,7 +2,6 @@ package cn.cheakin.gulimall.thirdparty.controller;
 
 import cn.cheakin.common.utils.R;
 import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.common.utils.BinaryUtil;
 import com.aliyun.oss.model.MatchMode;
 import com.aliyun.oss.model.PolicyConditions;
@@ -30,9 +29,9 @@ public class OssController {
     @Value("${spring.cloud.alicloud.oss.bucket}")
     String bucket ;
 
-    @Value("${spring.cloud.alicloud.access-key}")
+    @Value("${spring.cloud.alicloud.oss.access-key}")
     String accessId ;
-    @Value("${spring.cloud.alicloud.secret-key}")
+    @Value("${spring.cloud.alicloud.oss.secret-key}")
     String accessKey ;
 
     @RequestMapping("oss/policy")

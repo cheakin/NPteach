@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: oss # 暂且先从本地配置读取, 后期从nacos中获取
+    active: oss, sms # 暂且先从本地配置读取, 后期从nacos中获取
 
   cloud:
     nacos:
