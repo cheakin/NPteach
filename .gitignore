@@ -31,12 +31,12 @@ target/
 ### VS Code ###
 .vscode/
 
+### Obsidian ###
+.obsidian/
+
 ### other ###
 **/mvnw
 **/mvnw.cmd
 **/.mvn
 **/target
 **/node_modules
-
-### 脱敏 ###
-**/application-oss.yml
