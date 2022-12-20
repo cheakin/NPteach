@@ -6,8 +6,6 @@
 docker image  #查看本地镜像
 ```
 
-
-
 ```
 docker search XXX  #从远程仓库查找镜像
 ```
@@ -559,7 +557,6 @@ services:
 
 
 ## Docker Secret
-
 配置密码，创建证书
 
 略
@@ -567,21 +564,16 @@ services:
 
 
 ## Docker Config
-
 略
 
 
 
 ## 其他
-
 ### [Docker容器启用Spring Profiles](https://segmentfault.com/a/1190000011367595)
-
 https://segmentfault.com/a/1190000011367595
-
 https://www.cnblogs.com/woshimrf/p/springboot-docker.html
 
 ### Docker中的容器与宿主机共享网络的方式
-
 1. docker在创建时就会在宿主机上创建一张虚拟网卡，docker中的容器都会使用这张虚拟网考。所以，在运行容器时，配置住宿主机的ip未此即可（一般是x.x.x.1）
 2. 将容器的网络模式使用host就可以将容器和宿主机共享网络了。网络模式有host、bridge、none。
 
@@ -604,4 +596,24 @@ https://www.cnblogs.com/woshimrf/p/springboot-docker.html
 windows下开启了远程连接且已打开端口，但还是无法连接，可以尝试管理员cmd执行下面的命令（your-public-ip就是你本机的IP地址）
 
 `netsh interface portproxy add v4tov4 listenport=2375 connectaddress=127.0.0.1 connectport=2375 listenaddress=<your-public-ip> protocol=tcp`
+
+
+## 一些Docker容器的安装命令
+### 安装MinIO
+```shell
+## 下载镜像
+docker pull minio/minio
+
+## 启动容器
+docker run -d -p 9000:9000 -p 9001:9001  \
+-e "MINIO_ACCESS_KEY=admin" \
+-e "MINIO_SECRET_KEY=admin123456" \
+--restart=always \
+--name minio \
+minio/minio server /data
+```
+
+> MinIO SDK地址
+>[MinIO | Java Client API Reference(官方)](https://docs.min.io/docs/java-client-api-reference.html)
+>[Java Client API参考文档 | Minio中文文档(中文)](http://docs.minio.org.cn/docs/master/java-client-api-reference#putObject)
 

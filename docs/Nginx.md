@@ -17,14 +17,14 @@ location ~* ^(\/cache\/files.*)(\/.*) {
 
 ```shell
 location /office/{
-			add_header 'Access-Control-Allow-Origin' '*';
-            add_header 'Access-Control-Allow-Credentials' 'true';
-			proxy_pass http://10.10.10.25:8010/;
-			
-			# 解决WS跨域
-			proxy_http_version 1.1;
-			proxy_set_header Upgrade $http_upgrade;
-			proxy_set_header Connection "upgrade";
+	add_header 'Access-Control-Allow-Origin' '*';
+	add_header 'Access-Control-Allow-Credentials' 'true';
+	proxy_pass http://10.10.10.25:8010/;
+	
+	# 解决WS跨域
+	proxy_http_version 1.1;
+	proxy_set_header Upgrade $http_upgrade;
+	proxy_set_header Connection "upgrade";
 }
 ```
 

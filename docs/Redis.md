@@ -298,20 +298,14 @@ bitcount sign # 返回3
 ### 事务
 
 > 事务时一组命令的集合一个事务中的所有命令都会被序列化。在事务执行过程中，会按照顺序执行！
->
 > 一次性，顺序性，排他性；执行一系列的命令！
->
 > * Redis事务没有隔离级别的概念！
 > * Redis单条命令具有原子性，但事务不保证原子性；
 
 1. 正常执行事务；`multi`、`...`、`exec`
-
    **开启事务(multi)**：表示开启事务
-
    **命令入队(...)**：将命令入队，此时命令并没有执行
-
    **执行事务(exec)**：依次按顺序执行命令
-
    ```bash
    127.0.0.1:6379> multi
    OK
@@ -331,7 +325,6 @@ bitcount sign # 返回3
    ```
 
 2. 放弃事务；`multi`、`...`、`discard`
-
    ```ba
    127.0.0.1:6379> multi
    OK
@@ -349,7 +342,6 @@ bitcount sign # 返回3
    ```
 
 3. 编译异常；所有命令都不会执行
-
    ```ba
    127.0.0.1:6379> multi
    OK
@@ -370,7 +362,6 @@ bitcount sign # 返回3
    ```
 
 4. 运行时异常；错误命令报异常，其他命令会正常运行
-
    ```ba
    127.0.0.1:6379> multi
    OK
@@ -394,14 +385,11 @@ bitcount sign # 返回3
    ```
 
 ### 监控(锁)
-
 * 悲观锁：认为什么售后都会出问题，无论做什么都会加锁
 * 乐观锁：认为什么时候都不会出问题，所以不会上锁，更新数据的时候去判断一下，在此期间此数据是否被修改。执行前获取version，执行后比较 version
 
 **监测**
-
 1. 加锁；`watch`
-
 ```bash
 127.0.0.1:6379> set money 100
 OK
@@ -425,7 +413,6 @@ QUEUED
 ```
 
 2. 解锁；`unwatch`
-
 ```ba
 127.0.0.1:6379> unwatch		#如果发现事务执行失败，就先解锁
 OK
@@ -445,15 +432,12 @@ QUEUED
 > *`exec`和`discard`都会自动解锁*
 
 
-
 ## Redis进阶
 
 ### Jedis
-
 >Redis官方推荐的java连接工具
 
 1. 导入依赖
-
    ```xml
    <dependencies>
        <!--jedis-->
@@ -472,7 +456,6 @@ QUEUED
    ```
 
 2. 编码测试
-
    ```java
    public class TestPing {
        public static void main(String[] args) {
@@ -506,12 +489,8 @@ QUEUED
    }
    ```
 
-3. 
-
-
 
 ### SpringBoot集成Redis
-
 >说明：SpingBoot2.X之后，Jedis替换为lettuce了
 >
 >- ​	jedis采用直连方式，多线程操作不安全；要避免这个情况就需要使用jedis pool连接池
@@ -519,7 +498,6 @@ QUEUED
 >- ​	lettuce采用netty，实例可以在多个线程中共享，就不存在线程不安全的情况，可以减少线程数量
 
 源码分析`RedisAutoConfiguration`
-
 ```java
 @Bean
 @ConditionalOnMissingBean(	//当Bean不存在时，此类生效
@@ -546,7 +524,6 @@ public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConne
 ```
 
 1. 引入依赖，或在创建项目时勾选NoSQL中的Redis
-
    ```xml
    <dependency>
        <groupId>org.springframework.boot</groupId>
@@ -582,7 +559,6 @@ public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConne
    ```
 
 4. 可以编写配置类来修改template的一些配置
-
    > 首先准备一个实体类并实现序列化接口`implements Serializable`(若没有实例化，在redis时会报未序列化的错)，此处以User{name:xxx,age:xx}实体对象为例
 
    **修改redis的序列化方式**，*查看redisTemplte源码可以知道template默认以jdk的方式序列化*。
@@ -627,7 +603,6 @@ public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConne
 ### Redis配置(Redis.config)
 
 #### 1. unit对大小写不敏感
-
 ```bash
 # Note on units: when memory size is needed, it is possible to specify
 # it in the usual form of 1k 5GB 4M and so forth:
@@ -643,7 +618,6 @@ public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConne
 ```
 
 #### 2. INCLUDES，其他配置文件
-
 ```bash
 # Include one or more other config files here.  This is useful if you
 # have a standard template that goes to all Redis servers but also need
@@ -665,7 +639,6 @@ public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConne
 ```
 
 #### 3. 网络
-
 ```bash
 bind 127.0.0.1		#绑定一个或多个ip
 protected-mode yes	#保护模式
@@ -674,7 +647,6 @@ port 6379		#端口设置
 ```
 
 #### 4. GENERAL，通用配置
-
 ```bash
 daemonize yes	#以守护方式(后台)运行,默认式no
 supervised no	#开机自启动
@@ -695,8 +667,7 @@ always-show-logo yes	#运行redis时是否展示logo，默认开启
 ```
 
 #### 5. SNAPSHOTTING，快照；
-
- 在规定时间内，执行了多少次操作，则会持久化到文件中，`.rdb`和`.aof`文件
+在规定时间内，执行了多少次操作，则会持久化到文件中，`.rdb`和`.aof`文件
 
 *redis是内存数据库，没有持久化的话，断电即失*
 
@@ -720,7 +691,6 @@ dir ./					#.rdb文件保存目录，默认当前文件
 #### 7. SECURITY，安全
 
 也可以使用命令，通过`config set requirepass "123456"`给redis数据库设置密码
-
 *连接数据库时使用`auth 123456`来验证*
 
 ```bash
@@ -745,7 +715,6 @@ maxmemory-policy noeviction		#内存达到上限时的触发策略,默认报错
 #### 9. APPEND ONLY MODE，aof模式配置
 
 参见下面详解
-
 ```bash
 appendonly no	#默认不开启aof模式，默认使用rdb方式持久化
 appendfilename "appendonly.aof"	#aof持久化时文件名

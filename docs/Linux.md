@@ -48,9 +48,9 @@ cd `dirname $0`
    java -jar XXX.jar
    ```
 2. &代表在后台运行，使用ctrl+c不会中断程序的运行，但是关闭窗口会中断程序的运行。
-   ```sh
-   java -jar XXX.jar &`
-   ```
+```sh 
+java -jar XXX.jar &`
+```
 3. 使用这种方式运行的程序日志会输出到当前目录下的nohup.out文件，使用ctrl+c中断或者关闭窗口都不会中断程序的执行。
    ```sh
    nohup java -jar XXX.jar &
@@ -61,7 +61,9 @@ cd `dirname $0`
    ```
 > 参考: [linux运行jar包_Java_Mike的博客-CSDN博客_linux 启动jar](https://blog.csdn.net/Java_Mike/article/details/80383126)
 
-### 压缩文件
+
+
+### 压缩文件(linux)
 > 参考: [Linux环境下，文件的压缩/解压](https://blog.csdn.net/qq_41038824/article/details/96880371)
 
 1. zip格式
@@ -145,6 +147,119 @@ cd `dirname $0`
   tar -jxvf filename.tar.bz2 -C newdir
   ```
 
+### 压缩文件(windows)
+> 参考: [用批处理的方式压缩文件_菇毒的博客-CSDN博客_bat压缩文件](https://blog.csdn.net/weixin_43960383/article/details/124261084)
+``` bat
+winrar的路径 a 压缩后的完整路径 要压缩的文件
+
+WinRAR 的参数如下所示:
+m ：表示移动(压缩后，删除源文件)命令a表示添加压缩
+s ：表示创建自解压文件实用开关:
+-r ：含子文件夹-ai忽略文件属性
+-cl ：文件名小写
+-cu ：文件名大写
+-df ：表示压缩后删除源文件
+-dr：删除源文件到回收站
+-or：自动重命名同名文件
+-ed ：忽略空文件夹
+-ep ：忽略路径信息
+-ep1：表示忽略被压缩的根文件夹
+-ep2：包含最完整路径信息(除驱动器)
+```
+
+### 发送文件(windows)
+如果需要免密发送文件，那么需要在目标主机中添加本机的公钥, 将生成两个文件,id_dsa和id_dsa.pub
+1. 生成密钥，按照提示依次完成即可
+```sh
+ssh-keygen
+```
+2. 将id_dsa.pub拷贝到远程机器,并且将id_dsa.pub的内容添加到~/.ssh/authorized_keys中  
+```sh
+cat id_dsa.pub >>authorized_keys
+```
+
+*  单个文件上传(windows)
+``` bat
+%关闭其他所有命令回显%
+@echo off
+
+%设置本地文件路径%
+set localFile=D:\temp\demo1.txt
+​
+%设置服务器ip地址%
+set host=***.***.**.**
+%设置服务器登录用户名%
+set user=root
+%设置需要上传的位置路径%
+set remotePath=/temp/
+​%执行scp命令上传文件%
+scp %localFile% %user%@%host%:%remotePath%
+
+%pause脚本执行完成之后需要手动关闭，如需直接关闭，替换成exit即可%
+pause
+```
+* 多个文件上传
+``` bat
+@echo off
+
+set localPath=D:\temp\
+
+set host=***.***.**.**
+set user=root
+set remotePath=/temp/
+
+for /r %localPath% %%i in (*.txt) do (scp %%i %user%@%host%:%remotePath%)
+```
+/r: 递归，不指定的话默认当前路径  
+
+> 参考
+> 1. [Windows使用bat脚本向linux上传文件（使用scp输入密码）_尉某人的博客-CSDN博客_bat scp 密码](https://blog.csdn.net/ll123151190/article/details/121107953)
+> 2. [windows环境bat脚本替换指定路径下文件的内容_Fragile_liu的博客-CSDN博客_bat脚本替换文件](https://blog.csdn.net/Fragile_liu/article/details/103425593)
+
+### 字符串拼接(windows)
+> [【bat字符串拼接】_BruceZong的博客-CSDN博客_bat 字符串拼接](https://blog.csdn.net/BruceZong/article/details/91386522)
+``` bat
+@echo off
+ 
+rem 两个变量拼接，等号前后一定不要有空格
+set str1=Hello
+set str2=world
+set result=%str1%, %str2%!
+echo %result%
+ 
+rem 开启延迟变量
+@setlocal enableextensions enabledelayedexpansion
+set words=China,Hubei,Wuhan
+set result2=
+for %%i in (%words%) do (
+  set result2=!result2! %%i
+)
+ 
+rem 将字符串最前面的空格去掉  
+set "result2=%result2:~1%"
+echo %result2%
+```
+
+### 获取时间戳(windows)
+> 参考: [bat获取系统时间戳_不二土人的博客-CSDN博客_bat 时间戳](https://blog.csdn.net/Alpelious/article/details/88706663)
+* 日期: 日期截取遵从格式 %date:~x,y%，表示从第x位开始，截取y个长度(x,y的起始值为0), 年份从第0位开始截取4位，月份从第5位开始截取2位，日期从第8位开始截取2位;
+* 时间截取遵从格式 %time:~x,y%，表示从第x位开始，截取y个长度(x,y的起始值为0), 时钟从第0位开始截取2位，分钟从第3位开始截取2位，秒钟从第6位开始截取2位
+1. 中文版OS
+``` bat
+set filename=%date:~0,4%%date:~5,2%%date:~8,2%%time:~0,2%%time:~3,2%%time:~6,2%
+set "filename=%filename: =0%"
+echo %filename%
+
+20190321093029
+```
+2. 英文版OS
+``` bat 
+set filename=%date:~10,4%%date:~4,2%%date:~7,2%%time:~0,2%%time:~3,2%%time:~6,2%  
+set "filename=%filename: =0%"  
+echo %filename%
+
+20190921093232
+```
 
 
 ## 脚本
@@ -324,7 +439,7 @@ esac
 > 1. [Linux脚本启动jar包_pocher的博客-CSDN博客_linux启动jar包脚本](https://blog.csdn.net/bingxuesiyang/article/details/88531613)
 > 2. [linux脚本执行jar包运行 - 贾小仙 - 博客园 (cnblogs.com)](https://www.cnblogs.com/hackerxian/p/13722821.html)
 
-### 拷贝远程Linux文件(拷贝并允许jar包)
+### 拷贝远程Linux文件(拷贝并jar包)
 > 参考: 
 > 1. [shell中 expect 命令](https://www.cnblogs.com/itwangqiang/articles/14207133.html?ivk_sa=1024320u)
 > 2. [xsync同步脚本的使用](https://blog.csdn.net/nalw2012/article/details/98322637)
@@ -360,9 +475,9 @@ esac
 2. 使用SSH密钥
    * 生成密钥
     直接运行
-      ``` shell
-      ssh-keygen
-      ```
+  ``` shell
+  ssh-keygen
+  ```
       使用默认位置(`/用户/.ssh/`)下会生成两个文件:
       * `id_rsa`: 私钥
       * `id_rsa.pub`: 公钥
@@ -403,7 +518,8 @@ esac
       echo $pid
       kill -9 $pid
       nohup java -jar -Duser.timezone=GMT+08 $PROJECT_ROOT/$JAR_NAME.jar --spring.profiles.active=$ENV > $PROJECT_ROOT/$JAR_NAME.log &
-      ```
+```
+
 
 ### 远程执行命令
 > 参考: [Linux远程执行脚本](ssh root@192.168.1.1 "cd /opt/sys; /opt/misroservice/gzcx/travel-api/docker_run.sh")
@@ -412,7 +528,60 @@ ssh root@192.168.1.1 "cd /opt/sys; /opt/misroservice/gzcx/travel-api/docker_run.
 ```
 其中一定注意  引号内是两条命令, 已分号分隔
 
+### 安装V2ray
+> 网上已经有很多人写了一键安装的脚本，这里记录两个:
+> 1. [V2ray服务器搭建教程图文版 - 菠菜园 (zkii.net)](https://www.zkii.net/system/environment/4366.html)
+> 2. [233boy/v2ray: 最好用的 V2Ray 一键安装脚本 & 管理脚本 (github.com)](https://github.com/233boy/v2ray)
 
+* 方式一
+```shell
+安装命令：
+source <(curl -sL https://multi.netlify.app/v2ray.sh) --zh
+
+升级命令(保留配置文件更新)：
+source <(curl -sL https://multi.netlify.app/v2ray.sh) -k
+
+卸载命令：
+source <(curl -sL https://multi.netlify.app/v2ray.sh) --remove
+
+
+如果输入安装命令没反应，那是因为服务器系统没有自带curl命令，安装一下curl。
+CentOS系统安装curl命令: yum install -y curl 
+Debian/Ubuntu系统安装curl命令: apt-get install -y curl
+```
+* 方式二
+``` shell
+bash <(curl -s -L https://git.io/v2ray.sh)
+
+
+如果提示 curl: command not found ，那是因为你的 VPS 没装 Curl  
+ubuntu/debian 系统安装 Curl 方法: `apt-get update -y && apt-get install curl -y`  
+centos 系统安装 Curl 方法: `yum update -y && yum install curl -y`
+```
+
+### 替换文件中的内容(windows)
+```bat
+REM 源文件
+set filePath=%~1
+set file=!%~1\!index.html
+REM 临时文件
+set file_tmp=!%~1!\index_tmp.html
+REM 备份文件
+set file_bak=!%~1!\index_bak.html
+
+REM 替换前的字符串
+set source=%~2
+REM 替换后的字符串
+set replaced=%~3
+
+for /f "delims=" %%i in (%file%) do (
+  set str=%%i
+  set "str=!str:%source%=%replaced%!"
+  echo !str!>>%file_tmp%
+)
+copy "%file%" "%file_bak%" >nul 2>nul
+move "%file_tmp%" "%file%"
+```
 
 ## 报错
 ### $'\r':command not found
@@ -434,6 +603,7 @@ source /etc/profile
 这样脚本就会先去加载`/etc/profile`的内容了, 这个文件是环境变量的配置
 当然也可以用到什么环境加什么环境变量
 
+
 ### No usable temporary directory found in ['/tmp', '/var/tmp', '/usr/tmp', '/home/vagrant']
 在运行一些命令时,找不到这些文件夹, 一般是由于系统没有足够的空间了, 所以无法创建这些文件
 
@@ -448,6 +618,7 @@ du -sh *
 # 删除较大的文件
 sudo rm -rf 文件(夹)名
 ```
+
 
 ### vagrant可能会遇到磁盘爆满的情况
 > 参考: [Vagrant 磁盘爆满](https://blog.csdn.net/weixin_45518808/article/details/122429563)

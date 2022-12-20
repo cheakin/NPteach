@@ -1,0 +1,152 @@
+{
+  "main": {
+    "id": "ca17fbea0761aa5e",
+    "type": "split",
+    "children": [
+      {
+        "id": "0ec6fffda4ce5c39",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "68696d4437d07c71",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Linux.md",
+                "mode": "source",
+                "source": false
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "ecf53c6cee88dc9d",
+    "type": "split",
+    "children": [
+      {
+        "id": "5c806f1a148906c3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4913da189fae944f",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "4e45badb5f14ad17",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "3426d6105d7321bf",
+            "type": "leaf",
+            "state": {
+              "type": "starred",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "17ccfa2f8da27c88",
+    "type": "split",
+    "children": [
+      {
+        "id": "b505bcc6d58e5585",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7dd3dc25eb01c7c1",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Linux.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "823f4efb00ac540f",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Linux.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "7c080696ba3f940b",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "38d866578b3c05a4",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Linux.md"
+              }
+            }
+          }
+        ],
+        "currentTab": 3
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "active": "68696d4437d07c71",
+  "lastOpenFiles": [
+    "Linux.md",
+    "Nssm/README.md",
+    "Azure.md",
+    "Alibaba.md",
+    "_sidebar.md",
+    "Docker.md",
+    "Electron.md",
+    "GuliMall.md",
+    "Git.md",
+    "Nssm.md"
+  ]
+}
