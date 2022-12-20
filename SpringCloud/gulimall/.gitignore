@@ -37,3 +37,7 @@ build/
 **/mvnw.cmd
 **/.mvn
 **/target
+
+### 脱敏 ###
+**/application-oss.yml
+**/application-sms.yml
