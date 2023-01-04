@@ -763,6 +763,23 @@ public class MyMvcConfig implements WebMvcConfigurer {
 	2) filter（过滤器）：获取serlet实例对象设置参数后注入Bean中(大致同上)
 		获取`FilterRegistrationBean<Filter>`的获取到bean实例然后通过`Map.put()`设置参数以`bean.setInitParameters(xxx)`方式配置过滤路径、排除路径等
 		*别忘了方法也需要注入到`@Bean`中*
+		``` java
+		//filter
+	   @Bean
+	   public FilterRegistrationBean wevStatFilter() {
+	       FilterRegistrationBean<Filter> bean = new FilterRegistrationBean<>();
+	       bean.setFilter(new WebStatFilter());
+	   
+	       //过滤的请求
+	       Map<String, String> initParameters = new HashMap<>();
+	   
+	       //排除统计的路径
+	       initParameters.put("exclusions","*.js,*.css,/druid/*");
+	   
+	       bean.setInitParameters(initParameters);
+	       return bean;
+	   }
+		```
 
 ## 整合MyBatis
 
@@ -1161,7 +1178,7 @@ protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) 
 
 至此，用户经过过滤->登录->认证，然后可以访问授权了的页面了
 
-##### 整合MyBatis
+## 整合MyBatis
 
 1.添加依赖（jdbc、mysql、druid\log4j），并写配置（账户、密码、数据源、扫描包等），以及MVC层的代码
 
@@ -1930,11 +1947,9 @@ cron表达式
       ```
 
 
-## 其他零散知识
-### Spring中的切面
-
-#### 拦截器和过滤器执行顺序：
-
+# 其他零散知识
+## Spring中的切面
+### 拦截器和过滤器执行顺序：
  1）.Filter.init();
  2）.Filter.doFilter(); before doFilter
  3）.HandlerInterceptor.preHandle();
@@ -1945,7 +1960,7 @@ cron表达式
  8）.Filter.doFilter(); after doFilter
  9）.Filter.destroy();
 
-#### 示意图
+### 示意图
 
 ![image-20210916101902441](C:\Users\Miittech\AppData\Roaming\Typora\typora-user-images\image-20210916101902441.png)
 
