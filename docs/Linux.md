@@ -1,7 +1,6 @@
 # Linux
 
 
-
 ## 脚本命令
 ### source
 ```bash
@@ -505,21 +504,20 @@ esac
       scp root@host:$PROJECT_ROOT/$JAR_NAME.jar $PROJECT_ROOT/$JAR_NAME.jar
       ```
    * 远程获取jar包并运行
-      ``` shell
-      PROJECT_ROOT="/java_project"
-      JAR_NAME="jar-1.0.0"
-      ENV="test"
+   ``` shell
+   PROJECT_ROOT="/java_project"
+    JAR_NAME="jar-1.0.0"
+    ENV="test"
 
-      # get jar from 27
-      scp root@host:$PROJECT_ROOT/$JAR_NAME.jar $PROJECT_ROOT/$JAR_NAME.jar
+    # get jar from 27
+    scp root@host:$PROJECT_ROOT/$JAR_NAME.jar $PROJECT_ROOT/$JAR_NAME.jar
 
-      # start
-      pid=`ps aux | grep $JAR_NAME | grep -v grep | awk '{print $2}'`
-      echo $pid
-      kill -9 $pid
-      nohup java -jar -Duser.timezone=GMT+08 $PROJECT_ROOT/$JAR_NAME.jar --spring.profiles.active=$ENV > $PROJECT_ROOT/$JAR_NAME.log &
-```
-
+    # start
+    pid=`ps aux | grep $JAR_NAME | grep -v grep | awk '{print $2}'`
+    echo $pid
+    kill -9 $pid
+    nohup java -jar -Duser.timezone=GMT+08 $PROJECT_ROOT/$JAR_NAME.jar --spring.profiles.active=$ENV > $PROJECT_ROOT/$JAR_NAME.log &
+	```
 
 ### 远程执行命令
 > 参考: [Linux远程执行脚本](ssh root@192.168.1.1 "cd /opt/sys; /opt/misroservice/gzcx/travel-api/docker_run.sh")

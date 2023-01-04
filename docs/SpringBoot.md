@@ -10,7 +10,7 @@
 
 SpringBoot的启动场景
 
-* ```xml
+```xml
   <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter</artifactId>
@@ -38,8 +38,7 @@ public class HellowordApplication {
 ```
 
 * 注解
-
-  * ```java
+  ```java
     @SpringBootConfiguration	//springboot的配置
     	@Configuration			//spring配置类
     		@Component			//本质任然是spring
@@ -53,7 +52,6 @@ public class HellowordApplication {
     ```
 
     获取获选配置
-
     ```
     protected List<String> getCandidateConfigurations(AnnotationMetadata metadata, AnnotationAttributes attributes) {
         List<String> configurations = SpringFactoriesLoader.loadFactoryNames(this.getSpringFactoriesLoaderFactoryClass(), this.getBeanClassLoader());
@@ -704,9 +702,7 @@ public class MyMvcConfig implements WebMvcConfigurer {
    *增和改也可以封装成Object对数据库操作（省略实体类）*
 
 ## 整合Druid
-
 1. 引入依赖，看源码
-
    ```xml
    <dependency>
        <groupId>com.alibaba</groupId>
@@ -715,89 +711,58 @@ public class MyMvcConfig implements WebMvcConfigurer {
    ```
 
 2. 配置配置文件（datasource-username、password、url、type、其他池的配置（mysql配置修改数据源类型时druid即可）），如
+	```java
+	spring:
+	  datasource:
+	    username: root
+	    password: root
+	    url: jdbc:mysql://localhost:3306/mp?serverTimezone=GMT&useUnicode=true&characterEncoding=utf-8
+	    driver-class-name: com.mysql.cj.jdbc.Driver
+	    type: com.alibaba.druid.pool.DruidDataSource
+	```
 
-```java
-spring:
-  datasource:
-    username: root
-    password: root
-    url: jdbc:mysql://localhost:3306/mp?serverTimezone=GMT&useUnicode=true&characterEncoding=utf-8
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    type: com.alibaba.druid.pool.DruidDataSource
-```
+
 
    *druid支持监控（支持filter.start、filter.log4j、filter.wall等日志）——引入log4j*
 
 3. 写`DruidConfig.class`配置druid
-
-   0) 获取到数据源DataSource（使用`@ConfigurationProperties(prefix = "spring.datasource")`将配置文件中的配置读取进来）
-
-   ```java
-   @ConfigurationProperties(prefix = "spring.datasource")
-   @Bean
-   public DataSource druidDataSource() {
-       return new DruidDataSource();
-   }
-   ```
-
-   
-
-   1）监控：获取serlet实例对象设置参数后注入Bean中
-
-   * 使用`ServletRegistrationBean<StatViewServlet>`获取到bean实例
-   * 然后通过Map.put设置参数以`bean.setInitParameters(xxx)`方式配置地址、、权限、用户名及密码等
-   * *别忘了方法也需要注入到`@Bean`中*
-
-   ```java
-   //因为SpringBoot 内置了servlet容器，所以没有web.xml,代替方法是ServletRegistrationBean
-   @Bean
-   public ServletRegistrationBean statViewServlet() {
-       ServletRegistrationBean<StatViewServlet> bean = new ServletRegistrationBean<>(new StatViewServlet(),"/druid/*");
-   
-       //后台需要有人登录，账号密码设置
-       HashMap<String, String> initParameters = new HashMap<>();
-       
-       //添加配置
-       initParameters.put("loginUsername","admin");    //登录的key是固定的 loginUsername和loginPassword
-       initParameters.put("loginPassword","123456");
-   
-       //允许谁可以访问
-       initParameters.put("allow","");
-       //禁止谁访问
-   //        initParameters.put("xiaoming","192.168.0.1");
-   
-       bean.setInitParameters(initParameters);   //设置初始化参数
-       return bean;
-   }
-   ```
-
-   此后别可以通过访问`locahost:8080/druid`查看监控了
-
-   
-
-   2）filter（过滤器）：获取serlet实例对象设置参数后注入Bean中(大致同上)
-
-   + 获取FilterRegistrationBean<Filter>的获取到bean实例
-   + 然后通过Map.put设置参数以`bean.setInitParameters(xxx)`方式配置过滤路径、排除路径等
-   + *别忘了方法也需要注入到`@Bean`中*
-
-   ```java
-   //filter
-   @Bean
-   public FilterRegistrationBean wevStatFilter() {
-       FilterRegistrationBean<Filter> bean = new FilterRegistrationBean<>();
-       bean.setFilter(new WebStatFilter());
-   
-       //过滤的请求
-       Map<String, String> initParameters = new HashMap<>();
-   
-       //排除统计的路径
-       initParameters.put("exclusions","*.js,*.css,/druid/*");
-   
-       bean.setInitParameters(initParameters);
-       return bean;
-   }
-   ```
+	0) 获取到数据源DataSource（使用`@ConfigurationProperties(prefix = "spring.datasource")`将配置文件中的配置读取进来）
+		```java
+	   @ConfigurationProperties(prefix = "spring.datasource")
+	   @Bean
+	   public DataSource druidDataSource() {
+	       return new DruidDataSource();
+	   }
+	   ```
+	1) 监控：获取serlet实例对象设置参数后注入Bean中
+			* 使用`ServletRegistrationBean<StatViewServlet>`获取到bean实例
+			* 然后通过Map.put设置参数以`bean.setInitParameters(xxx)`方式配置地址、、权限、用户名及密码等
+			* 别忘了方法也需要注入到`@Bean`中
+		``` java
+				//因为SpringBoot 内置了servlet容器，所以没有web.xml,代替方法是ServletRegistrationBean
+		   @Bean
+		   public ServletRegistrationBean statViewServlet() {
+		       ServletRegistrationBean<StatViewServlet> bean = new ServletRegistrationBean<>(new StatViewServlet(),"/druid/*");
+		   
+		       //后台需要有人登录，账号密码设置
+		       HashMap<String, String> initParameters = new HashMap<>();
+		       
+		       //添加配置
+		       initParameters.put("loginUsername","admin");    //登录的key是固定的 loginUsername和loginPassword
+		       initParameters.put("loginPassword","123456");
+		   
+		       //允许谁可以访问
+		       initParameters.put("allow","");
+		       //initParameters.put("xiaoming","192.168.0.1"); // 禁止谁访问
+		   
+		       bean.setInitParameters(initParameters);   //设置初始化参数
+		       return bean;
+		   }
+		```
+		此后别可以通过访问`locahost:8080/druid`查看监控了
+	2) filter（过滤器）：获取serlet实例对象设置参数后注入Bean中(大致同上)
+		获取`FilterRegistrationBean<Filter>`的获取到bean实例然后通过`Map.put()`设置参数以`bean.setInitParameters(xxx)`方式配置过滤路径、排除路径等
+		*别忘了方法也需要注入到`@Bean`中*
 
 ## 整合MyBatis
 
@@ -1680,13 +1645,12 @@ cron表达式
    ```
 
 2. 编写MQ相关配置，如主机地址、用户名和密码，端口默认是5672
-
-   ```properties
-   spring.rabbitmq.host=localhost
-   spring.rabbitmq.username=guest
-   spring.rabbitmq.password=guest
-   ```
-
+	```
+	spring.rabbitmq.host=localhost
+	spring.rabbitmq.username=guest
+	spring.rabbitmq.password=guest
+	```
+   
 3. 使用自动注入一个`RabbitTemplate`实例来对MQ操作（可以类比JDBCTeamplate）
 
 4. 发送消息
@@ -1882,7 +1846,7 @@ cron表达式
 
    2. 编写配置文件，配置服务应用名、注册中心地址、dubbo要扫描等信息
 
-      ```properties
+      ```
       # 服务应用名
       dubbo.application.name=provider-server
       # 注册中心地址
@@ -1915,8 +1879,7 @@ cron表达式
    1. 新建消费者项目，引入dubbo、zookeeper和zkclient相关依赖（同提供者）
 
    2. 编写配置文件
-
-      ```properties
+      ```
       # 服务应用名
       dubbo.application.name=consumer-server
       # 注册中心地址
@@ -1966,7 +1929,36 @@ cron表达式
       买了票了，《TENET》
       ```
 
-      
+
+## 其他零散知识
+### Spring中的切面
+
+#### 拦截器和过滤器执行顺序：
+
+ 1）.Filter.init();
+ 2）.Filter.doFilter(); before doFilter
+ 3）.HandlerInterceptor.preHandle();
+ 4）.Controller方法执行
+ 5）.HandlerInterceptor.postHandle();
+ 6）.DispatcherServlet视图渲染
+ 7）.HandlerInterceptor.afterCompletion();
+ 8）.Filter.doFilter(); after doFilter
+ 9）.Filter.destroy();
+
+#### 示意图
+
+![image-20210916101902441](C:\Users\Miittech\AppData\Roaming\Typora\typora-user-images\image-20210916101902441.png)
+
+![image-20210916101851184](C:\Users\Miittech\AppData\Roaming\Typora\typora-user-images\image-20210916101851184.png)
+
+另外，Filter与Interceptor相比。Filter使用的是ServerletRequest，而Interceptor使用的是HttpServerletRequest。HttpServerletRequest继承于ServerletRequest，ServerletRequest比HttpServerletRequest少了请求头和session，在使用身份校验功能时需要留意
+
+
+
+
+
+
+
 
 
 
