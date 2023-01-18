@@ -1,3 +1,29 @@
+## 常用命令
+以指定配置启动
+```
+nginx -c /usr/local/nginx/conf/nginx.conf
+```
+
+关闭
+```
+nginx -s quit
+或
+kill -s quit PID
+```
+
+验证配置
+```
+nginx -t
+# 验证指定配置
+nginx -t -c /home/test/conf/nginx.conf
+```
+
+重新加载配置
+```
+nginx -s reload
+```
+
+
 ## 解决跨域问题
 
 ### 解决http(s)跨域
