@@ -1878,7 +1878,7 @@ public class GulimallAuthServerApplication {
 		- Host=auth.gulimall.com
 ```
 
-#### 验证码倒计时 & 整合短信验证码 &
+#### 验证码倒计时 & 整合短信验证码
 `product`服务的`index.html`中修改登录页和注册页的地址
 ``` html
 <li>
@@ -1906,6 +1906,144 @@ public class GulimallWebConfig implements WebMvcConfigurer {
         registry.addViewController("/reg.html").setViewName("reg");
     }
 }
+```
+
+在阿里云申请短信服务的过程，略
+
+编写发送验证相关代码, 首先是controller层
+``` java
+@Controller  
+@RequestMapping(value = "/sms")  
+public class SmsSendController {  
+  
+    @Autowired  
+    private SmsComponent smsComponent;  
+  
+    /**  
+     * 提供给别的服务进行调用  
+     * @param phone  
+     * @param code  
+     * @return  
+     */  
+    @GetMapping(value = "/sendCode")  
+    public R sendCode(@RequestParam("phone") String phone, @RequestParam("code") String code) {  
+        //发送验证码  
+        smsComponent.sendCode(phone,code);  
+        return R.ok();  
+    }  
+}
+```
+
+然后是service层
+``` java
+@ConfigurationProperties(prefix = "spring.cloud.alicloud.sms")  
+@Data  
+@Component  
+public class SmsComponent {  
+  
+    private String accessKey;  
+    private String secretKey;  
+    private String region;  
+    private String endpoint;  
+    private String signName;  
+    private String templateCode;  
+  
+  
+    @SneakyThrows  
+    public void sendCode(String phone, String code) {  
+        StaticCredentialProvider provider = StaticCredentialProvider.create(Credential.builder()  
+                .accessKeyId(accessKey)  
+                .accessKeySecret(secretKey)  
+                //.securityToken("<your-token>") // use STS token  
+                .build());  
+  
+        // Configure the Client  
+        AsyncClient client = AsyncClient.builder()  
+                .region(region) // Region ID  
+                //.httpClient(httpClient) // Use the configured HttpClient, otherwise use the default HttpClient (Apache HttpClient)                .credentialsProvider(provider)  
+                //.serviceConfiguration(Configuration.create()) // Service-level configuration  
+                // Client-level configuration rewrite, can set Endpoint, Http request parameters, etc.                .overrideConfiguration(  
+                        ClientOverrideConfiguration.create()  
+                                .setEndpointOverride(endpoint)  
+                        //.setConnectTimeout(Duration.ofSeconds(30))  
+                )  
+                .build();  
+  
+        // Parameter settings for API request  
+        SendSmsRequest sendSmsRequest = SendSmsRequest.builder()  
+                .signName(signName)  
+                .templateCode(templateCode)  
+                .phoneNumbers(phone)  
+                .templateParam("{\"code\": " + code + "}")  
+                // Request-level configuration rewrite, can set Http request parameters, etc.  
+                // .requestConfiguration(RequestConfiguration.create().setHttpHeaders(new HttpHeaders()))                .build();  
+  
+        // Asynchronously get the return value of the API request  
+        CompletableFuture<SendSmsResponse> response = client.sendSms(sendSmsRequest);  
+        // Synchronously get the return value of the API request  
+        SendSmsResponse resp = response.get();  
+        System.out.println(new Gson().toJson(resp));  
+        // Asynchronous processing of return values  
+        /*response.thenAccept(resp -> {            System.out.println(new Gson().toJson(resp));        }).exceptionally(throwable -> { // Handling exceptions            System.out.println(throwable.getMessage());            return null;        });*/  
+        // Finally, close the client        client.close();  
+    }  
+  
+}
+```
+
+验证码防刷校验
+需要在`auth`服务中远程调用第三方服务, 新建feign的远程调用接口
+``` java
+@FeignClient("gulimall-third-party")  
+public interface ThirdPartFeignService {  
+  
+    @GetMapping(value = "/sms/sendCode")  
+    R sendCode(@RequestParam("phone") String phone, @RequestParam("code") String code);  
+  
+}
+```
+
+在`auth`服务的`LoginController`中编写发送验证码的接口, 用到了redis, 所以需要在xml中引入依赖
+``` java
+@ResponseBody  
+@GetMapping(value = "/sms/sendCode")  
+public R sendCode(@RequestParam("phone") String phone) {  
+  
+    //1、接口防刷  
+    String redisCode = stringRedisTemplate.opsForValue().get(AuthServerConstant.SMS_CODE_CACHE_PREFIX + phone);  
+    if (!StrUtil.isEmpty(redisCode)) {  
+        //活动存入redis的时间，用当前时间减去存入redis的时间，判断用户手机号是否在60s内发送验证码  
+        long currentTime = Long.parseLong(redisCode.split("_")[1]);  
+        if (System.currentTimeMillis() - currentTime < 60000) {  
+            //60s内不能再发  
+            return R.error(BizCodeEnum.SMS_CODE_EXCEPTION.getCode(), BizCodeEnum.SMS_CODE_EXCEPTION.getMsg());  
+        }  
+    }  
+  
+    //2、验证码的再次效验 redis.存key-phone,value-code  
+    int code = (int) ((Math.random() * 9 + 1) * 100000);  
+    String codeNum = String.valueOf(code);  
+    String redisStorage = codeNum + "_" + System.currentTimeMillis();  
+  
+    //存入redis，防止同一个手机号在60秒内再次发送验证码  
+    stringRedisTemplate.opsForValue().set(AuthServerConstant.SMS_CODE_CACHE_PREFIX + phone,  
+            redisStorage, 10, TimeUnit.MINUTES);  
+  
+    thirdPartFeignService.sendCode(phone, codeNum);  
+  
+    return R.ok();  
+}
+```
+在`common`服务中新增常量
+``` java
+public class AuthServerConstant {  
+    public static final String SMS_CODE_CACHE_PREFIX = "sms:code:";  
+//    public static final String LOGIN_USER = "loginUser";  
+}
+```
+在`common`服务中新增异常枚举
+``` java
+SMS_CODE_EXCEPTION(10002, "验证码获取频率太高，请稍后再试"),
 ```
 
 

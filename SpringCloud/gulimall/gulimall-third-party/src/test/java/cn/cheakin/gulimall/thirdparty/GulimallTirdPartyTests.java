@@ -1,9 +1,7 @@
 package cn.cheakin.gulimall.thirdparty;
 
 import cn.cheakin.gulimall.thirdparty.component.SmsComponent;
-import com.aliyun.oss.ClientException;
 import com.aliyun.oss.OSSClient;
-import com.aliyun.oss.OSSException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,7 +31,7 @@ public class GulimallTirdPartyTests {
 
     @Test
     void sendCode() {
-        // 提示没有访问权限，是因为没有盛情对应的模板
+        // 提示没有访问权限，是因为没有申请对应的模板
         smsComponent.sendCode("13888888888", "2022");
     }
 
