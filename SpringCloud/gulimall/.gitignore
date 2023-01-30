@@ -36,7 +36,7 @@ build/
 **/mvnw
 **/mvnw.cmd
 **/.mvn
-**/target
+**/target/
 
 ### 脱敏 ###
 **/application-oss.yml
