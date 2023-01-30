@@ -32,11 +32,11 @@ target/
 .vscode/
 
 ### Obsidian ###
-.obsidian/
+**/.obsidian
 
 ### other ###
 **/mvnw
 **/mvnw.cmd
 **/.mvn
-**/target
-**/node_modules
+**/target/
+**/node_modules/
