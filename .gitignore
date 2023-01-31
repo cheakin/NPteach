@@ -32,7 +32,7 @@ target/
 .vscode/
 
 ### Obsidian ###
-**/.obsidian
+**/.obsidian/
 
 ### other ###
 **/mvnw

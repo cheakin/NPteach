@@ -1,8 +1,11 @@
 package cn.cheakin.gulimall.member.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.member.entity.MemberEntity;
+import cn.cheakin.gulimall.member.exception.PhoneException;
+import cn.cheakin.gulimall.member.exception.UsernameException;
+import cn.cheakin.gulimall.member.vo.MemberUserRegisterVo;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Map;
 
@@ -16,5 +19,11 @@ import java.util.Map;
 public interface MemberService extends IService<MemberEntity> {
 
     PageUtils queryPage(Map<String, Object> params);
+
+    void register(MemberUserRegisterVo vo);
+
+    void checkPhoneUnique(String phone) throws PhoneException;
+
+    void checkUserNameUnique(String userName) throws UsernameException;
 }
 

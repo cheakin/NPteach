@@ -1991,7 +1991,7 @@ public class SmsComponent {
 }
 ```
 
-验证码防刷校验
+##### 验证码防刷校验
 需要在`auth`服务中远程调用第三方服务, 新建feign的远程调用接口
 ``` java
 @FeignClient("gulimall-third-party")  
@@ -2033,6 +2033,8 @@ public R sendCode(@RequestParam("phone") String phone) {
   
     return R.ok();  
 }
+
+
 ```
 在`common`服务中新增常量
 ``` java
@@ -2046,6 +2048,196 @@ public class AuthServerConstant {
 SMS_CODE_EXCEPTION(10002, "验证码获取频率太高，请稍后再试"),
 ```
 
+##### 注册接口 & 异常机制 & MD5&盐&BCrypt
+`auth`服务中的`LoginController`
+``` java
+/**  
+ * TODO: 重定向携带数据：利用session原理，将数据放在session中。  
+ * TODO:只要跳转到下一个页面取出这个数据以后，session里面的数据就会删掉  
+ * TODO：分布下session问题  
+ * RedirectAttributes：重定向也可以保留数据，不会丢失  
+ * 用户注册  
+ *  
+ * @return  
+ */  
+@PostMapping(value = "/register")  
+public String register(@Valid UserRegisterVo vos, BindingResult result, RedirectAttributes attributes) {  
+    //如果有错误回到注册页面  
+    if (result.hasErrors()) {  
+        Map<String, String> errors = result.getFieldErrors().stream().collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));  
+        attributes.addFlashAttribute("errors", errors);  
+        //效验出错回到注册页面  
+        //return "redirect:reg.html";   // 用户注册时时发送的post请求，而路径映射转发默认时使用get方式  
+        //转发的话用户在刷新页面时会重新提交请求  
+        /*model.addAttribute("errors", errors);  
+        return "reg"; */        //return "redirect:reg.html";   //这样会重定向到ip下  
+        return "redirect:http://auth.gulimall.com/reg.html";  
+    }  
+  
+    //1、效验验证码  
+    String code = vos.getCode();  
+  
+    //获取存入Redis里的验证码  
+    String redisCode = stringRedisTemplate.opsForValue().get(AuthServerConstant.SMS_CODE_CACHE_PREFIX + vos.getPhone());  
+    if (!StrUtil.isEmpty(redisCode)) {  
+        //截取字符串  
+        if (code.equals(redisCode.split("_")[0])) {  
+            //删除验证码;令牌机制  
+            stringRedisTemplate.delete(AuthServerConstant.SMS_CODE_CACHE_PREFIX + vos.getPhone());  
+            //验证码通过，真正注册，调用远程服务进行注册  
+            R register = memberFeignService.register(vos);  
+            if (register.getCode() == 0) {  
+                //成功  
+                return "redirect:http://auth.gulimall.com/login.html";  
+            } else {  
+                //失败  
+                Map<String, String> errors = new HashMap<>();  
+                errors.put("msg", register.getData("msg", new TypeReference<String>() {  
+                }));  
+                attributes.addFlashAttribute("errors", errors);  
+                return "redirect:http://auth.gulimall.com/reg.html";  
+            }  
+        } else {  
+            //效验出错回到注册页面  
+            Map<String, String> errors = new HashMap<>();  
+            errors.put("code", "验证码错误");  
+            attributes.addFlashAttribute("errors", errors);  
+            return "redirect:http://auth.gulimall.com/reg.html";  
+        }  
+    } else {  
+        //效验出错回到注册页面  
+        Map<String, String> errors = new HashMap<>();  
+        errors.put("code", "验证码错误");  
+        attributes.addFlashAttribute("errors", errors);  
+        return "redirect:http://auth.gulimall.com/reg.html";  
+    }  
+}
+```
+`auth`服务新建`UserRegisterVo`
+``` java
+@Data  
+public class UserRegisterVo {  
+  
+    @NotEmpty(message = "用户名不能为空")  
+    @Length(min = 6, max = 19, message="用户名长度在6-18字符")  
+    private String userName;  
+  
+    @NotEmpty(message = "密码必须填写")  
+    @Length(min = 6,max = 18,message = "密码必须是6—18位字符")  
+    private String password;  
+  
+    @NotEmpty(message = "手机号不能为空")  
+    @Pattern(regexp = "^[1]([3-9])[0-9]{9}$", message = "手机号格式不正确")  
+    private String phone;  
+  
+    @NotEmpty(message = "验证码不能为空")  
+    private String code;  
+  
+}
+```
+`auth`服务的远程调用接口
+``` java
+@FeignClient("gulimall-member")  
+public interface MemberFeignService {  
+  
+    @PostMapping(value = "/member/member/register")  
+    R register(@RequestBody UserRegisterVo vo); 
+}
+```
+
+`member`服务需要有相对应的接口
+`MemberController`
+``` java
+@Data
+
+public class MemberUserRegisterVo {
+
+private String userName;
+
+private String password;
+
+private String phone;
+
+}
+```
+`member`服务中新建
+``` java
+@Data  
+public class MemberUserRegisterVo {  
+  
+    private String userName;  
+  
+    private String password;  
+  
+    private String phone;  
+  
+}
+```
+MemberServiceImpl
+``` java
+@Resource  
+private MemberLevelDao memberLevelDao;
+
+@Override  
+public void register(MemberUserRegisterVo vo) {  
+    MemberEntity memberEntity = new MemberEntity();  
+  
+    //设置默认等级  
+    MemberLevelEntity levelEntity = memberLevelDao.getDefaultLevel();  
+    memberEntity.setLevelId(levelEntity.getId());  
+  
+    //设置其它的默认信息  
+    //检查用户名和手机号是否唯一。感知异常，异常机制  
+    checkPhoneUnique(vo.getPhone());  
+    checkUserNameUnique(vo.getUserName());  
+  
+    memberEntity.setNickname(vo.getUserName());  
+    memberEntity.setUsername(vo.getUserName());  
+    //密码进行MD5加密  
+    BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();  
+    String encode = bCryptPasswordEncoder.encode(vo.getPassword());  
+    memberEntity.setPassword(encode);  
+    memberEntity.setMobile(vo.getPhone());  
+    memberEntity.setGender(0);  
+    memberEntity.setCreateTime(new Date());  
+  
+    //保存数据  
+    this.baseMapper.insert(memberEntity);  
+}
+
+@Override  
+public void checkPhoneUnique(String phone) throws PhoneException {  
+  
+    Integer phoneCount = this.baseMapper.selectCount(new QueryWrapper<MemberEntity>().eq("mobile", phone));  
+  
+    if (phoneCount > 0) {  
+        throw new PhoneException();  
+    }  
+  
+}  
+  
+@Override  
+public void checkUserNameUnique(String userName) throws UsernameException {  
+  
+    Integer usernameCount = this.baseMapper.selectCount(new QueryWrapper<MemberEntity>().eq("username", userName));  
+  
+    if (usernameCount > 0) {  
+        throw new UsernameException();  
+    }  
+}
+```
+MemberLevelDao.xml
+``` sql
+SELECT * FROM ums_member_level WHERE default_status = 1
+```
+
+
+![[Pasted image 20230130224421.png]]
+
+common服务的BizCodeEnum中新增异常消息
+``` java
+
+```
 
 ### 购物车
 ### 消息队列
