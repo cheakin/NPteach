@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "43fc7787a301a166",
+        "id": "6b4e14c16f868697",
         "type": "tabs",
         "children": [
           {
-            "id": "c3dba30ad98f79fd",
+            "id": "b3d8b58b7263e8ad",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -69,8 +69,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "right": {
     "id": "17ccfa2f8da27c88",
@@ -155,8 +154,9 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "4913da189fae944f",
+  "active": "b3d8b58b7263e8ad",
   "lastOpenFiles": [
+    "GuliMall_high (2).md",
     "Other/PowerDesigner.md",
     "Other/assets/5d375104ca065c370d4aac885123e57.png",
     "Other/assets/Pasted image 20230104112531.png",
@@ -165,7 +165,6 @@
     "SpringBoot.md",
     "SpringCloud.md",
     "Docker.md",
-    "Other/Windows.md",
-    "Work.md"
+    "Other/Windows.md"
   ]
 }

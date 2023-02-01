@@ -119,7 +119,9 @@ public class LoginController {
                 //删除验证码;令牌机制
                 stringRedisTemplate.delete(AuthServerConstant.SMS_CODE_CACHE_PREFIX + vos.getPhone());
                 //验证码通过，真正注册，调用远程服务进行注册
-                R register = memberFeignService.register(vos);
+                //R register = memberFeignService.register(vos);    // 为方便测试, 不调用发短信1
+                R register = R.ok();    // 为方便测试, 不调用发短信2
+
                 if (register.getCode() == 0) {
                     //成功
                     return "redirect:http://auth.gulimall.com/login.html";
