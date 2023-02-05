@@ -4,6 +4,7 @@ import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.member.entity.MemberEntity;
 import cn.cheakin.gulimall.member.exception.PhoneException;
 import cn.cheakin.gulimall.member.exception.UsernameException;
+import cn.cheakin.gulimall.member.vo.MemberUserLoginVo;
 import cn.cheakin.gulimall.member.vo.MemberUserRegisterVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -25,5 +26,7 @@ public interface MemberService extends IService<MemberEntity> {
     void checkPhoneUnique(String phone) throws PhoneException;
 
     void checkUserNameUnique(String userName) throws UsernameException;
+
+    MemberEntity login(MemberUserLoginVo vo);
 }
 

@@ -14,6 +14,9 @@ package cn.cheakin.common.exception;
  * 13: 购物车
  * 14: 物流
  * 15: 用户
+ *  001: 用户已存在
+ *  002: 手机号已存在
+ *  003: 账号或密码错误
  * <p>
  * Create by botboy on 2022/07/26.
  **/
@@ -26,7 +29,8 @@ public enum BizCodeEnum {
     PRODUCT_UP_EXCEPTION(11000, "商品上架异常"),
 
     USER_EXIST_EXCEPTION(15001, "存在相同的用户"),
-    PHONE_EXIST_EXCEPTION(15002, "存在相同的手机号");
+    PHONE_EXIST_EXCEPTION(15002, "存在相同的手机号"),
+    LOGIN_ACCOUNT_PASSWORD_EXCEPTION(15003, "账号或密码错误");
 
     private int code;
     private String msg;

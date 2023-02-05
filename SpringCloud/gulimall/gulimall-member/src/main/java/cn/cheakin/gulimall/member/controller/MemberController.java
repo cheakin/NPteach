@@ -8,6 +8,7 @@ import cn.cheakin.gulimall.member.exception.PhoneException;
 import cn.cheakin.gulimall.member.exception.UsernameException;
 import cn.cheakin.gulimall.member.feign.CouponFeignService;
 import cn.cheakin.gulimall.member.service.MemberService;
+import cn.cheakin.gulimall.member.vo.MemberUserLoginVo;
 import cn.cheakin.gulimall.member.vo.MemberUserRegisterVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -43,6 +44,18 @@ public class  MemberController {
         return R.ok().put("member", memberEntity)
                 .put("coupons", membercoupons.get("coupons"));
     }
+
+    @PostMapping(value = "/login")
+    public R login(@RequestBody MemberUserLoginVo vo) {
+
+        MemberEntity memberEntity = memberService.login(vo);
+        if (memberEntity != null) {
+            return R.ok().setData(memberEntity);
+        } else {
+            return R.error(BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
+        }
+    }
+
 
     @PostMapping(value = "/register")
     public R register(@RequestBody MemberUserRegisterVo vo) {

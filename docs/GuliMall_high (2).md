@@ -1878,7 +1878,7 @@ public class GulimallAuthServerApplication {
 		- Host=auth.gulimall.com
 ```
 
-#### 验证码倒计时 & 整合短信验证码
+#### 注册：验证码倒计时 & 整合短信验证码
 `product`服务的`index.html`中修改登录页和注册页的地址
 ``` html
 <li>
@@ -2236,7 +2236,103 @@ SELECT * FROM ums_member_level WHERE default_status = 1
 
 common服务的BizCodeEnum中新增异常消息
 ``` java
+USER_EXIST_EXCEPTION(15001, "存在相同的用户"),  
+PHONE_EXIST_EXCEPTION(15002, "存在相同的手机号");
+```
 
+#### 登录
+> 前端代码修改略
+
+auth服务中新建UserLoginVo
+``` java
+@Data  
+public class UserLoginVo {  
+  
+    private String loginacct;  
+  
+    private String password;  
+}
+```
+LoginController新增登录方法
+``` java
+@PostMapping(value = "/login")  
+public String login(UserLoginVo vo, RedirectAttributes attributes, HttpSession session) {  
+  
+    //远程登录  
+    R login = memberFeignService.login(vo);  
+  
+    if (login.getCode() == 0) {  
+        /*MemberResponseVo data = login.getData("data", new TypeReference<MemberResponseVo>() {  
+        });        session.setAttribute(LOGIN_USER, data);*/        return "redirect:http://gulimall.com";  
+    } else {  
+        Map<String, String> errors = new HashMap<>();  
+        errors.put("msg", login.getData("msg", new TypeReference<String>() {  
+        }));  
+        attributes.addFlashAttribute("errors", errors);  
+        return "redirect:http://auth.gulimall.com/login.html";  
+    }  
+}
+```
+auth服务的MemberFeignService中新增方法
+``` java
+@PostMapping(value = "/member/member/login")  
+R login(@RequestBody UserLoginVo vo);
+```
+
+然后在member服务的MemberController新增登录方法
+``` java
+@PostMapping(value = "/login")  
+public R login(@RequestBody MemberUserLoginVo vo) {  
+  
+    MemberEntity memberEntity = memberService.login(vo);  
+    if (memberEntity != null) {  
+        return R.ok().setData(memberEntity);  
+    } else {  
+        return R.error(BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());  
+    }  
+}
+```
+member中新建MemberUserLoginVo
+``` java
+@Data
+
+public class MemberUserRegisterVo {
+
+private String userName;
+
+private String password;
+
+private String phone;
+
+}
+```
+MemberServiceImpl新增登录对应方法
+``` java
+@Override  
+public MemberEntity login(MemberUserLoginVo vo) {  
+    String loginacct = vo.getLoginacct();  
+    String password = vo.getPassword();  
+  
+    //1、去数据库查询 SELECT * FROM ums_member WHERE username = ? OR mobile = ?    MemberEntity memberEntity = this.baseMapper.selectOne(new QueryWrapper<MemberEntity>()  
+            .eq("username", loginacct).or().eq("mobile", loginacct));  
+  
+    if (memberEntity == null) {  
+        //登录失败  
+        return null;  
+    } else {  
+        //获取到数据库里的password  
+        String password1 = memberEntity.getPassword();  
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();  
+        //进行密码匹配  
+        boolean matches = passwordEncoder.matches(password, password1);  
+        if (matches) {  
+            //登录成功  
+            return memberEntity;  
+        }  
+    }  
+  
+    return null;  
+}
 ```
 
 ### 购物车

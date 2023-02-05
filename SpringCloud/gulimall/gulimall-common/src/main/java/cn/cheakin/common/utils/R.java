@@ -9,8 +9,7 @@
 package cn.cheakin.common.utils;
 
 import cn.hutool.core.lang.TypeReference;
-import cn.hutool.json.JSON;
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson.JSON;
 import org.apache.http.HttpStatus;
 
 import java.util.HashMap;
@@ -26,16 +25,24 @@ public class R extends HashMap<String, Object> {
 
 	public <T> T getData(String name , TypeReference<T> typeReference) {
 		Object data = this.get(name);	// 默认返回是map类型的
-		String s = JSONUtil.toJsonStr(data);
-		T t = JSONUtil.toBean(s, typeReference, false);
+		String s = JSON.toJSONString(data);
+		T t = JSON.parseObject(s, typeReference);
 		return t;
 	}
 
 	public <T> T getData(TypeReference<T> typeReference) {
-		Object data = this.get("data");	// 默认返回是map类型的
-		String s = JSONUtil.toJsonStr(data);
-		T t = JSONUtil.toBean(s, typeReference, false);
+		return getData("data", typeReference);
+	}
+
+	public <T> T getData(String name , Class<T> clazz) {
+		Object data = this.get(name);	// 默认返回是map类型的
+		String s = JSON.toJSONString(data);
+		T t = JSON.parseObject(s, clazz);
 		return t;
+	}
+
+	public <T> T getData(Class<T> clazz) {
+		return getData("data", clazz);
 	}
 
 	public R setData(Object data) {
@@ -88,4 +95,5 @@ public class R extends HashMap<String, Object> {
 
 		return (Integer) this.get("code");
 	}
+
 }

@@ -5411,11 +5411,26 @@ public interface WareFeignService {
 ```
 `gulimall-common`的`R`中, *我的项目中的JSON工具与视频中的不同，我使用的`Hutool工具`*
 ``` java
+public <T> T getData(String name , TypeReference<T> typeReference) {
+    Object data = this.get(name);	// 默认返回是map类型的
+    String s = JSON.toJSONString(data);
+    T t = JSON.parseObject(s, typeReference);
+    return t;
+}
+
 public <T> T getData(TypeReference<T> typeReference) {
-  Object data = this.get("data");	// 默认返回是map类型的
-  String s = JSONUtil.toJsonStr(data);
-  T t = (T) JSONUtil.toBean(s, typeReference.getClass());
-  return t;
+    return getData("data", typeReference);
+}
+
+public <T> T getData(String name , Class<T> clazz) {
+    Object data = this.get(name);	// 默认返回是map类型的
+    String s = JSON.toJSONString(data);
+    T t = JSON.parseObject(s, clazz);
+    return t;
+}
+
+public <T> T getData(Class<T> clazz) {
+    return getData("data", clazz);
 }
 
 public R setData(Object data) {

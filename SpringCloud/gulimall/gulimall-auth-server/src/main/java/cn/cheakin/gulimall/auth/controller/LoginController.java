@@ -5,8 +5,8 @@ import cn.cheakin.common.exception.BizCodeEnum;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.auth.feign.MemberFeignService;
 import cn.cheakin.gulimall.auth.feign.ThirdPartFeignService;
+import cn.cheakin.gulimall.auth.vo.UserLoginVo;
 import cn.cheakin.gulimall.auth.vo.UserRegisterVo;
-import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.util.StrUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,8 +78,9 @@ public class LoginController {
         //存入redis，防止同一个手机号在60秒内再次发送验证码
         stringRedisTemplate.opsForValue().set(AuthServerConstant.SMS_CODE_CACHE_PREFIX + phone,
                 redisStorage, 10, TimeUnit.MINUTES);
+        System.out.println("codeNum = " + codeNum);
 
-        thirdPartFeignService.sendCode(phone, codeNum);
+        // thirdPartFeignService.sendCode(phone, codeNum);  // 为方便测试, 不调用发短信
 
         return R.ok();
     }
@@ -117,10 +119,9 @@ public class LoginController {
             //截取字符串
             if (code.equals(redisCode.split("_")[0])) {
                 //删除验证码;令牌机制
-                stringRedisTemplate.delete(AuthServerConstant.SMS_CODE_CACHE_PREFIX + vos.getPhone());
+                //stringRedisTemplate.delete(AuthServerConstant.SMS_CODE_CACHE_PREFIX + vos.getPhone());    // 为方便测试, 暂时注释掉
                 //验证码通过，真正注册，调用远程服务进行注册
-                //R register = memberFeignService.register(vos);    // 为方便测试, 不调用发短信1
-                R register = R.ok();    // 为方便测试, 不调用发短信2
+                R register = memberFeignService.register(vos);
 
                 if (register.getCode() == 0) {
                     //成功
@@ -128,8 +129,7 @@ public class LoginController {
                 } else {
                     //失败
                     Map<String, String> errors = new HashMap<>();
-                    errors.put("msg", register.getData("msg", new TypeReference<String>() {
-                    }));
+                    errors.put("msg", register.getData("msg", String.class));
                     attributes.addFlashAttribute("errors", errors);
                     return "redirect:http://auth.gulimall.com/reg.html";
                 }
@@ -146,6 +146,26 @@ public class LoginController {
             errors.put("code", "验证码错误");
             attributes.addFlashAttribute("errors", errors);
             return "redirect:http://auth.gulimall.com/reg.html";
+        }
+    }
+
+    @PostMapping(value = "/login")
+    public String login(UserLoginVo vo, RedirectAttributes attributes, HttpSession session) {
+
+        //远程登录
+        R login = memberFeignService.login(vo);
+
+        if (login.getCode() == 0) {
+            /*MemberResponseVo data = login.getData("data", new TypeReference<MemberResponseVo>() {
+            });
+            session.setAttribute(LOGIN_USER, data);*/
+            return "redirect:http://gulimall.com";
+        } else {
+            Map<String, String> errors = new HashMap<>();
+//            errors.put("msg", login.getData("msg", String.class));
+            errors.put("msg", login.getData("msg", String.class));
+            attributes.addFlashAttribute("errors", errors);
+            return "redirect:http://auth.gulimall.com/login.html";
         }
     }
 
