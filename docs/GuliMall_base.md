@@ -11379,7 +11379,7 @@ public void saveBatch(List<AttrGroupRelationVo> vos) {
 在`gulimall-gateway`的`application.yml`中为`gulimall-member`添加路由规则(注意顺序, 需要在admin之前)
 ``` yml
 - id: member_route
-  uri: lb://mall-member
+  uri: lb://gulimall-member
   predicates:
     - Path=/api/member/**
   filters:
