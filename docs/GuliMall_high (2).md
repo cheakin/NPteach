@@ -2335,6 +2335,326 @@ public MemberEntity login(MemberUserLoginVo vo) {
 }
 ```
 
+#### OAuth2
+##### 简介
+![[Pasted image 20230205235854.png]]
+
+![[Pasted image 20230206000254.png]]
+
+##### 社交登录(weibo登录)
+1. 到微博开放平台
+2. 登录微博，进入微连接，选择网站接入
+3. 完成基本信息的录入
+4. 在 我的应用 中的 高级设置 里设置回调地址
+	成功：http://gulimall.com/success
+	失败：http://gulimall.com/fail
+5. 修改前端引导用户使用用户登录的按钮，依照文档修改后填入
+	``` html
+	<a href="https://api.weibo.com/oauth2/authorize?client_id=4159591980&response_type=code&redirect_uri=http://gulimall.com/success"></a>
+```
+6. 可以在postman中测试`换取Access Token`的步骤(code换取token只能使用一次；同一用户的AccessToken一段时间内是不会变化的)
+7. 然后根据AccessToken就可以调用开放接口获取信息了
+
+登录流程详见：[微博登录官方文档](https://open.weibo.com/wiki/%E6%8E%88%E6%9D%83%E6%9C%BA%E5%88%B6)
+
+###### 社交登录回调
+> 现在正式开始写社交登录的逻辑
+![[Pasted image 20230206172139.png]]
+
+###### 社交登录 & 测试
+将前端的回调地址切换为我们写的接口
+``` html
+<a href="https://api.weibo.com/oauth2/authorize?client_id=4159591980&response_type=code&redirect_uri=http://auth.gulimall.com/oauth2.0/weibo/success">  </a>
+```
+在auth服务中新建`OAuth2Controller`
+``` java
+@Slf4j  
+@Controller  
+public class OAuth2Controller {  
+  
+    private final MemberFeignService memberFeignService;  
+  
+    @Autowired  
+    public OAuth2Controller(MemberFeignService memberFeignService) {  
+        this.memberFeignService = memberFeignService;  
+    }  
+  
+    @GetMapping(value = "/oauth2.0/weibo/success")  
+    public String weibo(@RequestParam("code") String code, HttpSession session) throws Exception {  
+  
+        Map<String, Object> map = new HashMap<>(5);  
+        map.put("client_id", "2077705774");  
+        map.put("client_secret", "40af02bd1c7e435ba6a6e9cd3bf799fd");  
+        map.put("grant_type", "authorization_code");  
+        map.put("redirect_uri", "http://auth.gulimall.com/oauth2.0/weibo/success");  
+        map.put("code", code);  
+  
+        //1、根据用户授权返回的code换取access_token  
+//        HttpResponse response = HttpUtils.doPost("https://api.weibo.com", "/oauth2/access_token", "post", new HashMap<>(), map, new HashMap<>());  
+//        HttpResponse post = HttpUtil.post("https://api.weibo.com/oauth2/access_token", map);  
+        HttpResponse response = HttpUtil.createPost("https://api.weibo.com/oauth2/access_token").form(map).execute();  
+  
+        //2、处理  
+        if (response.getStatus() == 200) {  
+            //获取到了access_token,转为通用社交登录对象  
+            //String json = JSON.toJSONString(response.getEntity());  
+            SocialUser socialUser = JSON.parseObject(response.body(), SocialUser.class);  
+  
+            //知道了哪个社交用户  
+            //1）、当前用户如果是第一次进网站，自动注册进来（为当前社交用户生成一个会员信息，以后这个社交账号就对应指定的会员）  
+            //登录或者注册这个社交用户  
+//            System.out.println(socialUser.getAccess_token());  
+            //调用远程服务  
+            R oauthLogin = memberFeignService.oauthLogin(socialUser);  
+            if (oauthLogin.getCode() == 0) {  
+                MemberResponseVo data = oauthLogin.getData("data", MemberResponseVo.class);  
+                log.info("登录成功：用户信息：{}", data.toString());  
+  
+                //1、第一次使用session，命令浏览器保存卡号，JSESSIONID这个cookie  
+                //以后浏览器访问哪个网站就会带上这个网站的cookie  
+                //TODO 1、默认发的令牌。当前域（解决子域session共享问题）  
+                //TODO 2、使用JSON的序列化方式来序列化对象到Redis中  
+                session.setAttribute(LOGIN_USER, data);  
+  
+                //2、登录成功跳回首页  
+                return "redirect:http://gulimall.com";  
+            } else {  
+                return "redirect:http://auth.gulimall.com/login.html";  
+            }  
+        } else {  
+            return "redirect:http://auth.gulimall.com/login.html";  
+        }  
+  
+    }  
+  
+}
+```
+新建社交对象`SocialUser`
+``` java
+@Data
+
+public class SocialUser {
+
+private String access_token;
+
+private String remind_in;
+
+private long expires_in;
+
+private String uid;
+
+private String isRealName;
+
+}
+```
+
+在common服务中新建`MemberResponseVo`
+``` java
+@ToString
+@Data
+public class MemberResponseVo implements Serializable {
+
+    private static final long serialVersionUID = 5573669251256409786L;
+
+    private Long id;
+    /**
+     * 会员等级id
+     */
+    private Long levelId;
+    /**
+     * 用户名
+     */
+    private String username;
+    /**
+     * 密码
+     */
+    private String password;
+    /**
+     * 昵称
+     */
+    private String nickname;
+    /**
+     * 手机号码
+     */
+    private String mobile;
+    /**
+     * 邮箱
+     */
+    private String email;
+    /**
+     * 头像
+     */
+    private String header;
+    /**
+     * 性别
+     */
+    private Integer gender;
+    /**
+     * 生日
+     */
+    private Date birth;
+    /**
+     * 所在城市
+     */
+    private String city;
+    /**
+     * 职业
+     */
+    private String job;
+    /**
+     * 个性签名
+     */
+    private String sign;
+    /**
+     * 用户来源
+     */
+    private Integer sourceType;
+    /**
+     * 积分
+     */
+    private Integer integration;
+    /**
+     * 成长值
+     */
+    private Integer growth;
+    /**
+     * 启用状态
+     */
+    private Integer status;
+    /**
+     * 注册时间
+     */
+    private Date createTime;
+
+    /**
+     * 社交登录UID
+     */
+    private String socialUid;
+
+    /**
+     * 社交登录TOKEN
+     */
+    private String accessToken;
+
+    /**
+     * 社交登录过期时间
+     */
+    private long expiresIn;
+
+}
+```
+
+member的`MemberController`新增登录方法
+``` java
+@PostMapping(value = "/oauth2/login")
+
+public R oauthLogin(@RequestBody SocialUser socialUser) throws Exception {
+
+MemberEntity memberEntity = memberService.login(socialUser);
+
+if (memberEntity != null) {
+
+return R.ok().setData(memberEntity);
+
+} else {
+
+return R.error(BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
+
+}
+
+}
+```
+
+在member服务中同样新建社交对象`SocialUser`
+``` java
+@Data
+
+public class SocialUser {
+
+private String access_token;
+
+private String remind_in;
+
+private long expires_in;
+
+private String uid;
+
+private String isRealName;
+
+}
+```
+MemberServiceImpl中新增社交登录方法
+``` java
+public MemberEntity login(SocialUser socialUser) {  
+  
+        //具有登录和注册逻辑  
+        String uid = socialUser.getUid();  
+  
+        //1、判断当前社交用户是否已经登录过系统  
+        MemberEntity memberEntity = baseMapper.selectOne(new QueryWrapper<MemberEntity>().eq("social_uid", uid));  
+  
+        if (memberEntity != null) {  
+            //这个用户已经注册过  
+            //更新用户的访问令牌的时间和access_token  
+            MemberEntity update = new MemberEntity();  
+            update.setId(memberEntity.getId());  
+            update.setAccessToken(socialUser.getAccess_token());  
+            update.setExpiresIn(socialUser.getExpires_in());  
+            baseMapper.updateById(update);  
+  
+            memberEntity.setAccessToken(socialUser.getAccess_token());  
+            memberEntity.setExpiresIn(socialUser.getExpires_in());  
+            return memberEntity;  
+        } else {  
+            //2、没有查到当前社交用户对应的记录我们就需要注册一个  
+            MemberEntity register = new MemberEntity();  
+            //3、查询当前社交用户的社交账号信息（昵称、性别等）  
+            Map<String, Object> query = new HashMap<>();  
+            query.put("access_token", socialUser.getAccess_token());  
+            query.put("uid", socialUser.getUid());  
+//            HttpResponse response = HttpUtils.doGet("https://api.weibo.com", "/2/users/show.json", "get", new HashMap<>(), query);  
+            HttpResponse response = HttpUtil.createGet("https://api.weibo.com/2/users/show.json").form(query).execute();  
+  
+            if (response.getStatus() == 200) {  
+                //查询成功  
+                JSONObject jsonObject = JSON.parseObject(response.body());  
+                String name = jsonObject.getString("name");  
+                String gender = jsonObject.getString("gender");  
+                String profileImageUrl = jsonObject.getString("profile_image_url");  
+  
+                register.setNickname(name);  
+                register.setGender("m".equals(gender) ? 1 : 0);  
+                register.setHeader(profileImageUrl);  
+                register.setCreateTime(new Date());  
+                register.setSocialUid(socialUser.getUid());  
+                register.setAccessToken(socialUser.getAccess_token());  
+                register.setExpiresIn(socialUser.getExpires_in());  
+  
+                //把用户信息插入到数据库中  
+                baseMapper.insert(register);  
+            }  
+            return register;  
+        }  
+    }
+```
+MemberEntity中新增社交账号对应的字段, 别忘了在数据库中也需要新增对应字段
+``` java
+/**  
+ * 社交登录UID  
+ */private String socialUid;  
+  
+/**  
+ * 社交登录TOKEN  
+ */private String accessToken;  
+  
+/**  
+ * 社交登录过期时间  
+ */  
+private long expiresIn;
+```
+然后就可以开始测试社交登录流程了
+
+
 ### 购物车
 ### 消息队列
 ### 订单服务
