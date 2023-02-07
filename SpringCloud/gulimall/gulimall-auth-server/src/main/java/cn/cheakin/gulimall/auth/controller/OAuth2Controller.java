@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.auth.controller;
 
+import cn.cheakin.common.constant.AuthServerConstant;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.common.vo.MemberResponseVo;
 import cn.cheakin.gulimall.auth.feign.MemberFeignService;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +31,7 @@ public class OAuth2Controller {
     }
 
     @GetMapping(value = "/oauth2.0/weibo/success")
-    public String weibo(@RequestParam("code") String code, HttpSession session) throws Exception {
+    public String weibo(@RequestParam("code") String code, HttpSession session, HttpServletResponse servletResponse) throws Exception {
 
         Map<String, Object> map = new HashMap<>(5);
         map.put("client_id", "4159591980");
@@ -60,9 +62,16 @@ public class OAuth2Controller {
                 log.info("登录成功：用户信息：{}", data.toString());
 
                 //1、第一次使用session，命令浏览器保存卡号，JSESSIONID这个cookie
-                //以后浏览器访问哪个网站就会带上这个网站的cookie
+                //以后浏览器访问哪个网站就会带上这个网站的cookie, 如gulimall.com, auth.gulimall.com, order.gulimall.com
+                // 发卡的时候(指定域名为父域),即使是子域系统发的卡也能让父域直接使用
+                /*session.setAttribute("loginUser", data);
+                Cookie cookie = new Cookie("JSESSIONID", "dada");
+                cookie.setDomain("");   // 作用域默认是请求的域名
+                servletResponse.addCookie(cookie);*/
+
                 //TODO 1、默认发的令牌。当前域（解决子域session共享问题）
                 //TODO 2、使用JSON的序列化方式来序列化对象到Redis中
+                session.setAttribute(AuthServerConstant.LOGIN_USER, data);
 //                session.setAttribute(LOGIN_USER, data);
 
                 //2、登录成功跳回首页

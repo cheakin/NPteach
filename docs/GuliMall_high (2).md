@@ -2341,7 +2341,7 @@ public MemberEntity login(MemberUserLoginVo vo) {
 
 ![[Pasted image 20230206000254.png]]
 
-##### 社交登录(weibo登录)
+#### 社交登录(weibo登录)
 1. 到微博开放平台
 2. 登录微博，进入微连接，选择网站接入
 3. 完成基本信息的录入
@@ -2654,6 +2654,195 @@ private long expiresIn;
 ```
 然后就可以开始测试社交登录流程了
 
+#### 分布式session
+##### 分布式session不共享不同步问题
+session原理，每个服务都会产生不同的session
+![[Pasted image 20230206233355.png]]
+如果复制session, 会存在不同步问题
+![[Pasted image 20230206234011.png]]
+
+##### 分布式session解决方案原理
+方式1：session同步
+![[Pasted image 20230206234558.png]]
+方式2：客户端存储
+![[Pasted image 20230206234708.png]]
+方式3：hash一致性
+![[Pasted image 20230206234740.png]]
+方式4：让session统一存储
+![[Pasted image 20230206234755.png]]
+在使用了统一存储后，需要将session的作用域扩大
+![[Pasted image 20230206234817.png]]
+
+##### SpringSession整合
+> 官方文档： https://docs.spring.io/spring-session/reference/samples.html
+
+使用。在项目的父级pom引入依赖
+``` xml
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-web</artifactId>  
+</dependency>
+```
+auth服务, product服务, search服务的配置文件中
+``` yml
+spring:
+  session:  
+    store-type: redis  
+    timeout: 30m
+```
+在auth服务, product服务, search服务的启动类上使用`@EnableRedisHttpSession`打开redis存储session功能。
+在存储对象是需要序列化对象
+
+现在登录后修改session的作用域后，就能看到已经实现session存储的功能了
+
+##### SpringSession完成子域session共享
+在auth服务, product服务, search服务中都新建GulimallSessionConfig配置类
+``` java
+@Configuration
+public class GulimallSessionConfig {
+
+@Bean
+public CookieSerializer cookieSerializer() {
+
+	DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
+	
+	//放大作用域
+	cookieSerializer.setDomainName("gulimall.com");
+	
+	cookieSerializer.setCookieName("GULISESSION");
+	
+	return cookieSerializer;
+
+}
+
+@Bean
+public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
+
+	return new GenericJackson2JsonRedisSerializer();
+
+}
+
+}
+```
+现在登录后修改session的作用域后，就能看到已经实现session存储的功能了，且作用于父域了
+
+##### SprinigSession原理
+
+1）、@EnableRedisHttpSession导入RedisHttpSessionConfiguration配置  
+      1. 给容器中添加了一个组件  
+          SessionRepository -> RedisOperationsSessionRepository: redis操作session, session的增删改查封装类  
+      2. SessionRepositoryFilter ==> Filter: session存储过滤器每个请求过来都要经过Filter  
+          1. 创建的时候。就自动从容器中获取SessionRepository  
+          2. 原始的request, response 被包装为 SessionRepositoryRequestWrapper, SessionRepositoryResponseWrapper  
+          3. 以后获取session(request.getSession()) 就是sessionRepositoryRequestWrapper.getSession()  
+          4. 即用了装饰者模式，使用getSession是被包装过的session  
+	自动延期：redis中的数据也是有过期时间的
+![[Pasted image 20230206234855.png]]
+
+##### 页面效果完成
+common服务的AuthServerConstant中新增常量
+``` java
+public static final String LOGIN_USER = "loginUser";
+```
+
+修改auth服务中OAuth2Controller的社交登录方法
+``` java
+@GetMapping(value = "/oauth2.0/weibo/success")  
+    public String weibo(@RequestParam("code") String code, HttpSession session, HttpServletResponse servletResponse) throws Exception {  
+  
+        Map<String, Object> map = new HashMap<>(5);  
+        map.put("client_id", "4159591980");  
+        map.put("client_secret", "cd006789a55afae7c7bccb96cf6df003");  
+        map.put("grant_type", "authorization_code");  
+        map.put("redirect_uri", "http://auth.gulimall.com/oauth2.0/weibo/success");  
+        map.put("code", code);  
+  
+        //1、根据用户授权返回的code换取access_token  
+//        HttpResponse response = HttpUtils.doPost("https://api.weibo.com", "/oauth2/access_token", "post", new HashMap<>(), map, new HashMap<>());  
+//        HttpResponse post = HttpUtil.post("https://api.weibo.com/oauth2/access_token", map);  
+        HttpResponse response = HttpUtil.createPost("https://api.weibo.com/oauth2/access_token").form(map).execute();  
+  
+        //2、处理  
+        if (response.getStatus() == 200) {  
+            //获取到了access_token,转为通用社交登录对象  
+            //String json = JSON.toJSONString(response.getEntity());  
+            SocialUser socialUser = JSON.parseObject(response.body(), SocialUser.class);  
+  
+            //知道了哪个社交用户  
+            //1）、当前用户如果是第一次进网站，自动注册进来（为当前社交用户生成一个会员信息，以后这个社交账号就对应指定的会员）  
+            //登录或者注册这个社交用户  
+//            System.out.println(socialUser.getAccess_token());  
+            //调用远程服务  
+            R oauthLogin = memberFeignService.oauthLogin(socialUser);  
+            if (oauthLogin.getCode() == 0) {  
+                MemberResponseVo data = oauthLogin.getData("data", MemberResponseVo.class);  
+                log.info("登录成功：用户信息：{}", data.toString());  
+  
+                //1、第一次使用session，命令浏览器保存卡号，JSESSIONID这个cookie  
+                //以后浏览器访问哪个网站就会带上这个网站的cookie, 如gulimall.com, auth.gulimall.com, order.gulimall.com  
+                // 发卡的时候(指定域名为父域),即使是子域系统发的卡也能让父域直接使用  
+                /*session.setAttribute("loginUser", data);  
+                Cookie cookie = new Cookie("JSESSIONID", "dada");                cookie.setDomain("");   // 作用域默认是请求的域名  
+                servletResponse.addCookie(cookie);*/  
+                //TODO 1、默认发的令牌。当前域（解决子域session共享问题）  
+                //TODO 2、使用JSON的序列化方式来序列化对象到Redis中  
+                session.setAttribute(AuthServerConstant.LOGIN_USER, data);  
+//                session.setAttribute(LOGIN_USER, data);  
+  
+                //2、登录成功跳回首页  
+                return "redirect:http://gulimall.com";  
+            } else {  
+                return "redirect:http://auth.gulimall.com/login.html";  
+            }  
+        } else {  
+            return "redirect:http://auth.gulimall.com/login.html";  
+        }  
+  
+    }
+```
+
+修改auth服务中LoginController的登录方法
+``` java
+@PostMapping(value = "/login")  
+    public String login(UserLoginVo vo, RedirectAttributes attributes, HttpSession session) {  
+  
+        //远程登录  
+        R login = memberFeignService.login(vo);  
+  
+        if (login.getCode() == 0) {  
+            MemberResponseVo data = login.getData("data", MemberResponseVo.class);  
+            session.setAttribute(AuthServerConstant.LOGIN_USER, data);  
+            return "redirect:http://gulimall.com";  
+        } else {  
+            Map<String, String> errors = new HashMap<>();  
+//            errors.put("msg", login.getData("msg", String.class));  
+            errors.put("msg", login.getData("msg", String.class));  
+            attributes.addFlashAttribute("errors", errors);  
+            return "redirect:http://auth.gulimall.com/login.html";  
+        }  
+    }
+```
+
+修改前端页面, 略
+
+auth服务的LoginController中新增已登录的跳转
+``` java
+@GetMapping(value = "/login.html")  
+public String loginPage(HttpSession session) {  
+  
+    //从session先取出来用户的信息，判断用户是否已经登录过了  
+    Object attribute = session.getAttribute(AuthServerConstant.LOGIN_USER);  
+    //如果用户没登录那就跳转到登录页面  
+    if (attribute == null) {  
+        return "login";  
+    } else {  
+        return "redirect:http://gulimall.com";  
+    }  
+}
+```
+此时，在已登录状态下进入登录页会自动跳转至首页
+
+前端页面修改，略
 
 ### 购物车
 ### 消息队列

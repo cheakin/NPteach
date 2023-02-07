@@ -3,6 +3,7 @@ package cn.cheakin.gulimall.auth.controller;
 import cn.cheakin.common.constant.AuthServerConstant;
 import cn.cheakin.common.exception.BizCodeEnum;
 import cn.cheakin.common.utils.R;
+import cn.cheakin.common.vo.MemberResponseVo;
 import cn.cheakin.gulimall.auth.feign.MemberFeignService;
 import cn.cheakin.gulimall.auth.feign.ThirdPartFeignService;
 import cn.cheakin.gulimall.auth.vo.UserLoginVo;
@@ -149,6 +150,19 @@ public class LoginController {
         }
     }
 
+    @GetMapping(value = "/login.html")
+    public String loginPage(HttpSession session) {
+
+        //从session先取出来用户的信息，判断用户是否已经登录过了
+        Object attribute = session.getAttribute(AuthServerConstant.LOGIN_USER);
+        //如果用户没登录那就跳转到登录页面
+        if (attribute == null) {
+            return "login";
+        } else {
+            return "redirect:http://gulimall.com";
+        }
+    }
+
     @PostMapping(value = "/login")
     public String login(UserLoginVo vo, RedirectAttributes attributes, HttpSession session) {
 
@@ -156,9 +170,8 @@ public class LoginController {
         R login = memberFeignService.login(vo);
 
         if (login.getCode() == 0) {
-            /*MemberResponseVo data = login.getData("data", new TypeReference<MemberResponseVo>() {
-            });
-            session.setAttribute(LOGIN_USER, data);*/
+            MemberResponseVo data = login.getData("data", MemberResponseVo.class);
+            session.setAttribute(AuthServerConstant.LOGIN_USER, data);
             return "redirect:http://gulimall.com";
         } else {
             Map<String, String> errors = new HashMap<>();
