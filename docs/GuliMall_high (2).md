@@ -2335,13 +2335,13 @@ public MemberEntity login(MemberUserLoginVo vo) {
 }
 ```
 
-#### OAuth2
-##### 简介
+##### OAuth2
+###### 简介
 ![[Pasted image 20230205235854.png]]
 
 ![[Pasted image 20230206000254.png]]
 
-#### 社交登录(weibo登录)
+##### 社交登录(weibo登录)
 1. 到微博开放平台
 2. 登录微博，进入微连接，选择网站接入
 3. 完成基本信息的录入
@@ -2654,14 +2654,14 @@ private long expiresIn;
 ```
 然后就可以开始测试社交登录流程了
 
-#### 分布式session
-##### 分布式session不共享不同步问题
+##### 分布式session
+###### 分布式session不共享不同步问题
 session原理，每个服务都会产生不同的session
 ![[Pasted image 20230206233355.png]]
 如果复制session, 会存在不同步问题
 ![[Pasted image 20230206234011.png]]
 
-##### 分布式session解决方案原理
+###### 分布式session解决方案原理
 方式1：session同步
 ![[Pasted image 20230206234558.png]]
 方式2：客户端存储
@@ -2673,7 +2673,7 @@ session原理，每个服务都会产生不同的session
 在使用了统一存储后，需要将session的作用域扩大
 ![[Pasted image 20230206234817.png]]
 
-##### SpringSession整合
+###### SpringSession整合
 > 官方文档： https://docs.spring.io/spring-session/reference/samples.html
 
 使用。在项目的父级pom引入依赖
@@ -2695,7 +2695,7 @@ spring:
 
 现在登录后修改session的作用域后，就能看到已经实现session存储的功能了
 
-##### SpringSession完成子域session共享
+###### SpringSession完成子域session共享
 在auth服务, product服务, search服务中都新建GulimallSessionConfig配置类
 ``` java
 @Configuration
@@ -2726,7 +2726,7 @@ public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
 ```
 现在登录后修改session的作用域后，就能看到已经实现session存储的功能了，且作用于父域了
 
-##### SprinigSession原理
+###### SprinigSession原理
 
 1）、@EnableRedisHttpSession导入RedisHttpSessionConfiguration配置  
       1. 给容器中添加了一个组件  
@@ -2739,7 +2739,7 @@ public RedisSerializer<Object> springSessionDefaultRedisSerializer() {
 	自动延期：redis中的数据也是有过期时间的
 ![[Pasted image 20230206234855.png]]
 
-##### 页面效果完成
+###### 页面效果完成
 common服务的AuthServerConstant中新增常量
 ``` java
 public static final String LOGIN_USER = "loginUser";
@@ -2843,6 +2843,217 @@ public String loginPage(HttpSession session) {
 此时，在已登录状态下进入登录页会自动跳转至首页
 
 前端页面修改，略
+
+#### 单点登录
+##### 单点登录介绍
+在域名1下登陆后，进入域名2就不需要在登陆了
+在域名2下登出后，域名1下的账号也会同时登出
+
+xxl-sso项目演示，略
+
+##### 单点登录流程
+![[单点登录流程.png]]
+
+首先修改hosts，加入域名解析
+``` 
+# xxl-sso Start
+127.0.0.1   ssoserver.com
+127.0.0.1   client1.com
+127.0.0.1   client2.com
+# xxl-sso End
+```
+
+![[Pasted image 20230208203234.png]]
+
+|服务|站点|端口|域名|
+|--|--|--|--|
+|/xxl-sso-server|登录服务器|8080|ssoserver.com|
+|/xxl-sso-web-sample-springboot|项目1|8081|client1.com|
+|/xxl-sso-web-sample-springboot|项目2|8082|client2.com|
+
+###### 新建`gulimall-test-sso-server`模块
+pom依赖
+``` xml
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>  
+</dependency>  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-web</artifactId>  
+</dependency>  
+  
+<dependency>  
+    <groupId>org.projectlombok</groupId>  
+    <artifactId>lombok</artifactId>  
+    <optional>true</optional>  
+</dependency>  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-data-redis</artifactId>  
+</dependency>  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-test</artifactId>  
+    <scope>test</scope>  
+</dependency>
+```
+`application.properties`
+``` xml
+server.port=8080
+
+spring.redis.host=192.168.56.10
+```
+前端页面`login.html`
+``` html
+<!DOCTYPE html>  
+<html lang="en" xmlns:th="https://www.thymeleaf.org">  
+<head>  
+  <meta charset="UTF-8">  
+  <title>登录页</title>  
+</head>  
+<body>  
+<form action="/doLogin" method="post">  
+  用户名：<input type="text" name="username"/><br/>  
+  密码：<input type="password" name="password"/><br/>  
+  <input type="hidden" name="url" th:value="${url}"/>  
+  <input type="submit" value="登录">  
+</form>  
+</body>  
+</html>
+```
+LoginController
+``` java
+@Controller  
+public class LoginController {  
+  
+    @Autowired  
+    StringRedisTemplate redisTemplate;  
+  
+    @ResponseBody  
+    @GetMapping("/userinfo")  
+    public String userinfo(@RequestParam(value = "token") String token) {  
+        return redisTemplate.opsForValue().get(token);  
+  
+    }  
+  
+    @GetMapping("/login.html")  
+    public String loginPage(@RequestParam("redirect_url") String url, Model model,  
+                            @CookieValue(value = "sso_token", required = false) String sso_token) {  
+        if (!StringUtils.isEmpty(sso_token)) {  
+            return "redirect:" + url + "?token=" + sso_token;  
+        }  
+        model.addAttribute("url", url);  
+        return "login";  
+    }  
+  
+    @PostMapping(value = "/doLogin")  
+    public String doLogin(@RequestParam("username") String username,  
+                          @RequestParam("password") String password,  
+                          @RequestParam("redirect_url") String url,  
+                          HttpServletResponse response) {  
+  
+        //登录成功跳转，跳回到登录页  
+        if (!StringUtils.isEmpty(username) && !StringUtils.isEmpty(password)) {  
+  
+            String uuid = UUID.randomUUID().toString().replace("-", "");  
+            redisTemplate.opsForValue().set(uuid, username);  
+            Cookie ssoToken = new Cookie("sso_token", uuid);  
+  
+            response.addCookie(ssoToken);  
+            return "redirect:" + url + "?token=" + uuid;  
+        }  
+        return "login";  
+    }  
+}
+```
+
+###### 新建`gulimall-test-sso-client`模块
+pom依赖
+``` xml
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>  
+</dependency>  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-web</artifactId>  
+</dependency>  
+  
+<dependency>  
+    <groupId>org.projectlombok</groupId>  
+    <artifactId>lombok</artifactId>  
+    <optional>true</optional>  
+</dependency>  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-test</artifactId>  
+    <scope>test</scope>  
+</dependency>
+```
+`HelloController`
+``` java
+@Controller  
+public class HelloController {  
+    /**  
+     * 无需登录就可访问  
+     *  
+     * @return  
+     */  
+    @ResponseBody  
+    @GetMapping(value = "/hello")  
+    public String hello() {  
+        return "hello";  
+    }  
+  
+    @GetMapping(value = "/employees")  
+    public String employees(Model model, HttpSession session,  
+                            @RequestParam(value = "token", required = false) String token) {  
+  
+        if (!StringUtils.isEmpty(token)) {  
+            RestTemplate restTemplate = new RestTemplate();  
+            ResponseEntity<String> forEntity = restTemplate.getForEntity("http://localhost:8080/userinfo?token=" + token, String.class);  
+            String body = forEntity.getBody();  
+  
+            session.setAttribute("loginUser", body);  
+        }  
+        Object loginUser = session.getAttribute("loginUser");  
+  
+        if (loginUser == null) {  
+            return "redirect:" + "http://localhost:8080/login.html" + "?redirect_url=http://localhost:8081/employees";  
+        } else {  
+            List<String> emps = new ArrayList<>();  
+  
+            emps.add("张三");  
+            emps.add("李四");  
+  
+            model.addAttribute("emps", emps);  
+            return "employees";  
+        }  
+    }  
+  
+}
+```
+前端页面`employees.html`
+``` html
+<!DOCTYPE html>  
+<html lang="en" xmlns:th="http://www.thymeleaf.org">  
+<head>  
+  <meta charset="UTF-8">  
+  <title>员工列表</title>  
+</head>  
+<body>  
+<h1>欢迎：[[${session.loginUser}]]</h1>  
+<ul>  
+  <li th:each="emp:${emps}">姓名：[[${emp}]]</li>  
+</ul>  
+</body>  
+</html>
+```
+`application.properties`
+``` xml
+server.port=8081
+```
 
 ### 购物车
 ### 消息队列
