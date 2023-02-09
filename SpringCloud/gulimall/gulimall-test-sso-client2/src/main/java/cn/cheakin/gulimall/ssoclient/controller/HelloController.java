@@ -31,7 +31,7 @@ public class HelloController {
         return "hello";
     }
 
-    @GetMapping(value = "/employees")
+    @GetMapping(value = "/boss")
     public String employees(Model model, HttpSession session,
                             @RequestParam(value = "token", required = false) String token) {
 
@@ -46,7 +46,7 @@ public class HelloController {
         Object loginUser = session.getAttribute("loginUser");
 
         if (loginUser == null) {
-            return "redirect:" + ssoServerUrl + "?redirect_url=http://localhost:8081/employees";
+            return "redirect:" + ssoServerUrl + "?redirect_url=http://localhost:8082/boss";
         } else {
             List<String> emps = new ArrayList<>();
 

@@ -37,7 +37,7 @@ public class LoginController {
     @PostMapping(value = "/doLogin")
     public String doLogin(@RequestParam("username") String username,
                           @RequestParam("password") String password,
-                          @RequestParam("redirect_url") String url,
+                          @RequestParam("url") String url,
                           HttpServletResponse response) {
 
         //登录成功跳转，跳回到登录页
