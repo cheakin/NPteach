@@ -3056,6 +3056,110 @@ server.port=8081
 ```
 
 ### 购物车
+#### 环境搭建
+创建`gulimall-cart`模块
+pom文件
+``` xml
+dependency>  
+    <groupId>cn.cheakin</groupId>  
+    <artifactId>gulimall-common</artifactId>  
+    <version>0.0.1-SNAPSHOT</version>  
+</dependency>  
+  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-web</artifactId>  
+</dependency>  
+<!-- thymeleaf 模板引擎 -->  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>  
+</dependency>  
+  
+<!--使用热加载-->  
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-devtools</artifactId>  
+    <optional>true</optional>  
+</dependency>
+```
+
+hosts文件中添加新的域名解析
+``` 
+192.168.56.10   cart.gulimall.com
+```
+
+将购物车相关的静态资源上传的虚拟机的`/mydata/nginx/html/static/cart/`目录下
+
+将购物车的两个页面放到项目中的`/templates/`目录下，为了方便这里就直接用改完之后的页面文件
+
+启动类上添加需要的注解`@EnableFeignClients`,`@EnableDiscoveryClient`,`@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)`
+
+application.properties
+``` yml
+server.port=30000  
+  
+spring.application.name=gulimall-cart  
+  
+spring.cloud.nacos.discovery.server-addr=127.0.0.1:8848  
+```
+
+在`gateway`服务的application.yml中追加对应的网关转发
+``` yml
+- id: gulimall_cart_rout  
+  uri: lb://gulimall-cart  
+  predicates:  
+    - Host=cart.gulimall.com
+```
+
+最后，可以通过修改success.html的文件名为index.html后启动项目，查看是否能正常启动。*测试完后记得改回来*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### 消息队列
 ### 订单服务
 ### 分布式事务
