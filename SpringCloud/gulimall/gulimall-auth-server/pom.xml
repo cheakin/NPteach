@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>cn.cheakin</groupId>
-    <artifactId>gulimall.auth</artifactId>
+    <artifactId>gulimall-auth-server</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>gulimall-auth-server</name>
     <description>认证服务（社交登录、Oauth2.0、单点登录）</description>
