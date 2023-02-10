@@ -3114,22 +3114,473 @@ spring.cloud.nacos.discovery.server-addr=127.0.0.1:8848
 
 最后，可以通过修改success.html的文件名为index.html后启动项目，查看是否能正常启动。*测试完后记得改回来*
 
+#### 数据模型分析
+##### 需求描述
+用户可以在**登录状态**下将商品添加到购物车【用户购物车/在线购物车】
+* 放入数据库
+* mongodb
+* redis(采用)：登录后，会将临时购物车的数据全部合并到在线购物车，并清空临时购物车
+
+用户可以在**未登录状态**下将商品添加到购物车【游客购物车/高线购物车/临时购物车】
+* 放入localstorage(客户端存储)
+* cookie
+* WebSQL
+* 放入reids(采用)，浏览器技术关闭，下次进入，临时购物车数据仍在
+
+用户可以使用购物车一起结算下单
+给购物车**添加商品**
+用户可以**查询自己的购物车**
+用户可以在购物车中**修改购买商品的数量**
+用户可以在购物车中**删除商品**
+**选中不选中商品**
+在购物车中展示商品优惠信息
+提示购物车商品价格变化
+
+##### 数据结构
+首先不同用户应该有独立的购物车，因此购物车应该以用户的作为 key 来存储，Value 是用户的所有购物车信息。这样看来基本的”k-v“结构就可以了......
+但是，我们对购物车申的商品进行增、删、改操作，基本都需要根据商品 id 进行判断，为了方便后期处理，我们的购物车也应该是“k-v” 结构，key 是商品 id，value 才是这个商品的购物车信息。
+
+综上所述，我们的购物车结构是一个双层Map: Map<String,Map<String,String>>
+-第一层Map，Key 是用户id
+-第二层Map，Key 是购物车中商品 id，值是购物项数据
+
+#### VO编写
+新建`CartItemVo`购物项内容
+``` java
+/**  
+ * 购物项内容  
+ */  
+public class CartItemVo {  
+  
+    private Long skuId;  
+  
+    private Boolean check = true;  
+  
+    private String title;  
+  
+    private String image;  
+  
+    /**  
+     * 商品套餐属性  
+     */  
+    private List<String> skuAttrValues;  
+  
+    private BigDecimal price;  
+  
+    private Integer count;  
+  
+    private BigDecimal totalPrice;  
+  
+    public Long getSkuId() {  
+        return skuId;  
+    }  
+  
+    public void setSkuId(Long skuId) {  
+        this.skuId = skuId;  
+    }  
+  
+    public Boolean getCheck() {  
+        return check;  
+    }  
+  
+    public void setCheck(Boolean check) {  
+        this.check = check;  
+    }  
+  
+    public String getTitle() {  
+        return title;  
+    }  
+  
+    public void setTitle(String title) {  
+        this.title = title;  
+    }  
+  
+    public String getImage() {  
+        return image;  
+    }  
+  
+    public void setImage(String image) {  
+        this.image = image;  
+    }  
+  
+    public List<String> getSkuAttrValues() {  
+        return skuAttrValues;  
+    }  
+  
+    public void setSkuAttrValues(List<String> skuAttrValues) {  
+        this.skuAttrValues = skuAttrValues;  
+    }  
+  
+    public BigDecimal getPrice() {  
+        return price;  
+    }  
+  
+    public void setPrice(BigDecimal price) {  
+        this.price = price;  
+    }  
+  
+    public Integer getCount() {  
+        return count;  
+    }  
+  
+    public void setCount(Integer count) {  
+        this.count = count;  
+    }  
+  
+    /**  
+     * 计算当前购物项总价  
+     *  
+     * @return  
+     */  
+    public BigDecimal getTotalPrice() {  
+  
+        return this.price.multiply(new BigDecimal("" + this.count));  
+    }  
+  
+    public void setTotalPrice(BigDecimal totalPrice) {  
+        this.totalPrice = totalPrice;  
+    }  
+
+}
+```
+新建`CartVo`整个购物车存放的商品信息  
+``` java
+/**  
+ * 整个购物车存放的商品信息  
+ * 需要计算的属性需要重写get方法，保证每次获取属性都会进行计算  
+ */  
+public class CartVo {  
+  
+    /**  
+     * 购物车子项信息  
+     */  
+    List<CartItemVo> items;  
+  
+    /**  
+     * 商品数量  
+     */  
+    private Integer countNum;  
+  
+    /**  
+     * 商品类型数量  
+     */  
+    private Integer countType;  
+  
+    /**  
+     * 商品总价  
+     */  
+    private BigDecimal totalAmount;  
+  
+    /**  
+     * 减免价格  
+     */  
+    private BigDecimal reduce = new BigDecimal("0.00");;  
+  
+    public List<CartItemVo> getItems() {  
+        return items;  
+    }  
+  
+    public void setItems(List<CartItemVo> items) {  
+        this.items = items;  
+    }  
+  
+    public Integer getCountNum() {  
+        int count = 0;  
+        if (items != null && items.size() > 0) {  
+            for (CartItemVo item : items) {  
+                count += item.getCount();  
+            }  
+        }  
+        return count;  
+    }  
+  
+    public Integer getCountType() {  
+        int count = 0;  
+        if (items != null && items.size() > 0) {  
+            for (CartItemVo item : items) {  
+                count += 1;  
+            }  
+        }  
+        return count;  
+    }  
+  
+  
+    public BigDecimal getTotalAmount() {  
+        BigDecimal amount = new BigDecimal("0");  
+        // 1.计算购物项总价  
+        if (!CollectionUtils.isEmpty(items)) {  
+            for (CartItemVo cartItem : items) {  
+                if (cartItem.getCheck()) {  
+                    amount = amount.add(cartItem.getTotalPrice());  
+                }  
+            }  
+        }  
+        // 2.计算优惠后的价格  
+        return amount.subtract(getReduce());  
+    }  
+  
+    public BigDecimal getReduce() {  
+        return reduce;  
+    }  
+  
+    public void setReduce(BigDecimal reduce) {  
+        this.reduce = reduce;  
+    }  
+}
+```
+
+#### ThreadLocal身份鉴别
+cart服务的`application.properties`中添加redis配置
+```
+spring.redis.host=192.168.56.10
+```
+由于session依赖我是放到了父级pom中，所以就不需要再次引入了。如果需要的话，如下
+``` pom
+<dependency>  
+    <groupId>org.springframework.session</groupId>  
+    <artifactId>spring-session-data-redis</artifactId>  
+</dependency>  
+<!--SpringCloud Fei
+```
+然后在启动类上加上`@EnableRedisHttpSession`注解
+
+新建`UserInfoTo`
+``` java
+@Data  
+public class UserInfoTo {  
+  
+    private Long userId;  
+  
+    private String userKey;  
+  
+    /**  
+     * 是否临时用户  
+     */  
+    private Boolean tempUser = false;  
+  
+}
+```
+在common服务中新建常量
+``` java
+/**  
+ * 购物车常量  
+ */  
+public class CartConstant {  
+  
+    public final static String TEMP_USER_COOKIE_NAME = "user-key";  
+	
+	public final static int TEMP_USER_COOKIE_TIMEOUT = 60*60*24*30;
+}
+```
+创建
+``` java
+@Controller  
+public class CartController {  
+  
+    //@Resource  
+    //private CartService cartService;  
+  
+    /**  
+     * 去购物车页面的请求  
+     * 浏览器有一个cookie:user-key 标识用户的身份，一个月过期  
+     * 如果第一次使用jd的购物车功能，都会给一个临时的用户身份:  
+     * 浏览器以后保存，每次访问都会带上这个cookie；  
+     * <p>  
+     * 登录：session有  
+     * 没登录：按照cookie里面带来user-key来做  
+     * 第一次，如果没有临时用户，自动创建一个临时用户  
+     *  
+     * @return  
+     */  
+    @GetMapping(value = "/cart.html")  
+    public String cartListPage(HttpSession session, Model model) throws ExecutionException, InterruptedException {  
+        /*Object attribute = session.getAttribute(AuthServerConstant.LOGIN_USER);  
+        if (attribute == null) {            // 没登录，获取临时购物车  
+        } else {            // 获取登录了的购物车  
+        }*/  
+        //快速得到用户信息：id,user-key  
+        /*UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();        System.out.println("userInfoTo = " + userInfoTo);*/  
+        return "cartList";  
+    }  
+  
+    /**  
+     * 添加商品到购物车  
+     * attributes.addFlashAttribute():将数据放在session中，可以在页面中取出，但是只能取一次  
+     * attributes.addAttribute():将数据放在url后面  
+     *  
+     * @return  
+     */  
+    @GetMapping(value = "/addCartItem")  
+    public String addCartItem(@RequestParam("skuId") Long skuId,  
+                              @RequestParam("num") Integer num,  
+                              RedirectAttributes attributes) throws ExecutionException, InterruptedException {  
+  
+        cartService.addToCart(skuId, num);  
+  
+        attributes.addAttribute("skuId", skuId);  
+        return "redirect:http://cart.gulimall.com/addToCartSuccessPage.html";  
+    }  
+  
+}
+```
 
 
+**临时用户**
+user-key 是随机生成的 id，不管有没有登录都会有这个 cookie 信息。
+两个功能：新增商品到购物车、查询购物车。
+新增商品：判断是否登录
+是:则添加商品到后台 Redis 中，把user 的唯一标识符作为 keye。否:则添加商品到后台redis 中，使用随机生成的user-key 作为 keye
+直询购物车列表：判断是否登录
+否:直接根撰 user-key 查询 redis 中数据并展示是:已登录，则需要先根据 userkey 查询 redis 是否有数据。·有:需要提交到后台添加到 redis，合并数据，而后查询。否:直接去后台查询redis，而后返回。
 
+**ThreadLocal**：可以在同一个线程中共享数据。其本质是Map，以线程为key，数据为值
+![[Pasted image 20230210210324.png]]
+添加拦截器，创建`GulimallWebConfig`
+``` java
+@Configuration  
+public class GulimallWebConfig implements WebMvcConfigurer {  
+  
+    @Override  
+    public void addInterceptors(InterceptorRegistry registry) {  
+        registry.addInterceptor(new CartInterceptor())//注册拦截器  
+                .addPathPatterns("/**");  
+    }  
+}
+```
+创建`CartInterceptor`
+``` java
+/**  
+ * 在执行目标方法之前，判断用户的登录状态.并封装传递给controller目标请求  
+ */  
+@Component  
+public class CartInterceptor implements HandlerInterceptor {  
+  
+  
+    public static ThreadLocal<UserInfoTo> toThreadLocal = new ThreadLocal<>();  
+  
+    /***  
+     * 目标方法执行之前  
+     * @param request  
+     * @param response  
+     * @param handler  
+     * @return  
+     * @throws Exception  
+     */    @Override  
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {  
+  
+        UserInfoTo userInfoTo = new UserInfoTo();  
+  
+        HttpSession session = request.getSession();  
+        //获得当前登录用户的信息  
+        MemberResponseVo memberResponseVo = (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);  
+  
+        if (memberResponseVo != null) {  
+            //用户登录了  
+            userInfoTo.setUserId(memberResponseVo.getId());  
+        }  
+  
+        Cookie[] cookies = request.getCookies();  
+        if (cookies != null && cookies.length > 0) {  
+            for (Cookie cookie : cookies) {  
+                //user-key  
+                String name = cookie.getName();  
+                if (name.equals(CartConstant.TEMP_USER_COOKIE_NAME)) {  
+                    userInfoTo.setUserKey(cookie.getValue());  
+                    //标记为已是临时用户  
+                    userInfoTo.setTempUser(true);  
+                }  
+            }  
+        }  
+  
+        //如果没有临时用户一定分配一个临时用户  
+        if (StringUtils.isEmpty(userInfoTo.getUserKey())) {  
+            String uuid = UUID.randomUUID().toString();  
+            userInfoTo.setUserKey(uuid);  
+        }  
+  
+        //目标方法执行之前  
+        toThreadLocal.set(userInfoTo);  
+        return true;    }  
+  
+  
+    /**  
+     * 业务执行之后，分配临时用户来浏览器保存  
+     *  
+     * @param request  
+     * @param response  
+     * @param handler  
+     * @param modelAndView  
+     * @throws Exception  
+     */    @Override  
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {  
+  
+        //获取当前用户的值  
+        UserInfoTo userInfoTo = toThreadLocal.get();  
+  
+        //如果没有临时用户一定保存一个临时用户  
+        if (!userInfoTo.getTempUser()) {  
+            //创建一个cookie  
+            Cookie cookie = new Cookie(CartConstant.TEMP_USER_COOKIE_NAME, userInfoTo.getUserKey());  
+            //扩大作用域  
+            cookie.setDomain("gulimall.com");  
+            //设置过期时间  
+            cookie.setMaxAge(CartConstant.TEMP_USER_COOKIE_TIMEOUT);  
+            response.addCookie(cookie);  
+        }  
+  
+    }  
+  
+    @Override  
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {  
+  
+    }}
+```
 
+#### 页面环境搭建
+在product服务的item.html页面中
+``` html
+<a class="addToCart" href="#" th:attr="skuId=${item.info.skuId}">  
+ 加入购物车  
+</a>
 
-
-
-
-
-
-
-
-
-
-
-
+$(".addToCart").click(function () {  
+ let skuId = $(this).attr("skuId");  
+ let num = $("#productNum").val();  
+ location.href = "http://cart.gulimall.com/addCartItem?skuId=" + skuId + "&num=" + num;  
+ return false;});
+```
+cart服务的CartController新增方法
+``` java
+/**  
+ * 跳转到添加购物车成功页面  
+ *  
+ * @param skuId  
+ * @param model  
+ * @return  
+ */  
+@GetMapping(value = "/addToCartSuccessPage.html")  
+public String addToCartSuccessPage(@RequestParam("skuId") Long skuId,  
+                                   Model model) {  
+    //重定向到成功页面。再次查询购物车数据即可  
+    CartItemVo cartItemVo = cartService.getCartItem(skuId);  
+    model.addAttribute("cartItem", cartItemVo);  
+    return "success";  
+}
+```
+在product服务的index.html页面
+``` html
+<span><a href="http://cart.gulimall.com/cart.html">我的购物车</a></span>
+```
+cart服务的cartList.html
+``` html
+<a href="http://gulimall.com">首页</a>
+```
+cart服务的success.html
+``` html
+<a class="btn-tobback" th:href="'http://item.gulimall.com/'+${cartItem.skuId}+'.html'">查看商品详情</a>
+<a class="btn-addtocart" href="http://cart.gulimall.com/cart.html"  
+   id="GotoShoppingCart"><b></b>去购物车结算</a>
+```
 
 
 
