@@ -614,7 +614,7 @@
 
 						<div class="box-btns clear">
 							<div class="box-btns-one">
-								<input type="text" name="" id="" value="1" />
+                <input type="text" name="" id="productNum" value="1"/>
 								<div class="box-btns-one1">
 
 									<div>
@@ -1318,7 +1318,7 @@
 		$(".addToCart").click(function () {
 			let skuId = $(this).attr("skuId");
 			let num = $("#productNum").val();
-			location.href = "http://cart.gulimall.com/addCartItem?skuId=" + skuId + "&num=" + num;
+			location.href = "http://cart.gulimall.com/addToCart?skuId=" + skuId + "&num=" + num;
 			return false;
 		});
 

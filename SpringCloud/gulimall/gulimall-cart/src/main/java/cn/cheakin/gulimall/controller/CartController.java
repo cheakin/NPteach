@@ -1,9 +1,11 @@
 package cn.cheakin.gulimall.controller;
 
 import cn.cheakin.gulimall.service.CartService;
+import cn.cheakin.gulimall.vo.CartItemVo;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
@@ -57,6 +59,19 @@ public class CartController {
         /*CartVo cartVo = cartService.getCart();
         model.addAttribute("cart", cartVo);*/
         return "cartList";
+    }
+
+    /**
+     * 添加商品到购物车
+     * @return
+     */
+    @GetMapping(value = "/addToCart")
+    public String addToCart(@RequestParam("skuId") Long skuId,
+                            @RequestParam("num") Integer num,
+                            Model model) throws ExecutionException, InterruptedException{
+        CartItemVo cartItem = cartService.addToCart(skuId, num);
+        model.addAttribute("cartItem", cartItem);
+        return "success";
     }
 
     /**

@@ -1,5 +1,9 @@
 package cn.cheakin.gulimall.service;
 
+import cn.cheakin.gulimall.vo.CartItemVo;
+
+import java.util.concurrent.ExecutionException;
+
 public interface CartService {
 
     /**
@@ -8,7 +12,7 @@ public interface CartService {
      * @param num
      * @return
      */
-//    CartItemVo addToCart(Long skuId, Integer num) throws ExecutionException, InterruptedException;
+    CartItemVo addToCart(Long skuId, Integer num) throws ExecutionException, InterruptedException;
 
     /**
      * 获取购物车某个购物项
@@ -27,7 +31,7 @@ public interface CartService {
      * 清空购物车的数据
      * @param cartKey
      */
-    public void clearCartInfo(String cartKey);
+//    public void clearCartInfo(String cartKey);
 
     /**
      * 勾选购物项

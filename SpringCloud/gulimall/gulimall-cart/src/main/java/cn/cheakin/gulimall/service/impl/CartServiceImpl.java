@@ -1,12 +1,25 @@
 package cn.cheakin.gulimall.service.impl;
 
+import cn.cheakin.common.constant.CartConstant;
+import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.feign.ProductFeignService;
+import cn.cheakin.gulimall.interceptor.CartInterceptor;
 import cn.cheakin.gulimall.service.CartService;
+import cn.cheakin.gulimall.to.UserInfoTo;
+import cn.cheakin.gulimall.vo.CartItemVo;
+import cn.cheakin.gulimall.vo.SkuInfoVo;
+import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 @Service("cartService")
@@ -15,13 +28,13 @@ public class CartServiceImpl implements CartService {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    /*@Autowired
-    private ProductFeignService productFeignService;*/
+    @Autowired
+    private ProductFeignService productFeignService;
 
-    /*@Autowired
-    private ThreadPoolExecutor executor;*/
+    @Autowired
+    private ThreadPoolExecutor executor;
 
-    /*@Override
+    @Override
     public CartItemVo addToCart(Long skuId, Integer num) throws ExecutionException, InterruptedException {
 
         //拿到要操作的购物车信息
@@ -38,8 +51,7 @@ public class CartServiceImpl implements CartService {
             CompletableFuture<Void> getSkuInfoFuture = CompletableFuture.runAsync(() -> {
                 //1、远程查询当前要添加商品的信息
                 R productSkuInfo = productFeignService.getInfo(skuId);
-                SkuInfoVo skuInfo = productSkuInfo.getData("skuInfo", new TypeReference<SkuInfoVo>() {
-                });
+                SkuInfoVo skuInfo = productSkuInfo.getData("skuInfo", SkuInfoVo.class);
                 //数据赋值操作
                 cartItemVo.setSkuId(skuInfo.getSkuId());
                 cartItemVo.setTitle(skuInfo.getSkuTitle());
@@ -72,7 +84,7 @@ public class CartServiceImpl implements CartService {
 
             return cartItemVo;
         }
-    }*/
+    }
 
     /*@Override
     public CartItemVo getCartItem(Long skuId) {
@@ -133,21 +145,21 @@ public class CartServiceImpl implements CartService {
      *
      * @return
      */
-    /*private BoundHashOperations<String, Object, Object> getCartOps() {
+    private BoundHashOperations<String, Object, Object> getCartOps() {
         //先得到当前用户信息
         UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();
 
         String cartKey = "";
         if (userInfoTo.getUserId() != null) {
             //gulimall:cart:1
-            cartKey = CART_PREFIX + userInfoTo.getUserId();
+            cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserId();
         } else {
-            cartKey = CART_PREFIX + userInfoTo.getUserKey();
+            cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();
         }
 
         //绑定指定的key操作Redis
         return redisTemplate.boundHashOps(cartKey);
-    }*/
+    }
 
 
     /**

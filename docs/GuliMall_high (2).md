@@ -3075,7 +3075,12 @@ dependency>
     <groupId>org.springframework.boot</groupId>  
     <artifactId>spring-boot-starter-thymeleaf</artifactId>  
 </dependency>  
-  
+
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-data-redis</artifactId>  
+</dependency>
+
 <!--使用热加载-->  
 <dependency>  
     <groupId>org.springframework.boot</groupId>  
@@ -3339,10 +3344,9 @@ spring.redis.host=192.168.56.10
 <dependency>  
     <groupId>org.springframework.session</groupId>  
     <artifactId>spring-session-data-redis</artifactId>  
-</dependency>  
-<!--SpringCloud Fei
+</dependency>
 ```
-然后在启动类上加上`@EnableRedisHttpSession`注解
+然后将`GulimallSessionConfig`类从起来模块拷贝过来，并在类上加上`@EnableRedisHttpSession`注解
 
 新建`UserInfoTo`
 ``` java
@@ -3372,7 +3376,7 @@ public class CartConstant {
 	public final static int TEMP_USER_COOKIE_TIMEOUT = 60*60*24*30;
 }
 ```
-创建
+创建CartController
 ``` java
 @Controller  
 public class CartController {  
@@ -3404,22 +3408,15 @@ public class CartController {
     }  
   
     /**  
-     * 添加商品到购物车  
-     * attributes.addFlashAttribute():将数据放在session中，可以在页面中取出，但是只能取一次  
-     * attributes.addAttribute():将数据放在url后面  
-     *  
-     * @return  
-     */  
-    @GetMapping(value = "/addCartItem")  
-    public String addCartItem(@RequestParam("skuId") Long skuId,  
-                              @RequestParam("num") Integer num,  
-                              RedirectAttributes attributes) throws ExecutionException, InterruptedException {  
-  
-        cartService.addToCart(skuId, num);  
-  
-        attributes.addAttribute("skuId", skuId);  
-        return "redirect:http://cart.gulimall.com/addToCartSuccessPage.html";  
-    }  
+	 * 添加商品到购物车  
+	 * @return  
+	 */  
+	@GetMapping(value = "/addToCart")  
+	public String addToCart(@RequestParam("skuId") Long skuId,  
+	                        @RequestParam("num") Integer num,  
+	                        Model model) {   
+	    return "success";  
+	}
   
 }
 ```
@@ -3552,18 +3549,15 @@ $(".addToCart").click(function () {
 cart服务的CartController新增方法
 ``` java
 /**  
- * 跳转到添加购物车成功页面  
- *  
- * @param skuId  
- * @param model  
+ * 添加商品到购物车  
  * @return  
  */  
-@GetMapping(value = "/addToCartSuccessPage.html")  
-public String addToCartSuccessPage(@RequestParam("skuId") Long skuId,  
-                                   Model model) {  
-    //重定向到成功页面。再次查询购物车数据即可  
-    CartItemVo cartItemVo = cartService.getCartItem(skuId);  
-    model.addAttribute("cartItem", cartItemVo);  
+@GetMapping(value = "/addToCart")  
+public String addToCart(@RequestParam("skuId") Long skuId,  
+                        @RequestParam("num") Integer num,  
+                        Model model) throws ExecutionException, InterruptedException{  
+    CartItemVo cartItem = cartService.addToCart(skuId, num);  
+    model.addAttribute("cartItem", cartItem);  
     return "success";  
 }
 ```
@@ -3582,13 +3576,213 @@ cart服务的success.html
    id="GotoShoppingCart"><b></b>去购物车结算</a>
 ```
 
+#### 添加购物车
+cart服务中的CartController
+``` java
+/**  
+ * 添加商品到购物车  
+ * @return  
+ */  
+@GetMapping(value = "/addToCart")  
+public String addToCart(@RequestParam("skuId") Long skuId,  
+                        @RequestParam("num") Integer num,  
+                        Model model) throws ExecutionException, InterruptedException{  
+    model.addToCart(skuId, num);  
+    return "success";  
+}
+```
+cart服务中新建SkuInfoVo
+``` java
+@Data  
+public class SkuInfoVo {  
+  
+    private Long skuId;  
+    /**  
+     * spuId     */    private Long spuId;  
+    /**  
+     * sku名称  
+     */  
+    private String skuName;  
+    /**  
+     * sku介绍描述  
+     */  
+    private String skuDesc;  
+    /**  
+     * 所属分类id  
+     */    private Long catalogId;  
+    /**  
+     * 品牌id  
+     */    private Long brandId;  
+    /**  
+     * 默认图片  
+     */  
+    private String skuDefaultImg;  
+    /**  
+     * 标题  
+     */  
+    private String skuTitle;  
+    /**  
+     * 副标题  
+     */  
+    private String skuSubtitle;  
+    /**  
+     * 价格  
+     */  
+    private BigDecimal price;  
+    /**  
+     * 销量  
+     */  
+    private Long saleCount;  
+  
+}
+```
+cart服务中新建ProductFeignService
+``` java
+@FeignClient("gulimall-product")  
+public interface ProductFeignService {  
+  
+    /**  
+     * 根据skuId查询sku信息  
+     * @param skuId  
+     * @return  
+     */  
+    @RequestMapping("/product/skuinfo/info/{skuId}")  
+    R getInfo(@PathVariable("skuId") Long skuId);  
 
-
-
-
-
-
-
+	/**  
+	 * 根据skuId查询pms_sku_sale_attr_value表中的信息  
+	 * @param skuId  
+	 * @return  
+	 */  
+	@GetMapping(value = "/product/skusaleattrvalue/stringList/{skuId}")  
+	List<String> getSkuSaleAttrValues(@PathVariable("skuId") Long skuId);
+  
+}
+```
+从product服务中拷贝MyThreadConfig和ThreadPoolConfigProperties到car服务中
+并且在application.properties添加配置信息
+``` yml
+#配置线程池  
+gulimall.thread.coreSize=20  
+gulimall.thread.maxSize=200  
+gulimall.thread.keepAliveTime=10
+```
+cart服务中CartServiceImpl
+``` java
+@Slf4j  
+@Service("cartService")  
+public class CartServiceImpl implements CartService {  
+  
+    @Autowired  
+    private StringRedisTemplate redisTemplate;  
+  
+    @Autowired  
+    private ProductFeignService productFeignService;  
+  
+    @Autowired  
+    private ThreadPoolExecutor executor;  
+  
+    @Override  
+    public CartItemVo addToCart(Long skuId, Integer num) throws ExecutionException, InterruptedException {  
+  
+        //拿到要操作的购物车信息  
+        BoundHashOperations<String, Object, Object> cartOps = getCartOps();  
+  
+        //判断Redis是否有该商品的信息  
+        String productRedisValue = (String) cartOps.get(skuId.toString());  
+        //如果没有就添加数据  
+        if (StringUtils.isEmpty(productRedisValue)) {  
+  
+            //2、添加新的商品到购物车(redis)  
+            CartItemVo cartItemVo = new CartItemVo();  
+            //开启第一个异步任务  
+            CompletableFuture<Void> getSkuInfoFuture = CompletableFuture.runAsync(() -> {  
+                //1、远程查询当前要添加商品的信息  
+                R productSkuInfo = productFeignService.getInfo(skuId);  
+                SkuInfoVo skuInfo = productSkuInfo.getData("skuInfo", SkuInfoVo.class);  
+                //数据赋值操作  
+                cartItemVo.setSkuId(skuInfo.getSkuId());  
+                cartItemVo.setTitle(skuInfo.getSkuTitle());  
+                cartItemVo.setImage(skuInfo.getSkuDefaultImg());  
+                cartItemVo.setPrice(skuInfo.getPrice());  
+                cartItemVo.setCount(num);  
+            }, executor);  
+  
+            //开启第二个异步任务  
+            CompletableFuture<Void> getSkuAttrValuesFuture = CompletableFuture.runAsync(() -> {  
+                //2、远程查询skuAttrValues组合信息  
+                List<String> skuSaleAttrValues = productFeignService.getSkuSaleAttrValues(skuId);  
+                cartItemVo.setSkuAttrValues(skuSaleAttrValues);  
+            }, executor);  
+  
+            //等待所有的异步任务全部完成  
+            CompletableFuture.allOf(getSkuInfoFuture, getSkuAttrValuesFuture).get();  
+  
+            String cartItemJson = JSON.toJSONString(cartItemVo);  
+            cartOps.put(skuId.toString(), cartItemJson);  
+  
+            return cartItemVo;  
+        } else {  
+            //购物车有此商品，修改数量即可  
+            CartItemVo cartItemVo = JSON.parseObject(productRedisValue, CartItemVo.class);  
+            cartItemVo.setCount(cartItemVo.getCount() + num);  
+            //修改redis的数据  
+            String cartItemJson = JSON.toJSONString(cartItemVo);  
+            cartOps.put(skuId.toString(), cartItemJson);  
+  
+            return cartItemVo;  
+        }  
+    }  
+  
+    /**  
+     * 获取到我们要操作的购物车  
+     *  
+     * @return  
+     */  
+    private BoundHashOperations<String, Object, Object> getCartOps() {  
+        //先得到当前用户信息  
+        UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();  
+  
+        String cartKey = "";  
+        if (userInfoTo.getUserId() != null) {  
+            //gulimall:cart:1  
+            cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserId();  
+        } else {  
+            cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();  
+        }  
+  
+        //绑定指定的key操作Redis  
+        return redisTemplate.boundHashOps(cartKey);  
+    }  
+}
+```
+product服务的SkuSaleAttrValueController
+``` java
+@GetMapping(value = "/stringList/{skuId}")  
+public List<String> getSkuSaleAttrValues(@PathVariable("skuId") Long skuId) {  
+    List<String> stringList = skuSaleAttrValueService.getSkuSaleAttrValuesAsStringList(skuId);  
+    return stringList;  
+}
+```
+product服务的SkuSaleAttrValueServiceImpl
+``` java
+@Override  
+public List<String> getSkuSaleAttrValuesAsStringList(Long skuId) {  
+    SkuSaleAttrValueDao baseMapper = this.baseMapper;  
+    return baseMapper.getSkuSaleAttrValuesAsStringList(skuId);  
+}
+```
+product服务的SkuSaleAttrValueDao
+``` java
+List<String> getSkuSaleAttrValuesAsStringList(Long skuId);
+```
+product服务的SkuSaleAttrValueDao.xml
+``` xml
+<select id="getSkuSaleAttrValuesAsStringList" resultType="java.lang.String">  
+    SELECT  
+        CONCAT( attr_name, "：", attr_value )  
+    FROM        pms_sku_sale_attr_value    WHERE        sku_id = #{skuId}</select>
+```
 
 
 
