@@ -7,6 +7,7 @@ import cn.cheakin.gulimall.interceptor.CartInterceptor;
 import cn.cheakin.gulimall.service.CartService;
 import cn.cheakin.gulimall.to.UserInfoTo;
 import cn.cheakin.gulimall.vo.CartItemVo;
+import cn.cheakin.gulimall.vo.CartVo;
 import cn.cheakin.gulimall.vo.SkuInfoVo;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service("cartService")
@@ -42,7 +44,7 @@ public class CartServiceImpl implements CartService {
 
         //判断Redis是否有该商品的信息
         String productRedisValue = (String) cartOps.get(skuId.toString());
-        //如果没有就添加数据
+        //如果没有就添加数据 <- 购物车中没有次商品
         if (StringUtils.isEmpty(productRedisValue)) {
 
             //2、添加新的商品到购物车(redis)
@@ -86,15 +88,13 @@ public class CartServiceImpl implements CartService {
         }
     }
 
-    /*@Override
+    @Override
     public CartItemVo getCartItem(Long skuId) {
         //拿到要操作的购物车信息
         BoundHashOperations<String, Object, Object> cartOps = getCartOps();
-
         String redisValue = (String) cartOps.get(skuId.toString());
-
         return JSON.parseObject(redisValue, CartItemVo.class);
-    }*/
+    }
 
     /**
      * 获取用户登录或者未登录购物车里所有的数据
@@ -103,16 +103,16 @@ public class CartServiceImpl implements CartService {
      * @throws ExecutionException
      * @throws InterruptedException
      */
-    /*@Override
+    @Override
     public CartVo getCart() throws ExecutionException, InterruptedException {
 
         CartVo cartVo = new CartVo();
         UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();
         if (userInfoTo.getUserId() != null) {
             //1、登录
-            String cartKey = CART_PREFIX + userInfoTo.getUserId();
+            String cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserId();
             //临时购物车的键
-            String temptCartKey = CART_PREFIX + userInfoTo.getUserKey();
+            String temptCartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();
 
             //2、如果临时购物车的数据还未进行合并
             List<CartItemVo> tempCartItems = getCartItems(temptCartKey);
@@ -131,14 +131,14 @@ public class CartServiceImpl implements CartService {
 
         } else {
             //没登录
-            String cartKey = CART_PREFIX + userInfoTo.getUserKey();
+            String cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();
             //获取临时购物车里面的所有购物项
             List<CartItemVo> cartItems = getCartItems(cartKey);
             cartVo.setItems(cartItems);
         }
 
         return cartVo;
-    }*/
+    }
 
     /**
      * 获取到我们要操作的购物车
@@ -168,7 +168,7 @@ public class CartServiceImpl implements CartService {
      * @param cartKey
      * @return
      */
-    /*private List<CartItemVo> getCartItems(String cartKey) {
+    private List<CartItemVo> getCartItems(String cartKey) {
         //获取购物车里面的所有商品
         BoundHashOperations<String, Object, Object> operations = redisTemplate.boundHashOps(cartKey);
         List<Object> values = operations.values();
@@ -179,14 +179,13 @@ public class CartServiceImpl implements CartService {
             }).collect(Collectors.toList());
         }
         return null;
+    }
 
-    }*/
 
-
-    /*@Override
+    @Override
     public void clearCartInfo(String cartKey) {
         redisTemplate.delete(cartKey);
-    }*/
+    }
 
     /*@Override
     public void checkItem(Long skuId, Integer check) {

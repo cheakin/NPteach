@@ -3576,7 +3576,7 @@ cart服务的success.html
    id="GotoShoppingCart"><b></b>去购物车结算</a>
 ```
 
-#### 添加购物车
+#### 添加购物车 & 添加购物车细节
 cart服务中的CartController
 ``` java
 /**  
@@ -3784,10 +3784,144 @@ product服务的SkuSaleAttrValueDao.xml
     FROM        pms_sku_sale_attr_value    WHERE        sku_id = #{skuId}</select>
 ```
 
+#### RedirectAttribute
+cart服务的CartController
+``` java
+	/**  
+     * 添加商品到购物车  
+     * @return  
+     */  
+    @GetMapping(value = "/addToCart")  
+    public String addToCart(@RequestParam("skuId") Long skuId,  
+                            @RequestParam("num") Integer num,  
+                            Model model,  
+                            RedirectAttributes redirectAttributes) throws ExecutionException, InterruptedException{  
+        /*CartItemVo cartItem = cartService.addToCart(skuId, num);  
+        model.addAttribute("cartItem", cartItem);*///        return "success";  
+  
+        cartService.addToCart(skuId, num);  
+        redirectAttributes.addAttribute("skuId", skuId);  
+        return "redirect:http://cart.gulimall.com/addToCartSuccess.html";  
+    }  
+  
+    @GetMapping(value = "/addToCartSuccess.html")  
+    public String addToCartSuccess(@RequestParam("skuId") Long skuId,  
+                                   Model model) throws ExecutionException, InterruptedException {  
+        // 重定向到成功页面， 再次查询一次购物车即可  
+        CartItemVo cartItem = cartService.getCartItem(skuId);  
+        model.addAttribute("cartItem", cartItem);  
+        return "success";  
+    }
+```
+cart服务的CartServiceImpl
+``` java
+@Override  
+public CartItemVo getCartItem(Long skuId) {  
+    //拿到要操作的购物车信息  
+    BoundHashOperations<String, Object, Object> cartOps = getCartOps();  
+    String redisValue = (String) cartOps.get(skuId.toString());  
+    return JSON.parseObject(redisValue, CartItemVo.class);  
+}
+```
 
+#### 获取&合并购物车
+cart服务的CartController
+``` java
+/**  
+ * 去购物车页面的请求  
+ * 浏览器有一个cookie:user-key 标识用户的身份，一个月过期  
+ * 如果第一次使用jd的购物车功能，都会给一个临时的用户身份:  
+ * 浏览器以后保存，每次访问都会带上这个cookie；  
+ * <p>  
+ * 登录：session有  
+ * 没登录：按照cookie里面带来user-key来做  
+ * 第一次，如果没有临时用户，自动创建一个临时用户  
+ *  
+ * @return  
+ */  
+@GetMapping(value = "/cart.html")  
+public String cartListPage(HttpSession session, Model model) throws ExecutionException, InterruptedException {  
+    /*Object attribute = session.getAttribute(AuthServerConstant.LOGIN_USER);  
+    if (attribute == null) {        // 没登录，获取临时购物车  
+    } else {        // 获取登录了的购物车  
+    }*/  
+    //快速得到用户信息：id,user-key  
+    /*UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();    System.out.println("userInfoTo = " + userInfoTo);*/  
+    CartVo cartVo = cartService.getCart();  
+    model.addAttribute("cart", cartVo);  
+  
+    return "cartList";  
+}
+```
+cart服务的CartServiceImpl
+``` java
+/**  
+ * 获取用户登录或者未登录购物车里所有的数据  
+ *  
+ * @return  
+ * @throws ExecutionException  
+ * @throws InterruptedException  
+ */@Override  
+public CartVo getCart() throws ExecutionException, InterruptedException {  
+  
+    CartVo cartVo = new CartVo();  
+    UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();  
+    if (userInfoTo.getUserId() != null) {  
+        //1、登录  
+        String cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserId();  
+        //临时购物车的键  
+        String temptCartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();  
+  
+        //2、如果临时购物车的数据还未进行合并  
+        List<CartItemVo> tempCartItems = getCartItems(temptCartKey);  
+        if (tempCartItems != null) {  
+            //临时购物车有数据需要进行合并操作  
+            for (CartItemVo item : tempCartItems) {  
+                addToCart(item.getSkuId(), item.getCount());  
+            }  
+            //清除临时购物车的数据  
+            clearCartInfo(temptCartKey);  
+        }  
+  
+        //3、获取登录后的购物车数据【包含合并过来的临时购物车的数据和登录后购物车的数据】  
+        List<CartItemVo> cartItems = getCartItems(cartKey);  
+        cartVo.setItems(cartItems);  
+  
+    } else {  
+        //没登录  
+        String cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();  
+        //获取临时购物车里面的所有购物项  
+        List<CartItemVo> cartItems = getCartItems(cartKey);  
+        cartVo.setItems(cartItems);  
+    }  
+  
+    return cartVo;  
+}
 
+/**  
+ * 获取购物车里面的数据  
+ *  
+ * @param cartKey  
+ * @return  
+ */  
+private List<CartItemVo> getCartItems(String cartKey) {  
+    //获取购物车里面的所有商品  
+    BoundHashOperations<String, Object, Object> operations = redisTemplate.boundHashOps(cartKey);  
+    List<Object> values = operations.values();  
+    if (values != null && values.size() > 0) {  
+        return values.stream().map((obj) -> {  
+            String str = (String) obj;  
+            return JSON.parseObject(str, CartItemVo.class);  
+        }).collect(Collectors.toList());  
+    }  
+    return null;  
+}
 
-
+@Override  
+public void clearCartInfo(String cartKey) {  
+    redisTemplate.delete(cartKey);  
+}
+```
 
 
 
