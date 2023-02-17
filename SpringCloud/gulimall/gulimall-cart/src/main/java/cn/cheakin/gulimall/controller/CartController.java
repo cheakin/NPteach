@@ -129,7 +129,6 @@ public class CartController {
 
     }
 
-
     /**
      * 改变商品数量
      *
@@ -146,20 +145,19 @@ public class CartController {
         return "redirect:http://cart.gulimall.com/cart.html";
     }
 
-
     /**
      * 删除商品信息
      *
      * @param skuId
      * @return
      */
-    /*@GetMapping(value = "/deleteItem")
+    @GetMapping(value = "/deleteItem")
     public String deleteItem(@RequestParam("skuId") Integer skuId) {
 
         cartService.deleteIdCartInfo(skuId);
 
         return "redirect:http://cart.gulimall.com/cart.html";
 
-    }*/
+    }
 
 }

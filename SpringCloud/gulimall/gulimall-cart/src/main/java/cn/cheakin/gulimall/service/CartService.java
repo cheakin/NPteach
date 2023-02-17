@@ -53,7 +53,7 @@ public interface CartService {
      * 删除购物项
      * @param skuId
      */
-//    void deleteIdCartInfo(Integer skuId);
+    void deleteIdCartInfo(Integer skuId);
 
 //    List<CartItemVo> getUserCartItems();
 

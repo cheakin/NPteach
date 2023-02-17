@@ -3996,7 +3996,38 @@ public void changeItemCount(Long skuId, Integer num) {
 }
 ```
 
-
+#### 删除购物项
+cart服务的CartController
+``` java
+/**  
+ * 删除商品信息  
+ *  
+ * @param skuId  
+ * @return  
+ */  
+@GetMapping(value = "/deleteItem")  
+public String deleteItem(@RequestParam("skuId") Integer skuId) {  
+  
+    cartService.deleteIdCartInfo(skuId);  
+  
+    return "redirect:http://cart.gulimall.com/cart.html";  
+  
+}
+```
+cart服务的CartServiceImpl
+``` java
+/**  
+ * 删除购物项  
+ *  
+ * @param skuId  
+ */  
+@Override  
+public void deleteIdCartInfo(Integer skuId) {  
+  
+    BoundHashOperations<String, Object, Object> cartOps = getCartOps();  
+    cartOps.delete(skuId.toString());  
+}
+```
 
 
 
