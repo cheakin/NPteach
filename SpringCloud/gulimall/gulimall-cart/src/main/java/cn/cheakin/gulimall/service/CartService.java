@@ -1,6 +1,7 @@
 package cn.cheakin.gulimall.service;
 
 import cn.cheakin.gulimall.vo.CartItemVo;
+import cn.cheakin.gulimall.vo.CartVo;
 
 import java.util.concurrent.ExecutionException;
 
@@ -19,26 +20,26 @@ public interface CartService {
      * @param skuId
      * @return
      */
-//    CartItemVo getCartItem(Long skuId);
+    CartItemVo getCartItem(Long skuId);
 
     /**
      * 获取购物车里面的信息
      * @return
      */
-//    CartVo getCart() throws ExecutionException, InterruptedException;
+    CartVo getCart() throws ExecutionException, InterruptedException;
 
     /**
      * 清空购物车的数据
      * @param cartKey
      */
-//    public void clearCartInfo(String cartKey);
+    public void clearCartInfo(String cartKey);
 
     /**
      * 勾选购物项
      * @param skuId
      * @param check
      */
-//    void checkItem(Long skuId, Integer check);
+    void checkItem(Long skuId, Integer check);
 
     /**
      * 改变商品数量

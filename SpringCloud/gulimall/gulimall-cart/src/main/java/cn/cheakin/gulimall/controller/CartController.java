@@ -2,10 +2,12 @@ package cn.cheakin.gulimall.controller;
 
 import cn.cheakin.gulimall.service.CartService;
 import cn.cheakin.gulimall.vo.CartItemVo;
+import cn.cheakin.gulimall.vo.CartVo;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
@@ -56,8 +58,9 @@ public class CartController {
         /*UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();
         System.out.println("userInfoTo = " + userInfoTo);*/
 
-        /*CartVo cartVo = cartService.getCart();
-        model.addAttribute("cart", cartVo);*/
+        CartVo cartVo = cartService.getCart();
+        model.addAttribute("cart", cartVo);
+
         return "cartList";
     }
 
@@ -68,8 +71,22 @@ public class CartController {
     @GetMapping(value = "/addToCart")
     public String addToCart(@RequestParam("skuId") Long skuId,
                             @RequestParam("num") Integer num,
-                            Model model) throws ExecutionException, InterruptedException{
-        CartItemVo cartItem = cartService.addToCart(skuId, num);
+                            Model model,
+                            RedirectAttributes redirectAttributes) throws ExecutionException, InterruptedException{
+        /*CartItemVo cartItem = cartService.addToCart(skuId, num);
+        model.addAttribute("cartItem", cartItem);*/
+//        return "success";
+
+        cartService.addToCart(skuId, num);
+        redirectAttributes.addAttribute("skuId", skuId);
+        return "redirect:http://cart.gulimall.com/addToCartSuccess.html";
+    }
+
+    @GetMapping(value = "/addToCartSuccess.html")
+    public String addToCartSuccess(@RequestParam("skuId") Long skuId,
+                                   Model model) throws ExecutionException, InterruptedException {
+        // 重定向到成功页面， 再次查询一次购物车即可
+        CartItemVo cartItem = cartService.getCartItem(skuId);
         model.addAttribute("cartItem", cartItem);
         return "success";
     }
@@ -92,21 +109,7 @@ public class CartController {
         return "redirect:http://cart.gulimall.com/addToCartSuccessPage.html";
     }*/
 
-    /**
-     * 跳转到添加购物车成功页面
-     *
-     * @param skuId
-     * @param model
-     * @return
-     */
-    /*@GetMapping(value = "/addToCartSuccessPage.html")
-    public String addToCartSuccessPage(@RequestParam("skuId") Long skuId,
-                                       Model model) {
-        //重定向到成功页面。再次查询购物车数据即可
-        CartItemVo cartItemVo = cartService.getCartItem(skuId);
-        model.addAttribute("cartItem", cartItemVo);
-        return "success";
-    }*/
+
 
 
     /**
@@ -116,7 +119,7 @@ public class CartController {
      * @param checked
      * @return
      */
-    /*@GetMapping(value = "/checkItem")
+    @GetMapping(value = "/checkItem")
     public String checkItem(@RequestParam(value = "skuId") Long skuId,
                             @RequestParam(value = "checked") Integer checked) {
 
@@ -124,7 +127,7 @@ public class CartController {
 
         return "redirect:http://cart.gulimall.com/cart.html";
 
-    }*/
+    }
 
 
     /**

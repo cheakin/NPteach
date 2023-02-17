@@ -3923,10 +3923,44 @@ public void clearCartInfo(String cartKey) {
 }
 ```
 
-
-
-
-
+#### 选中购物项
+cart服务的CartController
+``` java
+/**  
+ * 商品是否选中  
+ *  
+ * @param skuId  
+ * @param checked  
+ * @return  
+ */  
+@GetMapping(value = "/checkItem")  
+public String checkItem(@RequestParam(value = "skuId") Long skuId,  
+                        @RequestParam(value = "checked") Integer checked) {  
+  
+    cartService.checkItem(skuId, checked);  
+  
+    return "redirect:http://cart.gulimall.com/cart.html";  
+  
+}
+```
+cart服务的CartServiceImpl
+``` java
+@Override  
+public void checkItem(Long skuId, Integer check) {  
+  
+    //查询购物车里面的商品  
+    CartItemVo cartItem = getCartItem(skuId);  
+    //修改商品状态  
+    cartItem.setCheck(check == 1);  
+  
+    //序列化存入redis中  
+    String redisValue = JSON.toJSONString(cartItem);  
+  
+    BoundHashOperations<String, Object, Object> cartOps = getCartOps();  
+    cartOps.put(skuId.toString(), redisValue);  
+  
+}
+```
 
 
 
