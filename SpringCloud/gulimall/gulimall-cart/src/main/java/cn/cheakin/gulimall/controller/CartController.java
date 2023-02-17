@@ -137,14 +137,14 @@ public class CartController {
      * @param num
      * @return
      */
-    /*@GetMapping(value = "/countItem")
+    @GetMapping(value = "/countItem")
     public String countItem(@RequestParam(value = "skuId") Long skuId,
                             @RequestParam(value = "num") Integer num) {
 
         cartService.changeItemCount(skuId, num);
 
         return "redirect:http://cart.gulimall.com/cart.html";
-    }*/
+    }
 
 
     /**

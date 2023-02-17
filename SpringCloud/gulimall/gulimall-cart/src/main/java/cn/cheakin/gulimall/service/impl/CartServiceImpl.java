@@ -187,7 +187,7 @@ public class CartServiceImpl implements CartService {
         redisTemplate.delete(cartKey);
     }
 
-    /*@Override
+    @Override
     public void checkItem(Long skuId, Integer check) {
 
         //查询购物车里面的商品
@@ -201,7 +201,7 @@ public class CartServiceImpl implements CartService {
         BoundHashOperations<String, Object, Object> cartOps = getCartOps();
         cartOps.put(skuId.toString(), redisValue);
 
-    }*/
+    }
 
     /**
      * 修改购物项数量
@@ -209,7 +209,7 @@ public class CartServiceImpl implements CartService {
      * @param skuId
      * @param num
      */
-    /*@Override
+    @Override
     public void changeItemCount(Long skuId, Integer num) {
 
         //查询购物车里面的商品
@@ -220,7 +220,7 @@ public class CartServiceImpl implements CartService {
         //序列化存入redis中
         String redisValue = JSON.toJSONString(cartItem);
         cartOps.put(skuId.toString(), redisValue);
-    }*/
+    }
 
 
     /**

@@ -46,7 +46,7 @@ public interface CartService {
      * @param skuId
      * @param num
      */
-//    void changeItemCount(Long skuId, Integer num);
+    void changeItemCount(Long skuId, Integer num);
 
 
     /**

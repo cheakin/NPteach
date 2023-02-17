@@ -3962,8 +3962,39 @@ public void checkItem(Long skuId, Integer check) {
 }
 ```
 
-
-
+#### 改变购物项数量
+cart服务的CartController
+``` java
+@GetMapping(value = "/countItem")  
+public String countItem(@RequestParam(value = "skuId") Long skuId,  
+                        @RequestParam(value = "num") Integer num) {  
+  
+    cartService.changeItemCount(skuId, num);  
+  
+    return "redirect:http://cart.gulimall.com/cart.html";  
+}
+```
+cart服务的CartServiceImpl
+``` java
+/**  
+ * 修改购物项数量  
+ *  
+ * @param skuId  
+ * @param num  
+ */  
+@Override  
+public void changeItemCount(Long skuId, Integer num) {  
+  
+    //查询购物车里面的商品  
+    CartItemVo cartItem = getCartItem(skuId);  
+    cartItem.setCount(num);  
+  
+    BoundHashOperations<String, Object, Object> cartOps = getCartOps();  
+    //序列化存入redis中  
+    String redisValue = JSON.toJSONString(cartItem);  
+    cartOps.put(skuId.toString(), redisValue);  
+}
+```
 
 
 
