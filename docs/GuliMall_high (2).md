@@ -4030,12 +4030,73 @@ public void deleteIdCartInfo(Integer skuId) {
 ```
 
 
-
-
-
-
-
 ### 消息队列
+#### MQ简介
+**异步处理**
+![[Pasted image 20230219173110.png]]
+**应用解耦**
+![[Pasted image 20230219173224.png]]
+**流量控制**
+![[Pasted image 20230219173322.png]]
+![[Pasted image 20230219174127.png]]
+![[Pasted image 20230219174139.png]]
+
+**JMS协议和AMQP协议对比**
+![[Pasted image 20230219174256.png]]
+
+#### RabbitMQ概念
+RabbitMQ是一个由erlang开发的AMQP(Advanved Message Queue Protocol)的开源实现。
+![[image.png]]
+**Message**
+消息，消息是不具名的，它由消息头和消息体组成。消息体是不透明的，而消息头则由一系列的可选属性组成， 这些属性包括routing-key（路由键）、priority（相对于其他消息的优先权）、delivery-mode（指出该消息可 能需要持久性存储）等。
+
+**Publisher**
+消息的生产者，也是一个向交换器发布消息的客户端应用程序。
+
+**Exchange**
+交换器，用来接收生产者发送的消息并将这些消息路由给服务器中的队列。
+Exchange有4种类型：direct(默认)，fanout,topic,和headers，不同类型的Exchange转发消息的策略有所区别
+
+**Queue**
+消息队列，用来保存消息直到发送给消费者。它是消息的容器，也是消息的终点。一个消息可投入一个或多个队列。消息一直 在队列里面，等待消费者连接到这个队列将其取走。
+
+**Binding**
+绑定，用于消息队列和交换器之间的关联。一个绑定就是基于路由键将交换器和消息队列连接起来的路由规则，所以可以将交 换器理解成一个由绑定构成的路由表。
+Exchange和Queue的绑定可以是多对多的关系。
+
+**Connection**
+网络连接，比如一个TCP连接。
+
+**Channel**
+信道，多路复用连接中的一条独立的双向数据流通道。信道是建立在真实的TCP连接内的虚拟连接，AMQP命令都是通过信道 发出去的，不管是发布消息、订阅队列还是接收消息，这些动作都是通过信道完成。因为对于操作系统来说建立和销毁TCP都 是非常昂贵的开销，所以引入了信道的概念，以复用一条TCP连接。
+
+**Consumer**
+消息的消费者，表示一个从消息队列中取得消息的客户端应用程序。
+
+**Virtual Host**
+虚拟主机，表示一批交换器、消息队列和相关对象。虚拟主机是共享相同的身份认证和加 密环境的独立服务器域。每个 vhost 本质上就是一个mini版的RabbitMQ 服务器，拥 有自己的队列、交换器、绑定和权限机制。vhost是AMQP概念的基础，必须在连接时 指定，RabbitMQ 默认的vhost是/。
+
+**Broker**
+表示消息队列服务器实体
+
+#### RabbitMQ安装
+``` sh
+# 启动rabbitmq
+docker run -d --name rabbitmq -p 5671:5671 -p 5672:5672 -p 4369:4369 -p 25672:25672 -p 15671:15671 -p 15672:15672 rabbitmq:management
+
+# 4369,25672(Erlang发现&集群端口)
+# 5672,5671(AMQP端口)
+# 15672 (web管理后台端口)
+# 61613,61614(STOMP协议端口)
+# 1883,8883(MQTT协议端口)
+# https://www.rabbitmq.com/networking.html
+
+# rabbitmq自启
+docker update rabbitmq --restart=always
+```
+测试：http://192.168.56.10:15672/
+
+
 ### 订单服务
 ### 分布式事务
 ### 订单服务
