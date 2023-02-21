@@ -4105,6 +4105,29 @@ docker update rabbitmq --restart=always
 ![[Pasted image 20230220233503.png]]
 
 #### SpringBoot整合RabbitMQ
+在order服务的pom.xml中引入依赖
+``` xml
+<dependency>  
+   <groupId>org.springframework.boot</groupId>  
+   <artifactId>spring-boot-starter-amqp</artifactId>  
+</dependency>
+```
+
+在启动类上使用`@EnableRabbit`注解
+
+在配置文件中配置
+``` yml
+spring.rabbitmq.host=192.168.56.10  
+spring.rabbitmq.port=5672  
+spring.rabbitmq.virtual-host=/
+```
+
+#### AmqpAdmin使用 & RabbitTemplate使用
+
+
+
+
+
 
 
 ### 订单服务
