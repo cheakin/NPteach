@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.order;
 
+import cn.cheakin.gulimall.order.entity.OrderEntity;
 import cn.cheakin.gulimall.order.entity.OrderReturnReasonEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @SpringBootTest
@@ -35,7 +37,7 @@ class GulimallOrderApplicationTests {
             如果发送的消息是个对象，我们会使用序列化机制，将对象写出去，那么对象就必须实现Serializable
             也可以配置rabbitmq的序列化方式配置
         */
-        OrderReturnReasonEntity reasonEntity = new OrderReturnReasonEntity();
+        /*OrderReturnReasonEntity reasonEntity = new OrderReturnReasonEntity();
         reasonEntity.setId(1L);
         reasonEntity.setCreateTime(new Date());
         reasonEntity.setName("哈哈");
@@ -44,7 +46,44 @@ class GulimallOrderApplicationTests {
                 "hello.java",
                 reasonEntity
         );
-        log.info("消息发送完成{}", reasonEntity);
+        log.info("消息发送完成{}", reasonEntity);*/
+
+        /*for (int i = 0; i < 10; i++) {
+            OrderReturnReasonEntity reasonEntity = new OrderReturnReasonEntity();
+            reasonEntity.setId(1L);
+            reasonEntity.setCreateTime(new Date());
+            reasonEntity.setName("哈哈-" + i);
+            rabbitTemplate.convertAndSend(
+                    "hello-java-exchange",
+                    "hello.java",
+                    reasonEntity
+            );
+            log.info("消息发送完成{}", reasonEntity);
+        }*/
+
+        for (int i = 0; i < 10; i++) {
+            if (i %2 == 0) {
+                OrderReturnReasonEntity reasonEntity = new OrderReturnReasonEntity();
+                reasonEntity.setId(1L);
+                reasonEntity.setCreateTime(new Date());
+                reasonEntity.setName("哈哈-" + i);
+                rabbitTemplate.convertAndSend(
+                        "hello-java-exchange",
+                        "hello.java",
+                        reasonEntity
+                );
+            } else {
+                OrderEntity entity = new OrderEntity();
+                entity.setOrderSn(UUID.randomUUID().toString());
+                rabbitTemplate.convertAndSend(
+                        "hello-java-exchange",
+                        "hello.java",
+                        entity
+                );
+            }
+
+            log.info("消息发送完成{}");
+        }
     }
 
 
