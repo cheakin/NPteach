@@ -4292,9 +4292,9 @@ public class RabbitController {
 #### 可靠投递
 ##### 发送端确认
 ![[Pasted image 20230225234934.png]]
-![[Pasted image 20230225235552.png]]
 
-##### 确认回调ConfirmCallback
+###### 确认回调ConfirmCallback
+![[Pasted image 20230301220300.png]]
 在order服务的application.properties中，新版的配置是：
 ``` properties
 # 开启发送端确认
@@ -4329,7 +4329,8 @@ public void initRabbitTemplate() {
     });   
 }
 ```
-##### 失败回调ReturnsCallback
+###### 失败回调ReturnsCallback
+![[Pasted image 20230301220444.png]]
 ``` properties
 # 开启发送端消息抵达队列的确认  
 spring.rabbitmq.publisher-returns=true  
@@ -4383,6 +4384,53 @@ public void initRabbitTemplate() {
 }
 ```
 
+##### 消费端确认
+###### Ack消息确认机制
+![[Pasted image 20230301220740.png]]
+在order服务的application.properties中，新版的配置是：
+``` properties
+# 手动ack消息  
+spring.rabbitmq.listener.simple.acknowledge-mode=manual
+```
+在order服务的OrderItemServiceImpl中
+``` java
+@RabbitHandler  
+public void receiveMessage(Message message,  
+						   OrderReturnReasonEntity content,  
+						   Channel channel) throws InterruptedException {  
+	byte[] body = message.getBody();  
+	// 消息头属性信息  
+	MessageProperties messageProperties = message.getMessageProperties();  
+//        System.out.println("接收到消息...:" + message + "==>类型," + message);  
+
+	System.out.println("接收到消息...:" + message + "==>内容," + content);  
+
+	//Thread.sleep(3000);  
+	System.out.println("消息处理完成=>" + content.getName());  
+
+	// channel内按顺序自增  
+	long deliveryTag = message.getMessageProperties().getDeliveryTag();  
+	System.out.println("deliveryTag ==> " + deliveryTag);  
+
+	// 签收货物，非批量模式  
+	try {  
+		if (deliveryTag % 2 == 0) {  
+			// 收货  
+			channel.basicAck(deliveryTag, false);  
+			System.out.println("签收了货物..." + deliveryTag);  
+		} else {  
+			// 退货 requeue=false丢弃  requeue=true发回服务器，服务器重新入队  
+			//long deliveryTag, boolean multiple, boolean requeue  
+			channel.basicNack(deliveryTag, false, true);  
+			//long deliveryTag, boolean requeue  
+//            channel.basicReject();  
+			System.out.println("没有签收货物..." + deliveryTag);  
+		}  
+	} catch (IOException e) {  
+		// 网络终端  
+	}  
+}
+```
 
 ### 订单服务
 ### 分布式事务
