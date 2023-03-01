@@ -2,6 +2,7 @@ package cn.cheakin.gulimall.order.controller;
 
 import cn.cheakin.gulimall.order.entity.OrderEntity;
 import cn.cheakin.gulimall.order.entity.OrderReturnReasonEntity;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +29,8 @@ public class RabbitController {
                 rabbitTemplate.convertAndSend(
                         "hello-java-exchange",
                         "hello.java",
-                        reasonEntity
+                        reasonEntity,
+                        new CorrelationData(UUID.randomUUID().toString())
                 );
             } else {
                 OrderEntity entity = new OrderEntity();
@@ -36,8 +38,16 @@ public class RabbitController {
                 rabbitTemplate.convertAndSend(
                         "hello-java-exchange",
                         "hello.java",
-                        entity
+                        entity,
+                        new CorrelationData(UUID.randomUUID().toString())
                 );
+                /*OrderEntity entity = new OrderEntity();
+                entity.setOrderSn(UUID.randomUUID().toString());
+                rabbitTemplate.convertAndSend(
+                        "hello-java-exchange",
+                        "hello22.java",
+                        entity
+                );*/
             }
         }
 
