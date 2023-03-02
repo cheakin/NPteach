@@ -4433,6 +4433,69 @@ public void receiveMessage(Message message,
 ```
 
 ### 订单服务
+#### 页面环境搭建
+将等待付款的静态页面放到服务器的`/mydata/nginx/html/static/order/detail`目录下
+并将等待付款的`index.html`页面复制到订单服务的templates目录下，并重命名为`detail.html`
+
+将订单页的静态页面放到服务器的`/mydata/nginx/html/static/order/list`目录下
+并将订单页的`index.html`页面复制到订单服务的templates目录下，并重命名为`list.html`
+
+将结算页的静态页面放到服务器的`/mydata/nginx/html/static/order/confirm`目录下
+并将结算页的`index.html`页面复制到订单服务的templates目录下，并重命名为`confirm.html`
+
+将收银页的静态页面放到服务器的`/mydata/nginx/html/static/order/pay`目录下
+并将收银页的`index.html`页面复制到订单服务的templates目录下，并重命名为`pay.html`
+
+修改hosts文件，新增订单域名的DNS解析
+``` sh
+# Gulimall Start
+192.168.56.10   gulimall.com
+192.168.56.10   search.gulimall.com
+192.168.56.10   item.gulimall.com
+192.168.56.10   auth.gulimall.com
+192.168.56.10   cart.gulimall.com
+192.168.56.10   order.gulimall.com
+# Gulimall End
+```
+
+在网关服务的application.yml中增加网关转发配置
+``` yml
+- id: gulimall_order_rout  
+  uri: lb://gulimall-order  
+  predicates:  
+    - Host=order.gulimall.com
+```
+
+订单服务中的pom.xml中引入thymeleaf依赖
+``` yml
+<dependency>  
+   <groupId>org.springframework.boot</groupId>  
+   <artifactId>spring-boot-starter-thymeleaf</artifactId>  
+</dependency>
+```
+并且在application.properties中将thymeleaf缓存关闭
+``` yml
+spring.thymeleaf.cache=false
+```
+订单服务中新建视图解析的类
+``` java
+@RestController  
+public class HelloController {  
+  
+    @GetMapping("/{page}.html")  
+	public String listPage(@PathVariable("page") String page) {  
+	    return page;  
+	}
+}
+```
+
+由于之前没有在注册中心注册订单服务，所以还需要在注册中心将订单服务注册
+首先在启动类上使用`@EnableDiscoveryClient`，并且在applicatioin.properties中添加注册中心配置
+``` properties
+spring.cloud.nacos.discovery.server-addr=127.0.0.1:8848  
+spring.application.name=gulimall-order
+```
+
 ### 分布式事务
 ### 订单服务
 ### 支付
