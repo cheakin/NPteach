@@ -17,6 +17,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.Map;
 
 @RabbitListener(queues = {"hello-java-queue"})
@@ -60,6 +61,28 @@ public class OrderItemServiceImpl extends ServiceImpl<OrderItemDao, OrderItemEnt
 
         //Thread.sleep(3000);
         System.out.println("消息处理完成=>" + content.getName());
+
+        // channel内按顺序自增
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+        System.out.println("deliveryTag ==> " + deliveryTag);
+
+        // 签收货物，非批量模式
+        try {
+            if (deliveryTag % 2 == 0) {
+                // 收货
+                channel.basicAck(deliveryTag, false);
+                System.out.println("签收了货物..." + deliveryTag);
+            } else {
+                // 退货 requeue=false丢弃  requeue=true发回服务器，服务器重新入队
+                //long deliveryTag, boolean multiple, boolean requeue
+                channel.basicNack(deliveryTag, false, true);
+                //long deliveryTag, boolean requeue
+//                channel.basicReject();
+                System.out.println("没有签收货物..." + deliveryTag);
+            }
+        } catch (IOException e) {
+            // 网络终端
+        }
     }
 
     @RabbitHandler

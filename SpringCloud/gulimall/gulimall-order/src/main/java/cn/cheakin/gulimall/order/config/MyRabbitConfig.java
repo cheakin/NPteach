@@ -35,6 +35,13 @@ public class MyRabbitConfig {
      *  2)设置确认回调ReturnsCallback
      *
      * 3. 消息端确认（保证每个消息被正确消费，此时才可以broker删除这个消息）
+     *  1）默认是自动确认的，质押哦消息接收到，客户端会自动确认，服务端就会一处这个消息
+     *      问题：我们收到很多消息，自动回复给服务器ack，只有一个消息处理成功，宕机了。发生消息丢失
+     *      手动确认模式：只要我们没有明确告诉MQ，货物被签收。没有ack，消息就一直是unacked状态。
+     *                  即使Consumer宕机，消息不会丢失，会重新变为Ready，下一次有新的Consumer连接进来就发给他
+     *  2）如何签收：
+     *      channel.basicAck(deliveryTag, false); 签收：业务成功完成就应该签收
+     *      channel.basicNack(deliveryTag, false, true); 拒签：业务受害，拒签
      */
     @PostConstruct  // MyRabbitConfig对象创建完成以后，执行此方法
     public void initRabbitTemplate() {
