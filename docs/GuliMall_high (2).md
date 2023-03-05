@@ -3077,8 +3077,17 @@ dependency>
 </dependency>  
 
 <dependency>  
-    <groupId>org.springframework.boot</groupId>  
-    <artifactId>spring-boot-starter-data-redis</artifactId>  
+   <groupId>org.springframework.boot</groupId>  
+   <artifactId>spring-boot-starter-data-redis</artifactId>  
+   <exclusions>      <exclusion>  
+         <groupId>io.lettuce</groupId>  
+         <artifactId>lettuce-core</artifactId>  
+      </exclusion>  
+   </exclusions>  
+</dependency>  
+<dependency>  
+   <groupId>redis.clients</groupId>  
+   <artifactId>jedis</artifactId>  
 </dependency>
 
 <!--使用热加载-->  
@@ -4495,6 +4504,65 @@ public class HelloController {
 spring.cloud.nacos.discovery.server-addr=127.0.0.1:8848  
 spring.application.name=gulimall-order
 ```
+
+#### 整合SpringSession
+引入SpringSession依赖
+``` xml
+<dependency>  
+    <groupId>org.springframework.session</groupId>  
+    <artifactId>spring-session-data-redis</artifactId>  
+</dependency>
+
+<dependency>  
+   <groupId>org.springframework.boot</groupId>  
+   <artifactId>spring-boot-starter-data-redis</artifactId>  
+   <exclusions>      <exclusion>  
+         <groupId>io.lettuce</groupId>  
+         <artifactId>lettuce-core</artifactId>  
+      </exclusion>  
+   </exclusions>  
+</dependency>  
+<dependency>  
+   <groupId>redis.clients</groupId>  
+   <artifactId>jedis</artifactId>  
+</dependency>
+```
+在application.properties中添加配置
+``` properties
+spring.session.store-type=redis
+
+gulimall.thread.core-size=20  
+gulimall.thread.max-size=200  
+gulimall.thread.keep-alive-time=10
+```
+将product服务的GulimallSessionConfig类，MyThreadConfig类，ThreadPoolConfigProperties类复制到order服务中
+
+启动时发现third-part服务和cart服务端口冲突，将cart服务的端口修改为30010
+
+在启动类上添加`@EnableRedisHttpSession`注解
+
+前端页面修改，略
+
+#### 订单基本概念
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### 分布式事务
 ### 订单服务
