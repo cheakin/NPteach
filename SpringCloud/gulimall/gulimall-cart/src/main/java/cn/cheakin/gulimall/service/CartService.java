@@ -3,6 +3,7 @@ package cn.cheakin.gulimall.service;
 import cn.cheakin.gulimall.vo.CartItemVo;
 import cn.cheakin.gulimall.vo.CartVo;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public interface CartService {
@@ -55,6 +56,6 @@ public interface CartService {
      */
     void deleteIdCartInfo(Integer skuId);
 
-//    List<CartItemVo> getUserCartItems();
+    List<CartItemVo> getUserCartItems();
 
 }

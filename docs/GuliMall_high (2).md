@@ -4544,16 +4544,390 @@ gulimall.thread.keep-alive-time=10
 前端页面修改，略
 
 #### 订单基本概念
+订单构成：用户信息、订单基础信息、商品信息、优惠信息、支付信息、物流信息
+![[Pasted image 20230306195625.png]]
 
+订单状态：待付款、已付款/待发货、待收货/已发货、已完成、已取消、售后中
 
+订单流程：订单创建于支付、逆向流程
+![[电商订单流程图.png]]
 
+#### 订单登录拦截
+前端修改，略
 
+在order服务中新建 `LoginInterceptor`
+``` java
+/**  
+ * 登录拦截器，未登录的用户不能进入订单服务  
+ */  
+public class LoginInterceptor implements HandlerInterceptor {  
+    public static ThreadLocal<MemberResponseVo> loginUser = new ThreadLocal<>();  
+  
+    @Override  
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {  
+        /*String requestURI = request.getRequestURI();  
+        AntPathMatcher matcher = new AntPathMatcher();  
+        boolean match1 = matcher.match("/order/order/infoByOrderSn/**", requestURI);  
+        boolean match2 = matcher.match("/payed/**", requestURI);  
+        if (match1||match2) return true;  */
+  
+        HttpSession session = request.getSession();  
+        MemberResponseVo memberResponseVo = (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);  
+        if (memberResponseVo != null) {  
+            loginUser.set(memberResponseVo);  
+            return true;        }else {  
+            session.setAttribute("msg","请先登录");  
+            response.sendRedirect("http://auth.gulimall.com/login.html");  
+            return false;        }  
+    }  
+  
+    @Override  
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {  
+  
+    }  
+    @Override  
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {  
+  
+    }}
+```
+在order服务中新建 `OrderWebConfiguration`
+``` java
+@Configuration  
+public class OrderWebConfiguration implements WebMvcConfigurer {  
+    @Override  
+    public void addInterceptors(InterceptorRegistry registry) {  
+        registry.addInterceptor(new LoginInterceptor()).addPathPatterns("/**");  
+    }  
+}
+```
 
+在order服务中新建 `OrderWebController`
+``` java
+@Controller  
+public class OrderWebController {  
 
+	@RequestMapping("/toTrade")  
+	public String toTrade(Model model) {  
+	    /*OrderConfirmVo confirmVo = orderService.confirmOrder();  
+	    model.addAttribute("confirmOrder", confirmVo);  */
+	    return "confirm";  
+	}
+}
+```
 
+#### 订单确认页模型抽取
+```
 
+在order服务中新建`OrderConfirmVo`
+``` java
+/**  
+ * 订单确认页需要用的数据  
+ */  
+public class OrderConfirmVo {  
+  
+    @Getter  
+    @Setter    /** 会员收获地址列表 **/  
+    private List<MemberAddressVo> memberAddressVos;  
+  
+    @Getter @Setter  
+    /** 所有选中的购物项 **/  
+    private List<OrderItemVo> items;  
+  
+    /** 发票记录 **/  
+    @Getter @Setter  
+    /** 优惠券（会员积分） **/  
+    private Integer integration;  
+  
+    /** 防止重复提交的令牌 **/  
+    @Getter @Setter  
+    private String orderToken;  
+  
+    @Getter @Setter  
+    Map<Long,Boolean> stocks;  
+  
+    public Integer getCount() {  
+        Integer count = 0;  
+        if (items != null && items.size() > 0) {  
+            for (OrderItemVo item : items) {  
+                count += item.getCount();  
+            }  
+        }  
+        return count;  
+    }  
+  
+  
+    /** 订单总额 **/  
+    //BigDecimal total;  
+    //计算订单总额  
+    public BigDecimal getTotal() {  
+        BigDecimal totalNum = BigDecimal.ZERO;  
+        if (items != null && items.size() > 0) {  
+            for (OrderItemVo item : items) {  
+                //计算当前商品的总价格  
+                BigDecimal itemPrice = item.getPrice().multiply(new BigDecimal(item.getCount().toString()));  
+                //再计算全部商品的总价格  
+                totalNum = totalNum.add(itemPrice);  
+            }  
+        }  
+        return totalNum;  
+    }  
+  
+  
+    /** 应付价格 **/  
+    //BigDecimal payPrice;  
+    public BigDecimal getPayPrice() {  
+        return getTotal();  
+    }  
+}
+```
+在order服务中新建OrderItemVo
+``` java
+@Data  
+public class OrderItemVo {  
+    private Long skuId;  
+  
+    private Boolean check = true;  
+  
+    private String title;  
+  
+    private String image;  
+  
+    /**  
+     * 商品套餐属性  
+     */  
+    private List<String> skuAttrValues;  
+  
+    private BigDecimal price;  
+  
+    private Integer count;  
+  
+    private BigDecimal totalPrice;  
+  
+    /** 商品重量 **/  
+    private BigDecimal weight = new BigDecimal("0.085");  
+}
+```
+在order服务中新建OrderConfirmVo
+``` java
+/**  
+ * 收货地址  
+ */  
+@Data  
+public class MemberAddressVo {  
+    private Long id;  
+    /**  
+     * member_id     */    private Long memberId;  
+    /**  
+     * 收货人姓名  
+     */  
+    private String name;  
+    /**  
+     * 电话  
+     */  
+    private String phone;  
+    /**  
+     * 邮政编码  
+     */  
+    private String postCode;  
+    /**  
+     * 省份/直辖市  
+     */  
+    private String province;  
+    /**  
+     * 城市  
+     */  
+    private String city;  
+    /**  
+     * 区  
+     */  
+    private String region;  
+    /**  
+     * 详细地址(街道)  
+     */    private String detailAddress;  
+    /**  
+     * 省市区代码  
+     */  
+    private String areacode;  
+    /**  
+     * 是否默认  
+     */  
+    private Integer defaultStatus;  
+}
+```
+在order服务中 `OrderWebController`的toTrade
+``` java
+@RequestMapping("/toTrade")  
+	public String toTrade(Model model) {  
+	    OrderConfirmVo confirmVo = orderService.confirmOrder();  
+	    model.addAttribute("confirmOrder", confirmVo);
+	    // 展示订单页
+	    return "confirm";  
+	}
+```
 
+#### 订单确认页数据获取
+在启动类上加上`@EnableFeignClients`注解,开启远程服务调用
+order服务中创建`MemberFeignService`
+``` java
+@FeignClient("gulimall-member")  
+public interface MemberFeignService {  
+  
+    @RequestMapping("member/memberreceiveaddress/getAddressByUserId")  
+    List<MemberAddressVo> getAddressByUserId(@RequestBody Long userId);  
+    }
+```
+member服务中的`MemberReceiveAddressController`
+``` java
+@RequestMapping("/getAddressByUserId")  
+public List<MemberReceiveAddressEntity> getAddressByUserId(@RequestBody Long userId) {  
+    return memberReceiveAddressService.getAddressByUserId(userId);  
+}
+```
+member服务中的`MemberReceiveAddressServiceImpl`
+``` java
+@Override  
+public List<MemberReceiveAddressEntity> getAddressByUserId(Long userId) {  
+    return this.list(new QueryWrapper<MemberReceiveAddressEntity>().eq("member_id", userId));  
+}
+```
 
+cart服务中的CartController
+``` java
+/**  
+ * 获取当前用户的购物车商品项  
+ *  
+ * @return  
+ */  
+@GetMapping(value = "/currentUserCartItems")  
+@ResponseBody  
+public List<CartItemVo> getCurrentCartItems() {  
+  
+    List<CartItemVo> cartItemVoList = cartService.getUserCartItems();  
+  
+    return cartItemVoList;  
+}
+```
+cart服务的CartServiceImpl
+``` java
+@Override  
+public List<CartItemVo> getUserCartItems() {  
+  
+    List<CartItemVo> cartItemVoList = new ArrayList<>();  
+    //获取当前用户登录的信息  
+    UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();  
+    //如果用户未登录直接返回null  
+    if (userInfoTo.getUserId() == null) {  
+        return null;  
+    } else {  
+        //获取购物车项  
+        String cartKey = CART_PREFIX + userInfoTo.getUserId();  
+        //获取所有的  
+        List<CartItemVo> cartItems = getCartItems(cartKey);  
+        if (cartItems == null) {  
+            throw new CartExcep3tionHandler();  
+        }  
+        //筛选出选中的  
+        cartItemVoList = cartItems.stream()  
+                .filter(CartItemVo::getCheck)  
+                .peek(item -> {  
+                    //更新为最新的价格（查询数据库）  
+                    BigDecimal price = productFeignService.getPrice(item.getSkuId());  
+                    item.setPrice(price);  
+                }).collect(Collectors.toList());  
+    }  
+  
+    return cartItemVoList;  
+}
+```
+cart服务的ProductFeignService
+``` java
+/**  
+ * 根据skuId查询当前商品的最新价格  
+ * @param skuId  
+ * @return  
+ */  
+@GetMapping(value = "/product/skuinfo/{skuId}/price")  
+BigDecimal getPrice(@PathVariable("skuId") Long skuId);
+```
+product服务的`SkuInfoController`
+``` java
+@GetMapping("/{skuId}//price")  
+public BigDecimal getPrice(@PathVariable("skuId") Long skuId) {  
+    SkuInfoEntity byId = skuInfoService.getById(skuId);  
+    return byId.getPrice();  
+}
+```
+
+order服务新建CartFeignService
+``` java
+@FeignClient("gulimall-cart")  
+public interface CartFeignService {  
+  
+    @ResponseBody  
+    @RequestMapping("/getCheckedItems")  
+    List<OrderItemVo> getCheckedItems();  
+}
+```
+
+`order`服务中`OrderServiceImpl`的`confirmOrder`
+``` java
+@Autowired  
+private MemberFeignService memberFeignService;
+@Autowired  
+private CartFeignService cartFeignService;
+
+@Override  
+public OrderConfirmVo confirmOrder() {  
+    MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+    OrderConfirmVo confirmVo = new OrderConfirmVo();  
+    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();  
+    CompletableFuture<Void> itemAndStockFuture = CompletableFuture.supplyAsync(() -> {  
+        RequestContextHolder.setRequestAttributes(requestAttributes);  
+        //1. 查出所有选中购物项  
+        List<OrderItemVo> checkedItems = cartFeignService.getCheckedItems();  
+        confirmVo.setItems(checkedItems);  
+        return checkedItems;  
+    }, executor).thenAcceptAsync((items) -> {  
+        //4. 库存  
+        List<Long> skuIds = items.stream().map(OrderItemVo::getSkuId).collect(Collectors.toList());  
+        Map<Long, Boolean> hasStockMap = wareFeignService.getSkuHasStocks(skuIds).stream().collect(Collectors.toMap(SkuHasStockVo::getSkuId, SkuHasStockVo::getHasStock));  
+        confirmVo.setStocks(hasStockMap);  
+    }, executor);  
+  
+    //2. 查出所有收货地址  
+    CompletableFuture<Void> addressFuture = CompletableFuture.runAsync(() -> {  
+        List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+        confirmVo.setMemberAddressVos(addressByUserId);  
+    }, executor);  
+  
+    //3. 积分  
+    confirmVo.setIntegration(memberResponseVo.getIntegration());  
+  
+    //5. 总价自动计算  
+    //6. 防重令牌  
+    String token = UUID.randomUUID().toString().replace("-", "");  
+    redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);  
+    confirmVo.setOrderToken(token);  
+    try {  
+        CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
+    } catch (InterruptedException e) {  
+        e.printStackTrace();  
+    } catch (ExecutionException e) {  
+        e.printStackTrace();  
+    }  
+    return confirmVo;  
+}
+```
+cart服务的ProductFeignService
+``` java
+/**  
+ * 根据skuId查询当前商品的最新价格  
+ * @param skuId  
+ * @return  
+ */  
+@GetMapping(value = "/product/skuinfo/{skuId}/price")  
+BigDecimal getPrice(@PathVariable("skuId") Long skuId);
+```
 
 
 

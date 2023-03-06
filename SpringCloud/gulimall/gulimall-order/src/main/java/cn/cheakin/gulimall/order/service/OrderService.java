@@ -1,8 +1,9 @@
 package cn.cheakin.gulimall.order.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.order.entity.OrderEntity;
+import cn.cheakin.gulimall.order.vo.OrderConfirmVo;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Map;
 
@@ -16,5 +17,7 @@ import java.util.Map;
 public interface OrderService extends IService<OrderEntity> {
 
     PageUtils queryPage(Map<String, Object> params);
+
+    OrderConfirmVo confirmOrder();
 }
 

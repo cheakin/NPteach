@@ -1,6 +1,5 @@
 package cn.cheakin.gulimall.service.impl;
 
-import cn.cheakin.common.constant.CartConstant;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.feign.ProductFeignService;
 import cn.cheakin.gulimall.interceptor.CartInterceptor;
@@ -17,11 +16,15 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
+
+import static cn.cheakin.common.constant.CartConstant.CART_PREFIX;
 
 @Slf4j
 @Service("cartService")
@@ -110,9 +113,9 @@ public class CartServiceImpl implements CartService {
         UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();
         if (userInfoTo.getUserId() != null) {
             //1、登录
-            String cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserId();
+            String cartKey = CART_PREFIX + userInfoTo.getUserId();
             //临时购物车的键
-            String temptCartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();
+            String temptCartKey = CART_PREFIX + userInfoTo.getUserKey();
 
             //2、如果临时购物车的数据还未进行合并
             List<CartItemVo> tempCartItems = getCartItems(temptCartKey);
@@ -131,7 +134,7 @@ public class CartServiceImpl implements CartService {
 
         } else {
             //没登录
-            String cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();
+            String cartKey = CART_PREFIX + userInfoTo.getUserKey();
             //获取临时购物车里面的所有购物项
             List<CartItemVo> cartItems = getCartItems(cartKey);
             cartVo.setItems(cartItems);
@@ -152,9 +155,9 @@ public class CartServiceImpl implements CartService {
         String cartKey = "";
         if (userInfoTo.getUserId() != null) {
             //gulimall:cart:1
-            cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserId();
+            cartKey = CART_PREFIX + userInfoTo.getUserId();
         } else {
-            cartKey = CartConstant.CART_PREFIX + userInfoTo.getUserKey();
+            cartKey = CART_PREFIX + userInfoTo.getUserKey();
         }
 
         //绑定指定的key操作Redis
@@ -235,7 +238,7 @@ public class CartServiceImpl implements CartService {
         cartOps.delete(skuId.toString());
     }
 
-    /*@Override
+    @Override
     public List<CartItemVo> getUserCartItems() {
 
         List<CartItemVo> cartItemVoList = new ArrayList<>();
@@ -250,7 +253,7 @@ public class CartServiceImpl implements CartService {
             //获取所有的
             List<CartItemVo> cartItems = getCartItems(cartKey);
             if (cartItems == null) {
-                throw new CartExceptionHandler();
+//                throw new CartExcep3tionHandler();
             }
             //筛选出选中的
             cartItemVoList = cartItems.stream()
@@ -263,5 +266,5 @@ public class CartServiceImpl implements CartService {
         }
 
         return cartItemVoList;
-    }*/
+    }
 }
