@@ -26,7 +26,7 @@ public class SkuInfoController {
     @Autowired
     private SkuInfoService skuInfoService;
 
-    @GetMapping("/{skuId}//price")
+    @GetMapping("/{skuId}/price")
     public BigDecimal getPrice(@PathVariable("skuId") Long skuId) {
         SkuInfoEntity byId = skuInfoService.getById(skuId);
         return byId.getPrice();

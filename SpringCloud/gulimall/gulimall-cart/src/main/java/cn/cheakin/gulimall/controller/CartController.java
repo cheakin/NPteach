@@ -162,4 +162,10 @@ public class CartController {
 
     }
 
+    /*@ResponseBody
+    @RequestMapping("/getCheckedItems")
+    public List<CartItemVo> getCheckedItems() {
+        return cartService.getCheckedItems();
+    }*/
+
 }

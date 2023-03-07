@@ -262,7 +262,8 @@ public class CartServiceImpl implements CartService {
                         //更新为最新的价格（查询数据库）
                         BigDecimal price = productFeignService.getPrice(item.getSkuId());
                         item.setPrice(price);
-                    }).collect(Collectors.toList());
+                    })
+                    .collect(Collectors.toList());
         }
 
         return cartItemVoList;
