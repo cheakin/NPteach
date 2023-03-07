@@ -4851,7 +4851,7 @@ BigDecimal getPrice(@PathVariable("skuId") Long skuId);
 ```
 product服务的`SkuInfoController`
 ``` java
-@GetMapping("/{skuId}//price")  
+@GetMapping("/{skuId}/price")  
 public BigDecimal getPrice(@PathVariable("skuId") Long skuId) {  
     SkuInfoEntity byId = skuInfoService.getById(skuId);  
     return byId.getPrice();  
@@ -4864,8 +4864,9 @@ order服务新建CartFeignService
 public interface CartFeignService {  
   
     @ResponseBody  
-    @RequestMapping("/getCheckedItems")  
-    List<OrderItemVo> getCheckedItems();  
+	@RequestMapping("/currentUserCartItems")  
+	List<OrderItemVo> getCurrentUserCartItems();
+	
 }
 ```
 
@@ -4878,43 +4879,20 @@ private CartFeignService cartFeignService;
 
 @Override  
 public OrderConfirmVo confirmOrder() {  
-    MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
     OrderConfirmVo confirmVo = new OrderConfirmVo();  
-    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();  
-    CompletableFuture<Void> itemAndStockFuture = CompletableFuture.supplyAsync(() -> {  
-        RequestContextHolder.setRequestAttributes(requestAttributes);  
-        //1. 查出所有选中购物项  
-        List<OrderItemVo> checkedItems = cartFeignService.getCheckedItems();  
-        confirmVo.setItems(checkedItems);  
-        return checkedItems;  
-    }, executor).thenAcceptAsync((items) -> {  
-        //4. 库存  
-        List<Long> skuIds = items.stream().map(OrderItemVo::getSkuId).collect(Collectors.toList());  
-        Map<Long, Boolean> hasStockMap = wareFeignService.getSkuHasStocks(skuIds).stream().collect(Collectors.toMap(SkuHasStockVo::getSkuId, SkuHasStockVo::getHasStock));  
-        confirmVo.setStocks(hasStockMap);  
-    }, executor);  
-  
-    //2. 查出所有收货地址  
-    CompletableFuture<Void> addressFuture = CompletableFuture.runAsync(() -> {  
-        List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
-        confirmVo.setMemberAddressVos(addressByUserId);  
-    }, executor);  
-  
-    //3. 积分  
-    confirmVo.setIntegration(memberResponseVo.getIntegration());  
-  
-    //5. 总价自动计算  
-    //6. 防重令牌  
-    String token = UUID.randomUUID().toString().replace("-", "");  
-    redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);  
-    confirmVo.setOrderToken(token);  
-    try {  
-        CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
-    } catch (InterruptedException e) {  
-        e.printStackTrace();  
-    } catch (ExecutionException e) {  
-        e.printStackTrace();  
-    }  
+	MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+	  
+	//1. 远程查出所有收货地址  
+	List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+	confirmVo.setMemberAddressVos(addressByUserId);  
+	//2. 远程查出所有选中购物项  
+	List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+	confirmVo.setItems(items);
+	//3. 查询用户积分  
+	confirmVo.setIntegration(memberResponseVo.getIntegration());  
+	//4. 其他数据自动计算  
+	//5. 放重令牌
+	
     return confirmVo;  
 }
 ```
@@ -4928,6 +4906,62 @@ cart服务的ProductFeignService
 @GetMapping(value = "/product/skuinfo/{skuId}/price")  
 BigDecimal getPrice(@PathVariable("skuId") Long skuId);
 ```
+
+#### Feign远程调用丢失请求头问题
+![[Pasted image 20230307220357.png]]
+order服务中新建GuliFeignConfig
+``` java
+@Configuration  
+public class GuliFeignConfig {  
+
+    @Bean  
+    public RequestInterceptor requestInterceptor() {  
+        return new RequestInterceptor() {  
+            @Override  
+            public void apply(RequestTemplate template) {  
+                //1. 使用RequestContextHolder拿到老请求的请求数据  
+                ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();  
+                if (requestAttributes != null) {  
+                    HttpServletRequest request = requestAttributes.getRequest();  
+                    if (request != null) {  
+                        //2. 将老请求得到cookie信息放到feign请求上  
+                        String cookie = request.getHeader("Cookie");  
+                        template.header("Cookie", cookie);  
+                    }  
+                }  
+            }  
+        };  
+    }  
+    
+}
+```
+
+#### Feign异步调用丢失请求头问题
+`order`服务中`OrderServiceImpl`的`confirmOrder`
+``` java
+@Autowired  
+private ThreadPoolExecutor executor;
+
+@Override  
+public OrderConfirmVo confirmOrder() {  
+    OrderConfirmVo confirmVo = new OrderConfirmVo();  
+	MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+	  
+	//1. 远程查出所有收货地址  
+	List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+	confirmVo.setMemberAddressVos(addressByUserId);  
+	//2. 远程查出所有选中购物项  
+	List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+	confirmVo.setItems(items);  
+	//3. 查询用户积分  
+	confirmVo.setIntegration(memberResponseVo.getIntegration());  
+	//4. 其他数据自动计算  
+	//5. 放重令牌
+	
+    return confirmVo;  
+}
+```
+
 
 
 
