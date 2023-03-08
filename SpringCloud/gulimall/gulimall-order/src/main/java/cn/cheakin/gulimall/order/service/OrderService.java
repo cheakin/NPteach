@@ -6,6 +6,7 @@ import cn.cheakin.gulimall.order.vo.OrderConfirmVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  * 订单
@@ -18,6 +19,6 @@ public interface OrderService extends IService<OrderEntity> {
 
     PageUtils queryPage(Map<String, Object> params);
 
-    OrderConfirmVo confirmOrder();
+    OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException;
 }
 

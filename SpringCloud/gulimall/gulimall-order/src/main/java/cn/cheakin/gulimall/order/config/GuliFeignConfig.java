@@ -17,6 +17,7 @@ public class GuliFeignConfig {
         return new RequestInterceptor() {
             @Override
             public void apply(RequestTemplate template) {
+                System.out.println("RequestInterceptor线程..." + Thread.currentThread().getId());
                 // feign远程之前先进行RequestInterceptor.apply
                 //1. 使用RequestContextHolder拿到老请求的请求数据
                 ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();

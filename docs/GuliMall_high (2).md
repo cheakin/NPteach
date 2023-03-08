@@ -4935,8 +4935,6 @@ public class GuliFeignConfig {
     
 }
 ```
-
-#### Feign异步调用丢失请求头问题
 `order`服务中`OrderServiceImpl`的`confirmOrder`
 ``` java
 @Autowired  
@@ -4962,7 +4960,78 @@ public OrderConfirmVo confirmOrder() {
 }
 ```
 
-
+#### Feign异步调用丢失请求头问题
+![[Pasted image 20230308080910.png]]
+order服务中新建GuliFeignConfig
+``` java
+@Bean  
+public RequestInterceptor requestInterceptor() {  
+    return new RequestInterceptor() {  
+        @Override  
+        public void apply(RequestTemplate template) {  
+            System.out.println("RequestInterceptor线程..." + Thread.currentThread().getId());  
+            // feign远程之前先进行RequestInterceptor.apply  
+            //1. 使用RequestContextHolder拿到老请求的请求数据  
+            ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();  
+            if (requestAttributes != null) {  
+                HttpServletRequest request = requestAttributes.getRequest();  
+                if (request != null) {  
+                    //2. 将老请求得到cookie信息放到feign请求上  
+                    String cookie = request.getHeader("Cookie");  
+                    template.header("Cookie", cookie);  
+                }  
+            }  
+        }  
+    };  
+}
+```
+`order`服务中`OrderServiceImpl`的`confirmOrder`
+``` java
+@Override  
+public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException {  
+    OrderConfirmVo confirmVo = new OrderConfirmVo();  
+    MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+    System.out.println("主线程..." + Thread.currentThread().getId());  
+  
+    //1. 远程查出所有收货地址  
+    /*List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+    confirmVo.setMemberAddressVos(addressByUserId);*/    //2. 远程查出所有选中购物项  
+    /*List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+    confirmVo.setItems(items);*/    //3. 查询用户积分  
+    /*confirmVo.setIntegration(memberResponseVo.getIntegration());*/  
+    //4. 其他数据自动计算  
+    //5. 放重令牌  
+  
+    //1. 查出所有收货地址  
+    CompletableFuture<Void> addressFuture = CompletableFuture.runAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+        confirmVo.setMemberAddressVos(addressByUserId);  
+    }, executor);  
+  
+    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();  
+    CompletableFuture<Void> itemAndStockFuture = CompletableFuture.supplyAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        RequestContextHolder.setRequestAttributes(requestAttributes);   // 异步调用请求头共享  
+        //2. 查出所有选中购物项  
+        List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+        confirmVo.setItems(items);  
+        return items;  
+    }, executor);  
+  
+	//3. 查询用户积分  
+	confirmVo.setIntegration(memberResponseVo.getIntegration());
+  
+    //5. 总价自动计算  
+    //6. 防重令牌  
+    String token = UUID.randomUUID().toString().replace("-", "");  
+    /*redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);  
+    confirmVo.setOrderToken(token);*/  
+    CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
+  
+    return confirmVo;  
+}
+```
 
 
 
