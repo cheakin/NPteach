@@ -5033,9 +5033,140 @@ public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedExcep
 }
 ```
 
+#### bug修改
+product服务的SkuInfoController
+``` java
+@GetMapping("/{skuId}/price")  
+public R getPrice(@PathVariable("skuId") Long skuId) {  
+    SkuInfoEntity byId = skuInfoService.getById(skuId);  
+    return R.ok().setData(byId.getPrice());  
+}
+```
+cart服务的ProductFeignService
+``` java
+/**  
+ * 根据skuId查询当前商品的最新价格  
+ * @param skuId  
+ * @return  
+ */  
+@GetMapping(value = "/product/skuinfo/{skuId}/price")  
+R getPrice(@PathVariable("skuId") Long skuId);
+```
+cart服务的CartServiceImpl
+```java
+@Override  
+public List<CartItemVo> getUserCartItems() {  
 
+	List<CartItemVo> cartItemVoList = new ArrayList<>();  
+	//获取当前用户登录的信息  
+	UserInfoTo userInfoTo = CartInterceptor.toThreadLocal.get();  
+	//如果用户未登录直接返回null  
+	if (userInfoTo.getUserId() == null) {  
+		return null;  
+	} else {  
+		//获取购物车项  
+		String cartKey = CART_PREFIX + userInfoTo.getUserId();  
+		//获取所有的  
+		List<CartItemVo> cartItems = getCartItems(cartKey);  
+		if (cartItems == null) {  
+//                throw new CartExcep3tionHandler();  
+		}  
+		//筛选出选中的  
+		cartItemVoList = cartItems.stream()  
+				.filter(CartItemVo::getCheck)  
+				.peek(item -> {  
+					//更新为最新的价格（查询数据库）  
+					/*BigDecimal price = productFeignService.getPrice(item.getSkuId());*/  
+					BigDecimal price = productFeignService.getPrice(item.getSkuId()).getData(BigDecimal.class);  
+					item.setPrice(price);  
+				})  
+				.collect(Collectors.toList());  
+	}  
 
+	return cartItemVoList;  
+}
+```
+cart服务的CartController
+``` java
+/**  
+ * 获取当前用户的购物车商品项  
+ *  
+ * @return  
+ */  
+@GetMapping(value = "/currentUserCartItems")  
+@ResponseBody  
+public List<CartItemVo> getCurrentCartItems() {  
+  
+    List<CartItemVo> cartItemVoList = cartService.getUserCartItems();  
+  
+    return cartItemVoList;  
+}
+```
 
+#### 订单确认页渲染
+前端页面，略
+order服务的OrderConfirmVo
+``` java
+/**  
+ * 订单确认页需要用的数据  
+ */  
+public class OrderConfirmVo {  
+  
+    @Getter  
+    @Setter    /** 会员收获地址列表 **/  
+    private List<MemberAddressVo> memberAddressVos;  
+  
+    @Getter @Setter  
+    /** 所有选中的购物项 **/  
+    private List<OrderItemVo> items;  
+  
+    /** 发票记录 **/  
+    @Getter @Setter  
+    /** 优惠券（会员积分） **/  
+    private Integer integration;  
+  
+    /** 防止重复提交的令牌 **/  
+    @Getter @Setter  
+    private String orderToken;  
+  
+    @Getter @Setter  
+    Map<Long,Boolean> stocks;  
+  
+    public Integer getCount() {  
+        Integer count = 0;  
+        if (items != null && items.size() > 0) {  
+            for (OrderItemVo item : items) {  
+                count += item.getCount();  
+            }  
+        }  
+        return count;  
+    }  
+  
+  
+    /** 订单总额 **/  
+    //BigDecimal total;  
+    //计算订单总额  
+    public BigDecimal getTotal() {  
+        BigDecimal totalNum = BigDecimal.ZERO;  
+        if (items != null && items.size() > 0) {  
+            for (OrderItemVo item : items) {  
+                //计算当前商品的总价格  
+                BigDecimal itemPrice = item.getPrice().multiply(new BigDecimal(item.getCount().toString()));  
+                //再计算全部商品的总价格  
+                totalNum = totalNum.add(itemPrice);  
+            }  
+        }  
+        return totalNum;  
+    }  
+  
+  
+    /** 应付价格 **/  
+    //BigDecimal payPrice;  
+    public BigDecimal getPayPrice() {  
+        return getTotal();  
+    }  
+}
+```
 
 
 

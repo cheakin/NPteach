@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.stream.Collectors;
 
 
 @Service("orderService")
@@ -96,9 +97,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
             return items;
         }, executor).thenAcceptAsync((items) -> {
             //4. 库存
-            /*List<Long> skuIds = items.stream().map(OrderItemVo::getSkuId).collect(Collectors.toList());
+            List<Long> skuIds = items.stream().map(OrderItemVo::getSkuId).collect(Collectors.toList());
             Map<Long, Boolean> hasStockMap = wareFeignService.getSkuHasStocks(skuIds).stream().collect(Collectors.toMap(SkuHasStockVo::getSkuId, SkuHasStockVo::getHasStock));
-            confirmVo.setStocks(hasStockMap);*/
+            confirmVo.setStocks(hasStockMap);
         }, executor);
 
         //3. 查询用户积分
