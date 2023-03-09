@@ -10,7 +10,7 @@ nginx中前面已经是使用泛域名了，就不需要再配置了
 `gateway`服务的`application.yml`中配置网关
 ``` yml
 - id: mall_host_route 
-    uri: lb://mall-product
+    uri: lb://gulimall-product
     predicates:
       - Host=gulimall.com, item.gulimall.com
 ```
@@ -1792,6 +1792,10 @@ Controller层页需要将异常抛出
             </exclusions>
         </dependency>
 
+		<dependency>  
+		   <groupId>org.springframework.boot</groupId>  
+		   <artifactId>spring-boot-starter-web</artifactId>  
+		</dependency>
         <!-- thymeleaf 模板引擎 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -5024,9 +5028,6 @@ public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedExcep
   
     //5. 总价自动计算  
     //6. 防重令牌  
-    String token = UUID.randomUUID().toString().replace("-", "");  
-    /*redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);  
-    confirmVo.setOrderToken(token);*/  
     CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
   
     return confirmVo;  
@@ -5168,9 +5169,167 @@ public class OrderConfirmVo {
 }
 ```
 
+#### 订单确认页库存查询
+order服务中WareFeignService
+``` java
+@FeignClient("gulimall-ware")  
+public interface WareFeignService {  
+  
+    @RequestMapping("ware/waresku/hasStock")  
+    List<SkuHasStockVo> getSkuHasStocks(@RequestBody List<Long> ids);  
+      
+}
+```
+order服务中SkuStockVo
+```java
+@Data  
+public class SkuStockVo {  
+  
+    private Long skuId;  
+  
+    private Boolean hasStock;  
+  
+}
+```
+order服务中OrderServiceImpl
+``` java
+@Autowired  
+private WareFeignService wareFeignService;
 
-
-
+@Override  
+public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException {  
+    OrderConfirmVo confirmVo = new OrderConfirmVo();  
+    MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+    System.out.println("主线程..." + Thread.currentThread().getId());  
+  
+    //1. 远程查出所有收货地址  
+    /*List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+    confirmVo.setMemberAddressVos(addressByUserId);*/    //2. 远程查出所有选中购物项  
+    /*List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+    confirmVo.setItems(items);*/  
+    // 获取主线程的请求头  
+    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();  
+    //1. 查出所有收货地址  
+    CompletableFuture<Void> addressFuture = CompletableFuture.runAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        // 异步调用请求头共享：每一个线程都共享之前的请求头  
+        RequestContextHolder.setRequestAttributes(requestAttributes);  
+        List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+        confirmVo.setMemberAddressVos(addressByUserId);  
+    }, executor);  
+  
+  
+    CompletableFuture<Void> itemAndStockFuture = CompletableFuture.supplyAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        RequestContextHolder.setRequestAttributes(requestAttributes);   // 异步调用请求头共享  
+        //2. 查出所有选中购物项  
+        List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+        confirmVo.setItems(items);  
+        return items;  
+    }, executor).thenAcceptAsync((items) -> {  
+        //4. 库存  
+        List<Long> skuIds = items.stream().map(OrderItemVo::getSkuId).collect(Collectors.toList());  
+        R hasStocks = wareFeignService.getSkuHasStocks(skuIds);  
+        List<SkuStockVo> data = hasStocks.getData(new TypeReference<List<SkuStockVo>>() {  
+        });  
+        if (data != null) {  
+            data.stream().collect(Collectors.toMap(SkuStockVo::getSkuId, SkuStockVo::getHasStock));  
+        }  
+        Map<Long, Boolean> hasStockMap = data.stream().collect(Collectors.toMap(SkuStockVo::getSkuId, SkuStockVo::getHasStock));  
+        confirmVo.setStocks(hasStockMap);  
+    }, executor);  
+  
+    //3. 查询用户积分  
+    confirmVo.setIntegration(memberResponseVo.getIntegration());  
+  
+    //5. 总价自动计算  
+    //6. 防重令牌  
+    CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
+  
+    return confirmVo;  
+}
+```
+order服务中GuliFeignConfig
+``` java
+@Bean  
+public RequestInterceptor requestInterceptor() {  
+    return new RequestInterceptor() {  
+        @Override  
+        public void apply(RequestTemplate template) {  
+            System.out.println("RequestInterceptor线程..." + Thread.currentThread().getId());  
+            // feign远程之前先进行RequestInterceptor.apply  
+            //1. 使用RequestContextHolder拿到老请求的请求数据  
+            ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();  
+            if (requestAttributes != null) {  
+                HttpServletRequest request = requestAttributes.getRequest();  
+                if (request != null) {  
+                    //2. 将老请求得到cookie信息放到feign请求上  
+                    String cookie = request.getHeader("Cookie");  
+                    template.header("Cookie", cookie);  
+                }  
+            }  
+        }  
+    };  
+}
+```
+order服务中OrderServiceImpl
+``` java
+@Override  
+public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException {  
+    OrderConfirmVo confirmVo = new OrderConfirmVo();  
+    MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+    System.out.println("主线程..." + Thread.currentThread().getId());  
+  
+    //1. 远程查出所有收货地址  
+    /*List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+    confirmVo.setMemberAddressVos(addressByUserId);*/    //2. 远程查出所有选中购物项  
+    /*List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+    confirmVo.setItems(items);*/  
+    // 获取主线程的请求头  
+    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();  
+    //1. 查出所有收货地址  
+    CompletableFuture<Void> addressFuture = CompletableFuture.runAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        // 异步调用请求头共享：每一个线程都共享之前的请求头  
+        RequestContextHolder.setRequestAttributes(requestAttributes);  
+        List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+        confirmVo.setMemberAddressVos(addressByUserId);  
+    }, executor);  
+  
+  
+    CompletableFuture<Void> itemAndStockFuture = CompletableFuture.supplyAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        RequestContextHolder.setRequestAttributes(requestAttributes);   // 异步调用请求头共享  
+        //2. 查出所有选中购物项  
+        List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+        confirmVo.setItems(items);  
+        return items;  
+    }, executor).thenAcceptAsync((items) -> {  
+        //4. 库存  
+        List<Long> skuIds = items.stream().map(OrderItemVo::getSkuId).collect(Collectors.toList());  
+        R hasStocks = wareFeignService.getSkuHasStocks(skuIds);  
+        /*TypeReference<List<SkuStockVo>> typeReference = new TypeReference<List<SkuStockVo>>() {};  
+        List<SkuStockVo> data = hasStocks.getData(typeReference);        if (data != null) {            Map<Long, Boolean> hasStockMap = data.stream().collect(Collectors.toMap(SkuStockVo::getSkuId, SkuStockVo::getHasStock));            confirmVo.setStocks(hasStockMap);        }*/        TypeReference<List<SkuHasStockVo>> typeReference = new TypeReference<List<SkuHasStockVo>>() {};  
+        List<SkuHasStockVo> data = hasStocks.getData(typeReference);  
+        Map<Long, Boolean>hasStockMap = data.stream()  
+                .collect(Collectors.toMap(t -> t.getSkuId(), t -> t.getHasStock()));  
+  
+        confirmVo.setStocks(hasStockMap);  
+    }, executor);  
+  
+    //3. 查询用户积分  
+    confirmVo.setIntegration(memberResponseVo.getIntegration());  
+  
+    //5. 总价自动计算  
+    //6. 防重令牌  
+    String token = UUID.randomUUID().toString().replace("-", "");  
+    /*redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);  
+    confirmVo.setOrderToken(token);*/  
+    CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
+  
+    return confirmVo;  
+}
+```
 
 ### 分布式事务
 ### 订单服务

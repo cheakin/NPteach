@@ -1,6 +1,5 @@
 package cn.cheakin.gulimall.product.feign;
 
-import cn.cheakin.common.to.SkuHasStockVo;
 import cn.cheakin.common.utils.R;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +22,6 @@ public interface WareFeignService {
      * @return
      */
     @PostMapping(value = "/ware/waresku/hasStock")
-//    R getSkuHasStock(@RequestBody List<Long> skuIds);
     R getSkuHasStock(@RequestBody List<Long> skuIds);
 
 }

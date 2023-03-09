@@ -12201,7 +12201,7 @@ spring:
 在`gulimall-gateway`的`application.yml`中配置仓库服务的路由规则(注意顺序, 要在admin的路由之前)
 ``` yml
 - id: ware_route
-  uri: lb://mall-ware
+  uri: lb://gulimall-ware
   predicates:
     - Path=/api/ware/**
   filters:

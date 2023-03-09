@@ -5657,7 +5657,7 @@ public enum ProductStatusEnum {
 `gulimall-search`的`application.yml`中添加ES服务的路由
 ``` yml
 - id: search_route
-  uri: lb://mall-search
+  uri: lb://gulimall-search
   predicates:
     - Path=/api/search/**
   filters:
