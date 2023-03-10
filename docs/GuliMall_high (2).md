@@ -5371,6 +5371,44 @@ public BigDecimal getFare(Long addrId) {
 }
 ```
 
+#### 订单确认页细节显示
+``` java
+@Data  
+public class FareVo {  
+    private MemberAddressVo address;  
+    private BigDecimal fare;  
+}
+```
+ware服务的`WareInfoServiceImpl`
+``` java
+@Override  
+public FareVo getFare(Long addrId) {  
+    FareVo fareVo = new FareVo();  
+    R info = memberFeignService.info(addrId);  
+    if (info.getCode() == 0) {  
+        MemberAddressVo address = info.getData("memberReceiveAddress", new TypeReference<MemberAddressVo>() {  
+        });  
+        fareVo.setAddress(address);  
+        String phone = address.getPhone();  
+        //取电话号的最后两位作为邮费  
+        String fare = phone.substring(phone.length() - 2, phone.length());  
+        fareVo.setFare(new BigDecimal(fare));  
+    }  
+    return fareVo;  
+}
+```
+ware服务的WareInfoController
+``` java
+@RequestMapping("/fare/{addrId}")  
+public R getFare(@PathVariable("addrId") Long addrId) {  
+    /*BigDecimal fare =  wareInfoService.getFare(addrId);  
+    return R.ok().setData(fare);*/  
+    FareVo fare = wareInfoService.getFare(addrId);  
+    return R.ok().setData(fare);  
+}
+```
+
+前端页面，略
 
 
 ### 分布式事务

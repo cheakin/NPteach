@@ -4,10 +4,10 @@ import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.ware.entity.WareInfoEntity;
 import cn.cheakin.gulimall.ware.service.WareInfoService;
+import cn.cheakin.gulimall.ware.vo.FareVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -28,7 +28,10 @@ public class WareInfoController {
 
     @RequestMapping("/fare/{addrId}")
     public R getFare(@PathVariable("addrId") Long addrId) {
-        BigDecimal fare =  wareInfoService.getFare(addrId);
+        /*BigDecimal fare =  wareInfoService.getFare(addrId);
+        return R.ok().setData(fare);*/
+
+        FareVo fare = wareInfoService.getFare(addrId);
         return R.ok().setData(fare);
     }
 

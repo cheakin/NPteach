@@ -2,9 +2,9 @@ package cn.cheakin.gulimall.ware.service;
 
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.ware.entity.WareInfoEntity;
+import cn.cheakin.gulimall.ware.vo.FareVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import java.math.BigDecimal;
 import java.util.Map;
 
 /**
@@ -23,6 +23,7 @@ public interface WareInfoService extends IService<WareInfoEntity> {
      * @param addrId
      * @return
      */
-    BigDecimal getFare(Long addrId);
+    // BigDecimal getFare(Long addrId);
+    FareVo getFare(Long addrId);
 }
 

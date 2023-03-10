@@ -7,6 +7,7 @@ import cn.cheakin.gulimall.ware.dao.WareInfoDao;
 import cn.cheakin.gulimall.ware.entity.WareInfoEntity;
 import cn.cheakin.gulimall.ware.feign.MemberFeignService;
 import cn.cheakin.gulimall.ware.service.WareInfoService;
+import cn.cheakin.gulimall.ware.vo.FareVo;
 import cn.cheakin.gulimall.ware.vo.MemberAddressVo;
 import cn.hutool.core.lang.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -45,7 +46,7 @@ public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity
         return new PageUtils(page);
     }
 
-    @Override
+    /*@Override
     public BigDecimal getFare(Long addrId) {
         R info = memberFeignService.info(addrId);
         MemberAddressVo data = info.getData("memberReceiveAddress", new TypeReference<MemberAddressVo>() {
@@ -57,10 +58,10 @@ public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity
             return new BigDecimal(fare);
         }
         return null;
-    }
+    }*/
 
-    /*@Override
-    public BigDecimal getFare(Long addrId) {
+    @Override
+    public FareVo getFare(Long addrId) {
         FareVo fareVo = new FareVo();
         R info = memberFeignService.info(addrId);
         if (info.getCode() == 0) {
@@ -73,6 +74,6 @@ public class WareInfoServiceImpl extends ServiceImpl<WareInfoDao, WareInfoEntity
             fareVo.setFare(new BigDecimal(fare));
         }
         return fareVo;
-    }*/
+    }
 
 }
