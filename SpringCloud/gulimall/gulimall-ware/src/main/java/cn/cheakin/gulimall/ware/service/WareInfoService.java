@@ -1,9 +1,10 @@
 package cn.cheakin.gulimall.ware.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.ware.entity.WareInfoEntity;
+import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 /**
@@ -16,5 +17,12 @@ import java.util.Map;
 public interface WareInfoService extends IService<WareInfoEntity> {
 
     PageUtils queryPage(Map<String, Object> params);
+
+    /**
+     * 根据用户的收货地址计算运费
+     * @param addrId
+     * @return
+     */
+    BigDecimal getFare(Long addrId);
 }
 

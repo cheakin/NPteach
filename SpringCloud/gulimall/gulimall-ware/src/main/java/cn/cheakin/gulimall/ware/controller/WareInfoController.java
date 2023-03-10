@@ -1,20 +1,15 @@
 package cn.cheakin.gulimall.ware.controller;
 
-import java.util.Arrays;
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import cn.cheakin.gulimall.ware.entity.WareInfoEntity;
-import cn.cheakin.gulimall.ware.service.WareInfoService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.ware.entity.WareInfoEntity;
+import cn.cheakin.gulimall.ware.service.WareInfoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Map;
 
 
 /**
@@ -29,6 +24,13 @@ import cn.cheakin.common.utils.R;
 public class WareInfoController {
     @Autowired
     private WareInfoService wareInfoService;
+
+
+    @RequestMapping("/fare/{addrId}")
+    public R getFare(@PathVariable("addrId") Long addrId) {
+        BigDecimal fare =  wareInfoService.getFare(addrId);
+        return R.ok().setData(fare);
+    }
 
     /**
      * 列表

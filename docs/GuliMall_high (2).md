@@ -5331,6 +5331,48 @@ public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedExcep
 }
 ```
 
+#### 订单确认页模拟运费效果
+前端页面修改，略
+
+ware服务的WareInfoController
+``` java
+@RequestMapping("/fare/{addrId}")  
+public R getFare(@PathVariable("addrId") Long addrId) {  
+    BigDecimal fare =  wareInfoService.getFare(addrId);  
+    return R.ok().setData(fare);  
+}
+```
+ware服务中新建
+``` java
+@FeignClient("gulimall-member")  
+public interface MemberFeignService {  
+    @RequestMapping("member/memberreceiveaddress/info/{id}")  
+    R info(@PathVariable("id") Long id);  
+    }
+```
+将order服务中的MemberAddressVo复制到ware服务中
+ware服务中的WareInfoServiceImpl
+``` java
+@Autowired  
+private MemberFeignService memberFeignService;
+
+@Override  
+public BigDecimal getFare(Long addrId) {  
+    R info = memberFeignService.info(addrId);  
+    MemberAddressVo data = info.getData("memberReceiveAddress", new TypeReference<MemberAddressVo>() {  
+    });  
+    if (data != null) {  
+        String phone = data.getPhone();  
+        //取电话号的最后两位作为邮费  
+        String fare = phone.substring(phone.length() - 2, phone.length());  
+        return new BigDecimal(fare);  
+    }  
+    return null;  
+}
+```
+
+
+
 ### 分布式事务
 ### 订单服务
 ### 支付
