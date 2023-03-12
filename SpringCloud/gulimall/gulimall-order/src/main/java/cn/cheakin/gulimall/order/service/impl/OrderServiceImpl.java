@@ -5,6 +5,7 @@ import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.Query;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.common.vo.MemberResponseVo;
+import cn.cheakin.gulimall.order.constant.OrderConstant;
 import cn.cheakin.gulimall.order.dao.OrderDao;
 import cn.cheakin.gulimall.order.entity.OrderEntity;
 import cn.cheakin.gulimall.order.feign.CartFeignService;
@@ -20,6 +21,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -30,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
@@ -45,9 +48,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
 
     @Autowired
     private ThreadPoolExecutor executor;
-    /*@Autowired
-    private StringRedisTemplate redisTemplate;
     @Autowired
+    private StringRedisTemplate redisTemplate;
+    /*@Autowired
     private ProductFeignService productFeignService;
     @Autowired
     private OrderItemService orderItemService;
@@ -122,8 +125,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         //5. 总价自动计算
         //6. 防重令牌
         String token = UUID.randomUUID().toString().replace("-", "");
-        /*redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);
-        confirmVo.setOrderToken(token);*/
+        redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);
+        confirmVo.setOrderToken(token);
 
         CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();
 

@@ -5322,9 +5322,6 @@ public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedExcep
   
     //5. 总价自动计算  
     //6. 防重令牌  
-    String token = UUID.randomUUID().toString().replace("-", "");  
-    /*redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);  
-    confirmVo.setOrderToken(token);*/  
     CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
   
     return confirmVo;  
@@ -5459,6 +5456,127 @@ UPDATE tab1SET col1=col1+1 WHERE col2=2，每次执行的结果都会发生变�
 		之前说的 redis 防重也算
 	4. 全局请求唯一id
 		调用接口时，生成一个唯一id，redis 将数据保存到集合中(去重)，存在即处理过。可以使用 nginx 设置每一个请求的唯一 id:proxy set header X-Request-ld Srequest id;
+
+#### 订单确认页完成
+![[订单确认页流程.png]]
+
+order服务新建OrderConstant
+``` java
+public class OrderConstant {  
+    public static final String USER_ORDER_TOKEN_PREFIX = "order:token";  
+}
+```
+order服务的OrderServiceImpl
+``` java
+@Autowired  
+private StringRedisTemplate redisTemplate;
+
+@Override  
+public OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException {  
+    OrderConfirmVo confirmVo = new OrderConfirmVo();  
+    MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+    System.out.println("主线程..." + Thread.currentThread().getId());  
+  
+    //1. 远程查出所有收货地址  
+    /*List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+    confirmVo.setMemberAddressVos(addressByUserId);*/    //2. 远程查出所有选中购物项  
+    /*List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+    confirmVo.setItems(items);*/  
+    // 获取主线程的请求头  
+    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();  
+    //1. 查出所有收货地址  
+    CompletableFuture<Void> addressFuture = CompletableFuture.runAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        // 异步调用请求头共享：每一个线程都共享之前的请求头  
+        RequestContextHolder.setRequestAttributes(requestAttributes);  
+        List<MemberAddressVo> addressByUserId = memberFeignService.getAddressByUserId(memberResponseVo.getId());  
+        confirmVo.setMemberAddressVos(addressByUserId);  
+    }, executor);  
+  
+  
+    CompletableFuture<Void> itemAndStockFuture = CompletableFuture.supplyAsync(() -> {  
+        System.out.println("member线程..." + Thread.currentThread().getId());  
+        RequestContextHolder.setRequestAttributes(requestAttributes);   // 异步调用请求头共享  
+        //2. 查出所有选中购物项  
+        List<OrderItemVo> items = cartFeignService.getCurrentUserCartItems();  
+        confirmVo.setItems(items);  
+        return items;  
+    }, executor).thenAcceptAsync((items) -> {  
+        //4. 库存  
+        List<Long> skuIds = items.stream().map(OrderItemVo::getSkuId).collect(Collectors.toList());  
+        R hasStocks = wareFeignService.getSkuHasStocks(skuIds);  
+        /*TypeReference<List<SkuStockVo>> typeReference = new TypeReference<List<SkuStockVo>>() {};  
+        List<SkuStockVo> data = hasStocks.getData(typeReference);        if (data != null) {            Map<Long, Boolean> hasStockMap = data.stream().collect(Collectors.toMap(SkuStockVo::getSkuId, SkuStockVo::getHasStock));            confirmVo.setStocks(hasStockMap);        }*/        TypeReference<List<SkuHasStockVo>> typeReference = new TypeReference<List<SkuHasStockVo>>() {};  
+        List<SkuHasStockVo> data = hasStocks.getData(typeReference);  
+        Map<Long, Boolean>hasStockMap = data.stream()  
+                .collect(Collectors.toMap(t -> t.getSkuId(), t -> t.getHasStock()));  
+  
+        confirmVo.setStocks(hasStockMap);  
+    }, executor);  
+  
+    //3. 查询用户积分  
+    confirmVo.setIntegration(memberResponseVo.getIntegration());  
+  
+    //5. 总价自动计算  
+    //6. 防重令牌  
+    String token = UUID.randomUUID().toString().replace("-", "");  
+    redisTemplate.opsForValue().set(OrderConstant.USER_ORDER_TOKEN_PREFIX + memberResponseVo.getId(), token, 30, TimeUnit.MINUTES);  
+    confirmVo.setOrderToken(token);  
+  
+    CompletableFuture.allOf(itemAndStockFuture, addressFuture).get();  
+  
+    return confirmVo;  
+}
+```
+
+前端页面修改，略
+
+order服务新建OrderSubmitVo
+``` java
+/**  
+ * 封装订单提交的数据  
+ */
+@Data  
+public class OrderSubmitVo {  
+  
+    /** 收获地址的id **/  
+    private Long addrId;  
+  
+    /** 支付方式 **/  
+    private Integer payType;  
+    //无需提交要购买的商品，去购物车再获取一遍  
+    //优惠、发票  
+  
+    /** 防重令牌 **/  
+    private String orderToken;  
+  
+    /** 应付价格 **/  
+    private BigDecimal payPrice;  
+  
+    /** 订单备注 **/  
+    private String remarks;  
+  
+    //用户相关的信息，直接去session中取出即可  
+}
+```
+order服务的
+``` java
+/**  
+ * 下单功能  
+ * 下单，去创建订单，验令牌，锁库存...  
+ * 下单成功来到支付选择页  
+ * 下单失败回到订单确认页重新确定订单信息  
+ * @param submitVo  
+ * @param model  
+ * @param attributes  
+ * @return  
+ */  
+@RequestMapping("/submitOrder")  
+public String submitOrder(OrderSubmitVo submitVo, Model model, RedirectAttributes attributes) {  
+    System.out.println("订单提交的数据 ==> " + submitVo);  
+    return null;
+}
+```
 
 
 
