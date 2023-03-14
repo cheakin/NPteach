@@ -1,16 +1,15 @@
 package cn.cheakin.gulimall.product.app;
 
-import java.util.Arrays;
-import java.util.Map;
-
+import cn.cheakin.common.utils.PageUtils;
+import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.product.entity.SpuInfoEntity;
+import cn.cheakin.gulimall.product.service.SpuInfoService;
 import cn.cheakin.gulimall.product.vo.SpuSaveVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import cn.cheakin.gulimall.product.entity.SpuInfoEntity;
-import cn.cheakin.gulimall.product.service.SpuInfoService;
-import cn.cheakin.common.utils.PageUtils;
-import cn.cheakin.common.utils.R;
+import java.util.Arrays;
+import java.util.Map;
 
 
 
@@ -37,6 +36,12 @@ public class SpuInfoController {
     public R upSpu(@PathVariable Long spuId) {
         spuInfoService.up(spuId);
         return R.ok();
+    }
+
+    @RequestMapping("/skuId/{skuId}")
+    public R getSpuBySkuId(@PathVariable("skuId") Long skuId) {
+        SpuInfoEntity spuInfoEntity = spuInfoService.getSpuBySkuId(skuId);
+        return R.ok().setData(spuInfoEntity);
     }
 
     /**

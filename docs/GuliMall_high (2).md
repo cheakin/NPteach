@@ -5559,7 +5559,7 @@ public class OrderSubmitVo {
     //用户相关的信息，直接去session中取出即可  
 }
 ```
-order服务的
+order服务的OrderWebController
 ``` java
 /**  
  * 下单功能  
@@ -5577,6 +5577,329 @@ public String submitOrder(OrderSubmitVo submitVo, Model model, RedirectAttribute
     return null;
 }
 ```
+
+#### 原子验令牌 & 构造订单数据 & 构造订单项数据 & 订单验价 & 保存订单数据 & 锁定库存 & 提交订单的问题
+order服务新建SubmitOrderResponseVo
+``` java
+@Data  
+public class SubmitOrderResponseVo {  
+  
+    private OrderEntity order;  
+  
+    /** 错误状态码 **/  
+    private Integer code;  
+}
+```
+order服务的OrderWebController
+``` java
+/**  
+ * 下单功能  
+ * 下单，去创建订单，验令牌，锁库存...  
+ * 下单成功来到支付选择页  
+ * 下单失败回到订单确认页重新确定订单信息  
+ * @param submitVo  
+ * @param model  
+ * @param attributes  
+ * @return  
+ */  
+@RequestMapping("/submitOrder")  
+public String submitOrder(OrderSubmitVo submitVo, Model model, RedirectAttributes attributes) {  
+    /*System.out.println("订单提交的数据 ==> " + submitVo);    return null;*/  
+    try{  
+        SubmitOrderResponseVo responseVo=orderService.submitOrder(submitVo);  
+        Integer code = responseVo.getCode();  
+        if (code==0){  
+            model.addAttribute("order", responseVo.getOrder());  
+            return "pay";  
+        }else {  
+            String msg = "下单失败;";  
+            switch (code) {  
+                case 1:  
+                    msg += "防重令牌校验失败";  
+                    break;                
+                case 2:  
+                    msg += "商品价格发生变化";  
+                    break;            }  
+            attributes.addFlashAttribute("msg", msg);  
+            return "redirect:http://order.gulimall.com/toTrade";  
+        }  
+    }catch (Exception e){  
+        if (e instanceof NoStockException){  
+            String msg = "下单失败，商品无库存";  
+            attributes.addFlashAttribute("msg", msg);  
+        }  
+        return "redirect:http://order.gulimall.com/toTrade";  
+    }  
+}
+```
+order服务的OrderServiceImpl
+``` java
+@Autowired  
+private WareFeignService wareFeignService;
+@Autowired  
+private ProductFeignService productFeignService;
+@Autowired  
+private OrderItemService orderItemService;
+
+
+```
+order服务新建OrderCreateTo
+``` java
+@Data  
+public class OrderCreateTo {  
+    private OrderEntity order;  
+  
+    private List<OrderItemEntity> orderItems;  
+  
+    /** 订单计算的应付价格 **/  
+    private BigDecimal payPrice;  
+  
+    /** 运费 **/  
+    private BigDecimal fare;  
+}
+```
+order服务新建OrderStatusEnum
+``` java
+public enum OrderStatusEnum {  
+  
+    CREATE_NEW(0,"待付款"),  
+    PAYED(1,"已付款"),  
+    SENDED(2,"已发货"),  
+    RECIEVED(3,"已完成"),  
+    CANCLED(4,"已取消"),  
+    SERVICING(5,"售后中"),  
+    SERVICED(6,"售后完成");  
+  
+  
+    private String msg;  
+    private Integer code;  
+  
+    public String getMsg() {  
+        return msg;  
+    }  
+  
+    public Integer getCode() {  
+        return code;  
+    }  
+  
+    OrderStatusEnum(Integer code, String msg){  
+        this.msg = msg;  
+        this.code = code;  
+    }  
+}
+```
+order服务的WareFeignService
+``` java
+@RequestMapping("/ware/wareinfo/fare/{addrId}")  
+R getFare(@PathVariable("addrId") Long addrId);
+```
+从ware服务拷贝FareVo到order服务中
+
+product服务的SpuInfoController
+``` java
+@RequestMapping("/skuId/{skuId}")  
+public R getSpuBySkuId(@PathVariable("skuId") Long skuId) {  
+    SpuInfoEntity spuInfoEntity = spuInfoService.getSpuBySkuId(skuId);  
+    return R.ok().setData(spuInfoEntity);  
+}
+```
+product服务的SpuInfoServiceImpl
+``` java
+@Override  
+public SpuInfoEntity getSpuBySkuId(Long skuId) {  
+    SkuInfoEntity skuInfoEntity = skuInfoService.getById(skuId);  
+    SpuInfoEntity spu = this.getById(skuInfoEntity.getSpuId());  
+    BrandEntity brandEntity = brandService.getById(spu.getBrandId());  
+    spu.setBrandName(brandEntity.getName());  
+    return spu;  
+}
+```
+product服务的SpuInfoController
+``` java
+@RequestMapping("/skuId/{skuId}")  
+public R getSpuBySkuId(@PathVariable("skuId") Long skuId) {  
+    SpuInfoEntity spuInfoEntity = spuInfoService.getSpuBySkuId(skuId);  
+    return R.ok().setData(spuInfoEntity);  
+}
+```
+product服务的SpuInfoEntity新增属性
+``` java
+@TableField(exist = false)  
+private String brandName;
+```
+
+order服务的ProductFeignService
+``` java
+@FeignClient("gulimall-product")  
+public interface ProductFeignService {  
+    @RequestMapping("product/spuinfo/skuId/{skuId}")  
+    R getSpuBySkuId(@PathVariable("skuId") Long skuId);  
+  
+    /*@RequestMapping("product/skuinfo/info/{skuId}")  
+	R info(@PathVariable("skuId") Long skuId);*/
+}
+```
+order服务中新建SpuInfoTo
+``` java
+@Data  
+public class SpuInfoTo {  
+    private Long id;  
+    /**  
+     * 商品名称  
+     */  
+    private String spuName;  
+    /**  
+     * 商品描述  
+     */  
+    private String spuDescription;  
+    /**  
+     * 所属分类id  
+     */    private Long catalogId;  
+    /**  
+     * 品牌id  
+     */    private Long brandId;  
+  
+    private String brandName;  
+    /**  
+     *     */    private BigDecimal weight;  
+    /**  
+     * 上架状态[0 - 下架，1 - 上架]  
+     */    private Integer publishStatus;  
+    /**  
+     *     */    private Date createTime;  
+    /**  
+     *     */    private Date updateTime;  
+}
+```
+order服务中新建
+``` java
+@Data  
+public class WareSkuLockVo {  
+    private String OrderSn;  //订单号
+  
+    private List<OrderItemVo> locks;  //需要所住的所有信息
+}
+```
+
+将order服务中的OrderItemVo和WareSkuLockVo复制到ware服务中
+ware服务的WareSkuController
+``` java
+/**  
+ * 下订单时锁库存  
+ * @param lockVo  
+ * @return  
+ */  
+@RequestMapping("/lock/order")  
+public R orderLockStock(@RequestBody WareSkuLockVo lockVo) {  
+    /*List<LockStockResult> stockResults = wareSkuService.orderLockStock(lockVo);  
+    return R.ok().setData(stockResults);*/  
+    
+    try {  
+        Boolean lock = wareSkuService.orderLockStock(lockVo);  
+        return R.ok();  
+    } catch (NoStockException e) {  
+        return R.error(BizCodeEnum.NO_STOCK_EXCEPTION.getCode(), BizCodeEnum.NO_STOCK_EXCEPTION.getMsg());  
+    }  
+}
+```
+order服务的WareFeignService
+``` java
+@RequestMapping("/ware/waresku/lock/order")  
+R orderLockStock(@RequestBody WareSkuLockVo itemVos);
+```
+
+ware服务的WareSkuServiceImpl
+``` java
+/**  
+ * 为某个订单锁定库存  
+ * 默认只要是运行时异常都会回滚  
+ *  
+ * @param vo  
+ * @return  
+ */  
+@Transactional(rollbackFor = NoStockException.class)  
+@Override  
+public Boolean orderLockStock(WareSkuLockVo vo) {  
+    // 1.找到每个商品在哪个仓库都用库存  
+    List<OrderItemVo> locks = vo.getLocks();  
+    List<SkuWareHasStock> collect = locks.stream().map((item) -> {  
+        SkuWareHasStock stock = new SkuWareHasStock();  
+        Long skuId = item.getSkuId();  
+        stock.setSkuId(skuId);  
+        stock.setNum(item.getCount());  
+        //查询这个商品在哪个仓库都用库存  
+        return stock;  
+    }).collect(Collectors.toList());  
+  
+    Boolean allLock = false;  
+    // 2.锁定库存  
+    for (SkuWareHasStock hasStock : collect) {  
+        Long skuId = hasStock.getSkuId();  
+        List<Long> wareIds = hasStock.getWareId();  
+        if (wareIds == null || wareIds.size() == 0) {  
+            throw new NoStockException(skuId);  
+        }  
+        for (Long wareId : wareIds) {  
+            // 锁定成功就返回1，否则就是0  
+            Long count = baseMapper.lockSkuStock(skuId, wareId, hasStock.getNum());  
+            if (count == 0) {  
+                allLock = false;  
+                break;            } else {  
+                //锁定成功，保存工作单详情  
+                /*WareOrderTaskDetailEntity detailEntity = WareOrderTaskDetailEntity.builder()  
+                        .skuId(skuId)                        .skuName("")                        .skuNum(lockVo.getNum())                        .taskId(taskEntity.getId())                        .wareId(wareId)                        .lockStatus(1).build();                wareOrderTaskDetailService.save(detailEntity);                //发送库存锁定消息至延迟队列  
+                StockLockedTo lockedTo = new StockLockedTo();                lockedTo.setId(taskEntity.getId());                StockDetailTo detailTo = new StockDetailTo();                BeanUtils.copyProperties(detailEntity, detailTo);                lockedTo.setDetailTo(detailTo);                rabbitTemplate.convertAndSend("stock-event-exchange", "stock.locked", lockedTo);*/  
+                allLock = true;  
+  
+            }  
+        }  
+        if (allLock == false) {  
+            //当前商品锁定失败，前面锁定成功的要解锁  
+            throw new NoStockException(skuId);  
+        }  
+  
+    }  
+    //  3.全部都是锁定成功的  
+    return true;  
+}  
+  
+@Data  
+class SkuWareHasStock {  
+    private Long skuId;  
+    private Integer num;  
+    private List<Long> wareId;  
+}
+```
+ware服务新建NoStockException
+``` java
+public class NoStockException extends RuntimeException{  
+  
+    @Setter  
+    @Getter    
+    private Long skuId;  
+  
+    public NoStockException(Long skuId) {  
+        super("商品id:"+skuId+";库存不足");  
+    }  
+  
+    public NoStockException(String message) {  
+        super(message);  
+    }  
+}
+```
+ware服务的WareSkuDao.xml
+``` xml
+<update id="lockSkuStock">  
+    UPDATE wms_ware_sku  
+    SET stock_locked=stock_locked+#{num}    WHERE sku_id=#{skuId}      AND ware_id=#{wareId}      AND stock-stock_locked>#{num}</update>
+```
+common服务的BizCodeEnum
+``` java
+NO_STOCK_EXCEPTION(21000, "商品库存不足");
+```
+
+
+
 
 
 

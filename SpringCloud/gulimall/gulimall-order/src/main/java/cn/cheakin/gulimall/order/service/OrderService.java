@@ -3,6 +3,8 @@ package cn.cheakin.gulimall.order.service;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.order.entity.OrderEntity;
 import cn.cheakin.gulimall.order.vo.OrderConfirmVo;
+import cn.cheakin.gulimall.order.vo.OrderSubmitVo;
+import cn.cheakin.gulimall.order.vo.SubmitOrderResponseVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Map;
@@ -20,5 +22,7 @@ public interface OrderService extends IService<OrderEntity> {
     PageUtils queryPage(Map<String, Object> params);
 
     OrderConfirmVo confirmOrder() throws ExecutionException, InterruptedException;
+
+    SubmitOrderResponseVo submitOrder(OrderSubmitVo submitVo);
 }
 

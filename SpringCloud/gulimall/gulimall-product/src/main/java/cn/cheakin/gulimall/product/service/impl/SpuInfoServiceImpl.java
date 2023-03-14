@@ -5,7 +5,10 @@ import cn.cheakin.common.to.SkuHasStockVo;
 import cn.cheakin.common.to.SkuReductionTo;
 import cn.cheakin.common.to.SpuBoundTo;
 import cn.cheakin.common.to.es.SkuEsModel;
+import cn.cheakin.common.utils.PageUtils;
+import cn.cheakin.common.utils.Query;
 import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.product.dao.SpuInfoDao;
 import cn.cheakin.gulimall.product.entity.*;
 import cn.cheakin.gulimall.product.feign.CouponFeignService;
 import cn.cheakin.gulimall.product.feign.SearchFeignService;
@@ -13,24 +16,18 @@ import cn.cheakin.gulimall.product.feign.WareFeignService;
 import cn.cheakin.gulimall.product.service.*;
 import cn.cheakin.gulimall.product.vo.*;
 import cn.hutool.core.lang.TypeReference;
-import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.cheakin.common.utils.PageUtils;
-import cn.cheakin.common.utils.Query;
-
-import cn.cheakin.gulimall.product.dao.SpuInfoDao;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 
 @Service("spuInfoService")
@@ -328,6 +325,15 @@ import org.springframework.util.StringUtils;
              * 3.执行请求会有重试机制
              */
         }
+    }
+
+    @Override
+    public SpuInfoEntity getSpuBySkuId(Long skuId) {
+        SkuInfoEntity skuInfoEntity = skuInfoService.getById(skuId);
+        SpuInfoEntity spu = this.getById(skuInfoEntity.getSpuId());
+        BrandEntity brandEntity = brandService.getById(spu.getBrandId());
+        spu.setBrandName(brandEntity.getName());
+        return spu;
     }
 
 }

@@ -17,6 +17,7 @@ package cn.cheakin.common.exception;
  *  001: 用户已存在
  *  002: 手机号已存在
  *  003: 账号或密码错误
+ * 21: 库存
  * <p>
  * Create by botboy on 2022/07/26.
  **/
@@ -30,7 +31,9 @@ public enum BizCodeEnum {
 
     USER_EXIST_EXCEPTION(15001, "存在相同的用户"),
     PHONE_EXIST_EXCEPTION(15002, "存在相同的手机号"),
-    LOGIN_ACCOUNT_PASSWORD_EXCEPTION(15003, "账号或密码错误");
+    LOGIN_ACCOUNT_PASSWORD_EXCEPTION(15003, "账号或密码错误"),
+
+    NO_STOCK_EXCEPTION(21000, "商品库存不足");
 
     private int code;
     private String msg;

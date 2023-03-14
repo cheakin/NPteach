@@ -1,17 +1,19 @@
 package cn.cheakin.gulimall.ware.controller;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
+import cn.cheakin.common.exception.BizCodeEnum;
+import cn.cheakin.common.exception.NoStockException;
+import cn.cheakin.common.utils.PageUtils;
+import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.ware.entity.WareSkuEntity;
+import cn.cheakin.gulimall.ware.service.WareSkuService;
 import cn.cheakin.gulimall.ware.vo.SkuHasStockVo;
+import cn.cheakin.gulimall.ware.vo.WareSkuLockVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import cn.cheakin.gulimall.ware.entity.WareSkuEntity;
-import cn.cheakin.gulimall.ware.service.WareSkuService;
-import cn.cheakin.common.utils.PageUtils;
-import cn.cheakin.common.utils.R;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -26,6 +28,24 @@ import cn.cheakin.common.utils.R;
 public class WareSkuController {
     @Autowired
     private WareSkuService wareSkuService;
+
+    /**
+     * 下订单时锁库存
+     * @param lockVo
+     * @return
+     */
+    @RequestMapping("/lock/order")
+    public R orderLockStock(@RequestBody WareSkuLockVo lockVo) {
+        /*List<LockStockResult> stockResults = wareSkuService.orderLockStock(lockVo);
+        return R.ok().setData(stockResults);*/
+
+        try {
+            Boolean lock = wareSkuService.orderLockStock(lockVo);
+            return R.ok();
+        } catch (NoStockException e) {
+            return R.error(BizCodeEnum.NO_STOCK_EXCEPTION.getCode(), BizCodeEnum.NO_STOCK_EXCEPTION.getMsg());
+        }
+    }
 
     /**
      * 查询sku是否有库存

@@ -1,9 +1,9 @@
 package cn.cheakin.gulimall.product.service;
 
-import cn.cheakin.gulimall.product.vo.SpuSaveVo;
-import com.baomidou.mybatisplus.extension.service.IService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.product.entity.SpuInfoEntity;
+import cn.cheakin.gulimall.product.vo.SpuSaveVo;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Map;
 
@@ -29,5 +29,8 @@ public interface SpuInfoService extends IService<SpuInfoEntity> {
      * @param spuId
      */
     void up(Long spuId);
+
+    SpuInfoEntity getSpuBySkuId(Long skuId);
+
 }
 
