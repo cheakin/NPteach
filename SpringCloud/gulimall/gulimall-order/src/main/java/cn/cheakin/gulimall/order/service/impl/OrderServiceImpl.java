@@ -268,7 +268,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
      */
     private List<OrderItemEntity> buildOrderItems(String orderSn) {
         // 最后确定每个购物项的价格
-        List<OrderItemVo> checkedItems = cartFeignService.getCheckedItems();
+        List<OrderItemVo> checkedItems = cartFeignService.getCurrentUserCartItems();
         List<OrderItemEntity> orderItemEntities = checkedItems.stream().map((item) -> {
             OrderItemEntity orderItemEntity = buildOrderItem(item);
             //1) 设置订单号
@@ -363,11 +363,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
      * @param orderCreateTo
      */
     private void saveOrder(OrderCreateTo orderCreateTo) {
-        OrderEntity order = orderCreateTo.getOrder();
-        order.setCreateTime(new Date());
-        order.setModifyTime(new Date());
-        this.save(order);
-        orderItemService.saveBatch(orderCreateTo.getOrderItems());
+        try {
+            OrderEntity order = orderCreateTo.getOrder();
+            order.setCreateTime(new Date());
+            order.setModifyTime(new Date());
+            this.save(order);
+            orderItemService.saveBatch(orderCreateTo.getOrderItems());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 

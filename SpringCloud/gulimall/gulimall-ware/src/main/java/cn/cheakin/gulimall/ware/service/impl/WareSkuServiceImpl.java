@@ -123,7 +123,9 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
             Long skuId = item.getSkuId();
             stock.setSkuId(skuId);
             stock.setNum(item.getCount());
-            //查询这个商品在哪个仓库都用库存
+            //查询这个商品在哪个仓库都有库存
+            List<Long> wareIds = baseMapper.listWareIdsHasStock(item.getSkuId(), item.getCount());
+            stock.setWareId(wareIds);
             return stock;
         }).collect(Collectors.toList());
 
