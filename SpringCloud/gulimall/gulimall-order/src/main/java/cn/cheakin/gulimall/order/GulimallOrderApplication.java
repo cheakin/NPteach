@@ -20,6 +20,8 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
  * 		@RabbitListener： 类+方法(监听哪些队列即可)
  * 		@RabbitHandler： 标在方法上（重载区分不同的消息）
  *
+ * 本地
+ *
  */
 @EnableFeignClients
 @EnableRedisHttpSession

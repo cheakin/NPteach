@@ -6147,6 +6147,52 @@ NO_STOCK_EXCEPTION(21000, "商品库存不足");
 #### 本地事务在分布式下的问题
 ![[Pasted image 20230316235808.png]]
 
+#### 本地事务隔离级别&传播行为等复习
+1. 事务的基本性质
+	数据库事务的几个特性: 原子性(Atomicity)、一致性( Consistency )、隔离性或独立性(lsolation)和持久性(Durabilily)，简称就是 ACID:
+	* 原子性: 一系列的操作整体不可拆分，要么同时成功，要么同时失败
+	* 一致性: 数据在事务的前后，业务整体一致。
+		转账。A:1000: B:1000:转 200事务成功: A: 800B: 1200
+	* 隔离性: 事务之间互相隔离。
+	* 持久性: 一旦事务成功，数据一定会落盘在数据库。
+	在以往的单体应用中，我们多个业务操作使用同一条连接操作不同的数据表，一旦有异常,我们可以很容易的整体回滚:
+	
+	Business: 我们具体的业务代码
+	Storage: 库存业务代码: 扣库存
+	Order: 订单业务代码:保存订单
+	Account: 账号业务代码: 减账户余额比如买东西业务，扣库存，下订单，账户扣款，是一个整体:必须同时成功或者失败
+2. 事务的隔离级别
+	* READ UNCOMMITTED (读未提交)
+		该隔离级别的事务会读到其它未提交事务的数据，此现象也称之为脏读。
+	* READ COMMITTED (读提交)
+		一个事务可以读取另一个已提交的事务，多次读取会造成不一样的结果，此现象称为不可重复读问题，Oracle 和 SQL Server 的默认隔离级别。
+	* REPEATABLE READ (可重复读)
+		该隔离级别是 MysQL 默认的隔离级别，在同一个事务里，select 的结果是事务开始时时间点的状态，因此，同样的 select 操作读到的结果会是一致的，但是，会有幻读现象。MySQl的 InnoDB 引擎可以通过 next-key locks 机制(参考下文"行锁的算法"节)来避免幻读。
+	* SERIALIZABLE (序列化)
+		在该隔离级别下事务都是串行顺序执行的，MysQL 数据库的 nnoDB 引警会给读操作隐式加一把读共享锁，从而避免了脏读、不可重读复读和幻读问题。
+3. 事务的传播行为
+	1. PROPAGATION REQUIRED: 如果当前没有事务，就创建一个新事务，如果当前存在事务,就加入该事务，该设置是最常用的设置。
+	2. PROPAGATION SUPPORTS: 支持当前事务，如果当前存在事务，就加入该事务，如果当前不存在事务，就以非事务执行。
+	3. PROPAGATION MANDATORY:支持当前事务，如果当前存在事务，就加入该事务，如果当前不存在事务，就抛出异常。
+	4. PROPAGATION REQUIRES NEW: 创建新事务，无论当前存不存在事务，都创建新事务。
+	5. PROPAGATION NOT SUPPORTED: 以非事务方式执行操作，如果当前存在事务，就把当前事务挂起。
+	6. PROPAGATION NEVER: 以非事务方式执行，如果当前存在事务，则抛出异常。
+	7. PROPAGATION NESTED: 如果当前存在事务，则在嵌套事务内执行。如果当前没有事务则执行与 PROPAGATION REQUIRED 类似的操作。
+4. SpringBoot 事务关键点
+	* 事务的自动配置
+		TransactionAutoConfiguration
+	* 事务的坑
+		在同一个类里面，编写两个方法，内部调用的时候，会导致事务设置失效。原因是没有用到代理对象的缘故。
+		解决:
+		1. 导入 spring-boot-starter-aop
+		2. @EnableTransactionManagement(proxyTargetClass = true)
+		3. @EnableAspectJAutoProxy(exposeProxy=true)，开启AspectJ动态代理功能
+		4. AopContext.currentProxy() 调用方法，使用AOP的上下文拿到当前的代理对象
+
+#### 分布式CAP&Raft原理
+
+
+
 
 
 
