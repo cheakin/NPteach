@@ -143,6 +143,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         return confirmVo;
     }
 
+    // 本地事务在分布式系统，只能控制住自己的回滚，控制不了其他服务的回滚
+    // 分布式事务：最大问题，网络网体+分布式机器
     @Transactional
     @Override
     public SubmitOrderResponseVo submitOrder(OrderSubmitVo submitVo) {
@@ -177,10 +179,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
                 WareSkuLockVo lockVo = new WareSkuLockVo();
                 lockVo.setOrderSn(order.getOrder().getOrderSn());
                 lockVo.setLocks(orderItemVos);
+
+                // 库存成功了，但是网络原因超时了，订单回滚，库存不回滚
                 R r = wareFeignService.orderLockStock(lockVo);
                 //5.1 锁定库存成功
                 if (r.getCode()==0){
-//                    int i = 10 / 0;
+//                    int i = 10 / 0;   // 订单回滚，库存不会滚
                     responseVo.setOrder(order.getOrder());
                     responseVo.setCode(0);
 
