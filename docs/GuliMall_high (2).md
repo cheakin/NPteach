@@ -6263,6 +6263,51 @@ NO_STOCK_EXCEPTION(21000, "商品库存不足");
 	实现: 业务处理服务在业务事务提交之前，向实时消息服务请求发送消息，实时消息服务只记录消息数据，而不是真正的发送。业务处理服务在业务事务提交之后，向实时消息服务确认发送。只有在得到确认发送指令后，实时消息服务才会真正发送。
 
 
+``` java
+<dependency>  
+    <groupId>com.alibaba.cloud</groupId>  
+    <artifactId>spring-cloud-starter-alibaba-seata</artifactId>  
+</dependency>
+```
+order服务中新建`MySeataConfig`
+``` java
+@Configuration  
+public class MySeataConfig {  
+    @Autowired  
+    DataSourceProperties dataSourceProperties;  
+  
+  
+    @Bean  
+    public DataSource dataSource(DataSourceProperties dataSourceProperties) {  
+  
+        HikariDataSource dataSource = dataSourceProperties.initializeDataSourceBuilder().type(HikariDataSource.class).build();  
+        if (StringUtils.hasText(dataSourceProperties.getName())) {  
+            dataSource.setPoolName(dataSourceProperties.getName());  
+        }  
+  
+        return new DataSourceProxy(dataSource);  
+    }  
+}
+```
+同样的在ware服务中的`MySeataConfig`也需要
+``` java
+@Autowired  
+DataSourceProperties dataSourceProperties;  
+  
+@Bean  
+public DataSource dataSource(DataSourceProperties dataSourceProperties) {  
+  
+    HikariDataSource dataSource = dataSourceProperties.initializeDataSourceBuilder().type(HikariDataSource.class).build();  
+    if (StringUtils.hasText(dataSourceProperties.getName())) {  
+        dataSource.setPoolName(dataSourceProperties.getName());  
+    }  
+  
+    return new DataSourceProxy(dataSource);  
+}
+```
+
+需要将register.conf和file.conf放到order服务和ware服务中
+
 
 
 
