@@ -6309,10 +6309,41 @@ public DataSource dataSource(DataSourceProperties dataSourceProperties) {
 需要将register.conf和file.conf放到order服务和ware服务中
 
 #### 最终一致性库存解锁逻辑
-
-
+![[消息队列流程.jpg]]
 
 ### 订单服务
+#### RabbitMQ延时队列
+![[Pasted image 20230323224601.png]]
+常用解决方案：
+spring 的 schedule 定时任务轮询数据库
+缺点：消耗系统内存、增加了数据库的压力、存在较大的时间误差
+解决：rabbitmg的消息TTL和死信Exchange结合
+
+消息的TTL(Time To Live)
+* 消息的TTL就是**消息的存活时间**
+* RabbitMQ可以对**队列**和**消息**分别设置TTL。
+	* 对队列设置就是队列没有消费者连着的保留时间，**也可以对每-一个单独的消息做单独的设置。超过了这个时间，我们认为这个消息就死了，称之为死信**。
+	* 如果队列设置了，消息也设置了，那么会**取小的**。所以一个消息如果被路由到不同的列中，这个消息死亡的时间有可能不一样(不同的队列设置)。这里单讲单个消息的TTL，因为它才是实现延迟任务的关键。可以通过**设置消息的expiration字段或者x-message-ttl属性来设置时间**，两者是一样的效果。
+
+死信 Dead Letter Exchanges (DLX)
+* 一个消息在满足如下条件下，会进**死信路由**，记住这里是路由而不是队列个路由可以对应很多队列。(什么是死信)
+	* 一个消息被Consumer拒收了，并且reject方法的参数里requeue是false。也就是说不会被再次放在队列里，被其他消费者使用。(basic.reject/ basic.nack) requeue=false上面的消息的TTL到了，消息过期了。
+	* 队列的长度限制满了。排在前面的消息会被丢弃或者扔到死信路由上
+* Dead Letter Exchange其实就是一种普通的exchange，和创建其他exchange没有两样。只是在某一个设置Dead Letter Exchange的队列中有消息过期了，会自动触发消息的转发，发送到Dead Letter Exchange中去。
+* 我们既可以控制消息在一段时间后变成死信，又可以控制变成死信的消息被路由到某一个指定的交换机，结合二者，其实就可以实现一个延时队列
+* 手动ack&异常消息统一放在一个队列处理建议的两种方式
+	* catch异常后，手动发送到指定队列，然后使用channel给rabbitmq确认消息已消费
+	* 给Queue绑定死信队列，使用nack (requque为false) 确认消息消费失败
+
+延时队列实现1（给交换机设置过期时间。推荐）
+![[Pasted image 20230323233555.png]]
+延时队列实现2（给消息设置过期时间。不推荐，因为MQ是惰性检查机制，不能及时失效，扫到了才会被失效）
+![[Pasted image 20230323233632.png]]
+
+#### 延时队列定时关单模拟
+
+
+
 ### 支付
 ### 订单服务
 ### 秒杀服务
