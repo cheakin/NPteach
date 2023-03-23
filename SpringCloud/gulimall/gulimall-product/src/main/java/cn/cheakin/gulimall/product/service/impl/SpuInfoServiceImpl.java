@@ -74,8 +74,10 @@ import java.util.stream.Collectors;
 
     /**
      * //TODO 高级部分完善
+     * @GlobalTransactional // 适合 Seata AT 分布式事务
      * @param vo
      */
+
     @Transactional
     @Override
     public void saveSpuInfo(SpuSaveVo vo) {

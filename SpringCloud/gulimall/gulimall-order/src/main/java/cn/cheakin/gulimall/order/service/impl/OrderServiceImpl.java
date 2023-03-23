@@ -183,6 +183,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
                 lockVo.setLocks(orderItemVos);
 
                 // 库存成功了，但是网络原因超时了，订单回滚，库存不回滚
+                // 为了保证高并发。库存服务自己回滚。可以发消息给库存服务
+                // 库存服务本身也可以使用自动解锁模式 消息队列
                 R r = wareFeignService.orderLockStock(lockVo);
                 //5.1 锁定库存成功
                 if (r.getCode()==0){

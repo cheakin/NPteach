@@ -6308,6 +6308,7 @@ public DataSource dataSource(DataSourceProperties dataSourceProperties) {
 
 需要将register.conf和file.conf放到order服务和ware服务中
 
+#### 最终一致性库存解锁逻辑
 
 
 
