@@ -6445,6 +6445,100 @@ public String createOrderTest() {
 }
 ```
 
+#### 创建业务交换机&队列
+ware服务的pom.xm中引入依赖
+``` xml
+<dependency>  
+   <groupId>org.springframework.boot</groupId>  
+   <artifactId>spring-boot-starter-amqp</artifactId>  
+</dependency>
+```
+ware服务的application.properties
+``` yml
+spring.rabbitmq.host=192.168.56.10  
+spring.rabbitmq.virtual-host=/
+```
+并且在启动类是加上@EnableRabbit
+然后将ware服务的MyRabbitConfig设置和创建MQ
+``` java
+@Configuration  
+public class MyRabbitConfig {  
+  
+    /**  
+     * 使用JSON序列化机制，进行消息转换  
+     */  
+    @Bean  
+    public MessageConverter messageConverter() {  
+        return new Jackson2JsonMessageConverter();  
+    }  
+
+	@RabbitListener(queues = "stock.release.stock.queue")  
+	public void handle(Message message) {  
+	    System.out.println("收到过期的订单信息，准备解锁库存" + message.getBody());  
+	}
+  
+    @Bean  
+    public Exchange stockEventExchange() {  
+        return new TopicExchange("stock-event-exchange", true, false);  
+    }  
+  
+    /**  
+     * 普通队列，用于解锁库存  
+     * @return  
+     */  
+    @Bean  
+    public Queue stockReleaseStockQueue() {  
+        return new Queue("stock.release.stock.queue", true, false, false, null);  
+    }  
+  
+    /**  
+     * 延迟队列  
+     * @return  
+     */  
+    @Bean  
+    public Queue stockDelayQueue() {  
+        HashMap<String, Object> arguments = new HashMap<>();  
+        arguments.put("x-dead-letter-exchange", "stock-event-exchange");  
+        arguments.put("x-dead-letter-routing-key", "stock.release");  
+        arguments.put("x-message-ttl", 120000); // 消息过期时间 2分钟  
+        return new Queue("stock.delay.queue", true, false, false, arguments);  
+    }  
+  
+    /**  
+     * 交换机和普通队列绑定  
+     * @return  
+     */  
+    @Bean  
+    public Binding stockReleaseBinding() {  
+        return new Binding("stock.release.stock.queue",  
+                Binding.DestinationType.QUEUE,  
+                "stock-event-exchange",  
+                "stock.release.#",  
+                null);  
+    }  
+  
+    /**  
+     * 交换机和延迟队列绑定  
+     * @return  
+     */  
+    @Bean  
+    public Binding stockLockedBinding() {  
+        return new Binding("stock.delay.queue",  
+                Binding.DestinationType.QUEUE,  
+                "stock-event-exchange",  
+                "stock.locked",  
+                null);  
+    }  
+  
+}
+```
+在不需要seata的服务里排除掉，否则会导致报错
+``` xml
+<exclusion>  
+    <groupId>com.alibaba.cloud</groupId>  
+    <artifactId>spring-cloud-starter-alibaba-seata</artifactId>  
+</exclusion>
+```
 
 ### 支付
 ### 订单服务
