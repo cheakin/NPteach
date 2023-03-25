@@ -6540,6 +6540,24 @@ public class MyRabbitConfig {
 </exclusion>
 ```
 
+#### 监听库存解锁 
+`wms_ware_order_task_detail`表新增`wareid`和`lockStatus`字段，对应的实体类和xml都要新增
+为WareOrderTaskDetailEntity实体类添加`@NoArgsConstructor`、`@AllArgsConstructor`注解
+
+在common服务中新建StockLockedTo
+``` java
+@Data  
+public class StockLockedTo {  
+    private Long id;    //库存工作单的id  
+    private List<String> detailId;  //工作单详情
+}
+```
+
+
+
+
+
+
 ### 支付
 ### 订单服务
 ### 秒杀服务

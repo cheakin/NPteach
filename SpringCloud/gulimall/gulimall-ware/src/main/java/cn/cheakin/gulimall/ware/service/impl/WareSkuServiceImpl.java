@@ -1,12 +1,18 @@
 package cn.cheakin.gulimall.ware.service.impl;
 
 import cn.cheakin.common.exception.NoStockException;
+import cn.cheakin.common.to.mq.StockDetailTo;
+import cn.cheakin.common.to.mq.StockLockedTo;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.Query;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.ware.dao.WareSkuDao;
+import cn.cheakin.gulimall.ware.entity.WareOrderTaskDetailEntity;
+import cn.cheakin.gulimall.ware.entity.WareOrderTaskEntity;
 import cn.cheakin.gulimall.ware.entity.WareSkuEntity;
 import cn.cheakin.gulimall.ware.feign.ProductFeignService;
+import cn.cheakin.gulimall.ware.service.WareOrderTaskDetailService;
+import cn.cheakin.gulimall.ware.service.WareOrderTaskService;
 import cn.cheakin.gulimall.ware.service.WareSkuService;
 import cn.cheakin.gulimall.ware.vo.OrderItemVo;
 import cn.cheakin.gulimall.ware.vo.SkuHasStockVo;
@@ -15,16 +21,21 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.Data;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-
+@RabbitListener(queues = "stock.release.stock.queue")
 @Service("wareSkuService")
 public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> implements WareSkuService {
     @Autowired
@@ -32,6 +43,61 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
 
     @Autowired
     ProductFeignService productFeignService;
+    @Autowired
+    WareOrderTaskService wareOrderTaskService;
+    @Autowired
+    WareOrderTaskDetailService wareOrderTaskDetailService;
+
+    @Autowired
+    RabbitTemplate rabbitTemplate;
+
+    /**
+     * 1.库存自动解锁
+     *  下单成功,库存锁定成功,接下来的业务调用失败,导致订单回滚,之前锁定的库存就要自动解锁
+     * 2.订单失败
+     *  库存锁定失败
+     * @param to
+     * @param message
+     */
+    public void handleStockLockedRelease(StockLockedTo to, Message message) {
+        System.out.println("收到解锁库存的消息");
+        StockDetailTo detail = to.getDetailTo();
+        Long detailId = detail.getId();
+        //解锁
+        //1、查询数据库关于这个订单的锁定库存信息
+        //  有：证明库存锁定成功了
+        //   解锁：订单情况
+        //       1、没有这个订单，必须解锁库存
+        //       2、有这个订单，不一定解锁库存
+        //           订单状态：已取消：解锁库存
+        //                   没取消：不能解锁库存
+        //  没有：库存锁定失败了，库存回滚了，这种情况无需解锁
+        WareOrderTaskDetailEntity byId = wareOrderTaskDetailService.getById(detailId);
+        if (byId != null) {
+            //解锁
+            Long id = to.getId();
+            WareOrderTaskEntity taskEntity = wareOrderTaskService.getById(id);
+            String orderSn = taskEntity.getOrderSn();
+            //TODO 远程查询订单服务，查询订单状态
+            /*R r = productFeignService.getOrderStatus(orderSn);
+            if (r.getCode() == 0) {
+                //订单数据返回成功
+                OrderItemVo data = r.getData(new TypeReference<OrderItemVo>() {
+                });
+                if (data == null || data.getStatus() == 4) {
+                    //订单不存在或者订单已经取消了，才能解锁库存
+                    if (byId.getLockStatus() == 1) {
+                        unLockStock(detail.getSkuId(), detail.getWareId(), detail.getSkuNum(), detailId);
+                    }
+                }
+            } else {
+                //消息拒绝以后重新放到队列里面，让别人继续消费解锁
+                throw new RuntimeException("远程服务失败");
+            }*/
+        } else {
+            //无需解锁
+        }
+    }
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
@@ -110,12 +176,23 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
      * 为某个订单锁定库存
      * 默认只要是运行时异常都会回滚
      *
+     *
+     * 库存解锁的场景
+     * 1.下单成功，订单过期没有支付被系统自动取消、被用户手动取消都要解锁库存
+     * 2.下单成功，库存锁定成功，接下来的业务调用失败，导致订单回滚，之前锁定的库存就要自动解锁
+     *    之前锁定的库存就要自动解锁
      * @param vo
      * @return
      */
     @Transactional(rollbackFor = NoStockException.class)
     @Override
     public Boolean orderLockStock(WareSkuLockVo vo) {
+        //因为可能出现订单回滚后，库存锁定不回滚的情况，但订单已经回滚，得不到库存锁定信息，因此要有库存工作单
+        WareOrderTaskEntity taskEntity = new WareOrderTaskEntity();
+        taskEntity.setOrderSn(vo.getOrderSn());
+        taskEntity.setCreateTime(new Date());
+        wareOrderTaskService.save(taskEntity);
+
         // 1.找到每个商品在哪个仓库都用库存
         List<OrderItemVo> locks = vo.getLocks();
         List<SkuWareHasStock> collect = locks.stream().map((item) -> {
@@ -137,6 +214,8 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
             if (wareIds == null || wareIds.size() == 0) {
                 throw new NoStockException(skuId);
             }
+            //1)如果每一个商品都锁定成功，将当前商品锁定了几件的工作单记录发给MQ
+            //2)锁定失败。前面保存的工作单信息就回滚了。发送出去的消息，即使要解锁记录，由于在数据库查不到id，所有就不用解锁
             for (Long wareId : wareIds) {
                 // 锁定成功就返回1，否则就是0
                 Long count = baseMapper.lockSkuStock(skuId, wareId, hasStock.getNum());
@@ -145,13 +224,21 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
                     break;
                 } else {
                     //锁定成功，保存工作单详情
-                    /*WareOrderTaskDetailEntity detailEntity = WareOrderTaskDetailEntity.builder()
+                    WareOrderTaskDetailEntity detailEntity = new WareOrderTaskDetailEntity(
+                            null,
+                            skuId,
+                            "",
+                            hasStock.getNum(),
+                            taskEntity.getId(),
+                            wareId,
+                            1);
+                    /*WareOrderTaskDetailEntity detailEntity = new WareOrderTaskDetailEntity.builder()
                             .skuId(skuId)
                             .skuName("")
-                            .skuNum(lockVo.getNum())
+                            .skuNum(hasStock.getNum())
                             .taskId(taskEntity.getId())
                             .wareId(wareId)
-                            .lockStatus(1).build();
+                            .lockStatus(1).build();*/
                     wareOrderTaskDetailService.save(detailEntity);
                     //发送库存锁定消息至延迟队列
                     StockLockedTo lockedTo = new StockLockedTo();
@@ -159,10 +246,9 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
                     StockDetailTo detailTo = new StockDetailTo();
                     BeanUtils.copyProperties(detailEntity, detailTo);
                     lockedTo.setDetailTo(detailTo);
-                    rabbitTemplate.convertAndSend("stock-event-exchange", "stock.locked", lockedTo);*/
+                    rabbitTemplate.convertAndSend("stock-event-exchange", "stock.locked", lockedTo);
 
                     allLock = true;
-
                 }
             }
             if (allLock == false) {
