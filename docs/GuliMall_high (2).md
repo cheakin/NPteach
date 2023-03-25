@@ -6418,9 +6418,32 @@ public class MyRabbitmqConfig {
   
 }
 ```
-
-
-
+在order服务的MyRabbitmqConfig中添加一个监听
+``` java
+@RabbitListener(queues = "order.release.order.queue")  
+public void listener(OrderEntity entity, Channel channel, Message message) throws IOException {  
+    System.out.println("收到过期的订单信息，准备关闭订单" + entity.getOrderSn());  
+    channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);  
+}
+```
+在order服务的HelloController新增测试接口
+``` java
+@Autowired  
+private RabbitTemplate rabbitTemplate;  
+  
+@ResponseBody  
+@GetMapping("/testCreateOrderTest")  
+public String createOrderTest() {  
+    //订单下单成功  
+    OrderEntity orderEntity = new OrderEntity();  
+    orderEntity.setOrderSn(UUID.randomUUID().toString());  
+    orderEntity.setModifyTime(new Date());  
+  
+    // 给MQ发送消息  
+    rabbitTemplate.convertAndSend("order-event-exchange","order.create.order",orderEntity);  
+    return "ok";  
+}
+```
 
 
 ### 支付
