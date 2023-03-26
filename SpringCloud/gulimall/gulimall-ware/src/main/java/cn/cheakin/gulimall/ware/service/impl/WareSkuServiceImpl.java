@@ -10,18 +10,23 @@ import cn.cheakin.gulimall.ware.dao.WareSkuDao;
 import cn.cheakin.gulimall.ware.entity.WareOrderTaskDetailEntity;
 import cn.cheakin.gulimall.ware.entity.WareOrderTaskEntity;
 import cn.cheakin.gulimall.ware.entity.WareSkuEntity;
+import cn.cheakin.gulimall.ware.feign.OrderFeignService;
 import cn.cheakin.gulimall.ware.feign.ProductFeignService;
 import cn.cheakin.gulimall.ware.service.WareOrderTaskDetailService;
 import cn.cheakin.gulimall.ware.service.WareOrderTaskService;
 import cn.cheakin.gulimall.ware.service.WareSkuService;
 import cn.cheakin.gulimall.ware.vo.OrderItemVo;
+import cn.cheakin.gulimall.ware.vo.OrderVo;
 import cn.cheakin.gulimall.ware.vo.SkuHasStockVo;
 import cn.cheakin.gulimall.ware.vo.WareSkuLockVo;
+import cn.hutool.core.lang.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.rabbitmq.client.Channel;
 import lombok.Data;
 import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
@@ -30,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +50,9 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
     @Autowired
     ProductFeignService productFeignService;
     @Autowired
+    OrderFeignService orderFeignService;
+
+    @Autowired
     WareOrderTaskService wareOrderTaskService;
     @Autowired
     WareOrderTaskDetailService wareOrderTaskDetailService;
@@ -56,10 +65,14 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
      *  下单成功,库存锁定成功,接下来的业务调用失败,导致订单回滚,之前锁定的库存就要自动解锁
      * 2.订单失败
      *  库存锁定失败
+     *
+     *
+     * 只要解锁库存的消息失败,一定要告诉服务解锁失败
      * @param to
      * @param message
      */
-    public void handleStockLockedRelease(StockLockedTo to, Message message) {
+    @RabbitHandler
+    public void handleStockLockedRelease(StockLockedTo to, Message message, Channel channel) throws IOException {
         System.out.println("收到解锁库存的消息");
         StockDetailTo detail = to.getDetailTo();
         Long detailId = detail.getId();
@@ -79,24 +92,37 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
             WareOrderTaskEntity taskEntity = wareOrderTaskService.getById(id);
             String orderSn = taskEntity.getOrderSn();
             //TODO 远程查询订单服务，查询订单状态
-            /*R r = productFeignService.getOrderStatus(orderSn);
+            R r = orderFeignService.getOrderStatus(orderSn);
             if (r.getCode() == 0) {
                 //订单数据返回成功
-                OrderItemVo data = r.getData(new TypeReference<OrderItemVo>() {
+                OrderVo data = r.getData(new TypeReference<OrderVo>() {
                 });
                 if (data == null || data.getStatus() == 4) {
                     //订单不存在或者订单已经取消了，才能解锁库存
                     if (byId.getLockStatus() == 1) {
                         unLockStock(detail.getSkuId(), detail.getWareId(), detail.getSkuNum(), detailId);
                     }
+                    channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
                 }
             } else {
                 //消息拒绝以后重新放到队列里面，让别人继续消费解锁
+                channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);
                 throw new RuntimeException("远程服务失败");
-            }*/
+            }
         } else {
             //无需解锁
+            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
         }
+    }
+
+    private void unLockStock(Long skuId, Long wareId, Integer skuNum, Long detailId) {
+        //库存解锁
+        wareSkuDao.unLockStock(skuId, wareId, skuNum);
+        //更新库存工作单的状态
+        WareOrderTaskDetailEntity entity = new WareOrderTaskDetailEntity();
+        entity.setId(detailId);
+        entity.setLockStatus(2);
+        wareOrderTaskDetailService.updateById(entity);
     }
 
     @Override

@@ -214,6 +214,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         }
     }
 
+    @Override
+    public OrderEntity getOrderByOrderSn(String orderSn) {
+        return baseMapper.selectOne(new QueryWrapper<OrderEntity>().eq("order_sn", orderSn));
+    }
+
     private OrderCreateTo createOrderTo(MemberResponseVo memberResponseVo, OrderSubmitVo submitVo) {
         //用IdWorker生成订单号
         String orderSn = IdWorker.getTimeId();

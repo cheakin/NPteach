@@ -1,19 +1,14 @@
 package cn.cheakin.gulimall.order.controller;
 
-import java.util.Arrays;
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import cn.cheakin.gulimall.order.entity.OrderEntity;
-import cn.cheakin.gulimall.order.service.OrderService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.order.entity.OrderEntity;
+import cn.cheakin.gulimall.order.service.OrderService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.Map;
 
 
 
@@ -29,6 +24,12 @@ import cn.cheakin.common.utils.R;
 public class OrderController {
     @Autowired
     private OrderService orderService;
+
+    @GetMapping("/status/{orderSn}")
+    public R getOrderStatus(@PathVariable("orderSn") String orderSn){
+        OrderEntity orderEntity = orderService.getOrderByOrderSn(orderSn);
+        return R.ok().setData(orderEntity.getStatus());
+    }
 
     /**
      * 列表
