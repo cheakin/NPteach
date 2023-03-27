@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 @FeignClient("gulimall-order")
 public interface OrderFeignService {
-    @RequestMapping("order/order/status/{OrderSn}")
+    @RequestMapping("order/order/status/{orderSn}")
     R getOrderStatus(@PathVariable("orderSn") String OrderSn);
 }

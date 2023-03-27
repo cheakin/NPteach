@@ -6851,7 +6851,7 @@ order服务的LoginInterceptor
 public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {  
     String requestURI = request.getRequestURI();  
     AntPathMatcher matcher = new AntPathMatcher();  
-    boolean match1 = matcher.match("/order/order/infoByOrderSn/**", requestURI);  
+    boolean match1 = matcher.match("/order/order/status/**", requestURI);  
     if (match1||match2) return true;  
   
     HttpSession session = request.getSession();  
@@ -6894,51 +6894,83 @@ ware服务的WareSkuServiceImpl
 ``` java
 @Override  
 public void unLockStock(StockLockedTo to) {  
-	System.out.println("收到解锁库存的消息");  
-	StockDetailTo detail = to.getDetailTo();  
-	Long detailId = detail.getId();  
-	//解锁  
-	//1、查询数据库关于这个订单的锁定库存信息  
-	//  有：证明库存锁定成功了  
-	//   解锁：订单情况  
-	//       1、没有这个订单，必须解锁库存  
-	//       2、有这个订单，不一定解锁库存  
-	//           订单状态：已取消：解锁库存  
-	//                   没取消：不能解锁库存  
-	//  没有：库存锁定失败了，库存回滚了，这种情况无需解锁  
-	WareOrderTaskDetailEntity byId = wareOrderTaskDetailService.getById(detailId);  
-	if (byId != null) {  
-		//解锁  
-		Long id = to.getId();  
-		WareOrderTaskEntity taskEntity = wareOrderTaskService.getById(id);  
-		String orderSn = taskEntity.getOrderSn();  
-		//TODO 远程查询订单服务，查询订单状态  
-		R r = orderFeignService.getOrderStatus(orderSn);  
-		if (r.getCode() == 0) {  
-			//订单数据返回成功  
-			OrderVo data = r.getData(new TypeReference<OrderVo>() {  
-			});  
-			if (data == null || data.getStatus() == 4) {  
-				//订单不存在或者订单已经取消了，才能解锁库存  
-				if (byId.getLockStatus() == 1) {  
-					unLockStock(detail.getSkuId(), detail.getWareId(), detail.getSkuNum(), detailId);  
-				}  
-				/*channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);*/  
-			}  
-		} else {  
-			//消息拒绝以后重新放到队列里面，让别人继续消费解锁  
-			/*channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);*/  
-//                throw new RuntimeException("远程服务失败");  
-		}  
-	} else {  
-		//无需解锁  
-		/*channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);*/  
-	}  
+    System.out.println("收到解锁库存的消息");  
+    StockDetailTo detail = to.getDetailTo();  
+    Long detailId = detail.getId();  
+    //解锁  
+    //1、查询数据库关于这个订单的锁定库存信息  
+    //  有：证明库存锁定成功了  
+    //   解锁：订单情况  
+    //       1、没有这个订单，必须解锁库存  
+    //       2、有这个订单，不一定解锁库存  
+    //           订单状态：已取消：解锁库存  
+    //                   没取消：不能解锁库存  
+    //  没有：库存锁定失败了，库存回滚了，这种情况无需解锁  
+    WareOrderTaskDetailEntity byId = wareOrderTaskDetailService.getById(detailId);  
+    if (byId != null) {  
+        //解锁  
+        Long id = to.getId();  
+        WareOrderTaskEntity taskEntity = wareOrderTaskService.getById(id);  
+        String orderSn = taskEntity.getOrderSn();  
+        //TODO 远程查询订单服务，查询订单状态  
+        R r = orderFeignService.getOrderStatus(orderSn);  
+        if (r.getCode() == 0) {  
+            //订单数据返回成功  
+            OrderVo data = r.getData(new TypeReference<OrderVo>() {  
+            });  
+            if (data == null || data.getStatus() == 4) {  
+                //订单不存在或者订单已经取消了，才能解锁库存  
+                if (byId.getLockStatus() == 1) {  
+                    unLockStock(detail.getSkuId(), detail.getWareId(), detail.getSkuNum(), detailId);  
+                }  
+                /*channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);*/  
+            }  
+        } else {  
+            //消息拒绝以后重新放到队列里面，让别人继续消费解锁  
+            /*channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);*/  
+            throw new RuntimeException("远程服务失败");  
+        }  
+    } else {  
+        //无需解锁  
+        /*channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);*/  
+    }  
+}  
+  
+private void unLockStock(Long skuId, Long wareId, Integer skuNum, Long detailId) {  
+    //库存解锁  
+    wareSkuDao.unLockStock(skuId, wareId, skuNum);  
+    //更新库存工作单的状态  
+    WareOrderTaskDetailEntity entity = new WareOrderTaskDetailEntity();  
+    entity.setId(detailId);  
+    entity.setLockStatus(2);  
+    wareOrderTaskDetailService.updateById(entity);  
 }
 ```
 
-
-
+#### 定时关单完成
+order服务新建OrderCloseListener
+``` java
+@Component  
+@RabbitListener(queues = {"order.release.order.queue"})  
+public class OrderCloseListener {  
+  
+    @Autowired  
+    private OrderService orderService;  
+  
+    @RabbitHandler  
+    public void listener(OrderEntity orderEntity, Message message, Channel channel) throws IOException {  
+        System.out.println("收到过期的订单信息，准备关闭订单" + orderEntity.getOrderSn());  
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();  
+        try {  
+            orderService.closeOrder(orderEntity);  
+            channel.basicAck(deliveryTag,false);  
+        } catch (Exception e){  
+            channel.basicReject(deliveryTag,true);  
+        }  
+  
+    }  
+}
+```
 
 ### 支付
 ### 订单服务

@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.order;
 
+import io.seata.spring.boot.autoconfigure.SeataAutoConfiguration;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -40,7 +41,7 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 @EnableRedisHttpSession
 @EnableRabbit
 @EnableDiscoveryClient
-@SpringBootApplication
+@SpringBootApplication(exclude = SeataAutoConfiguration.class)
 public class GulimallOrderApplication {
 
 	public static void main(String[] args) {

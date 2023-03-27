@@ -144,7 +144,7 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
             } else {
                 //消息拒绝以后重新放到队列里面，让别人继续消费解锁
                 /*channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);*/
-//                throw new RuntimeException("远程服务失败");
+                throw new RuntimeException("远程服务失败");
             }
         } else {
             //无需解锁
