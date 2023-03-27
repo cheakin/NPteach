@@ -6844,6 +6844,102 @@ spring.rabbitmq.virtual-host=/
 spring.rabbitmq.listener.simple.acknowledge-mode=manual
 ```
 
+#### 库存自动解锁完成
+order服务的LoginInterceptor
+``` java
+@Override  
+public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {  
+    String requestURI = request.getRequestURI();  
+    AntPathMatcher matcher = new AntPathMatcher();  
+    boolean match1 = matcher.match("/order/order/infoByOrderSn/**", requestURI);  
+    if (match1||match2) return true;  
+  
+    HttpSession session = request.getSession();  
+    MemberResponseVo memberResponseVo = (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);  
+    if (memberResponseVo != null) {  
+        loginUser.set(memberResponseVo);  
+        return true;    }else {  
+        // 没登陆就去登录  
+        session.setAttribute("msg","请先登录");  
+        response.sendRedirect("http://auth.gulimall.com/login.html");  
+        return false;    }  
+}
+```
+ware服务中将消息监听抽取出来StockReleaseListener
+``` java
+@Slf4j  
+@Component  
+@RabbitListener(queues = {"stock.release.stock.queue"})  
+public class StockReleaseListener {  
+  
+    @Autowired  
+    private WareSkuService wareSkuService;  
+  
+    @RabbitHandler  
+    public void handleStockLockedRelease(StockLockedTo to, Message message, Channel channel) throws IOException {  
+        log.info("************************收到库存解锁的消息********************************");  
+        try {  
+            wareSkuService.unLockStock(to);  
+            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);  
+        } catch (Exception e) {  
+            channel.basicReject(message.getMessageProperties().getDeliveryTag(),true);  
+        }  
+    }  
+  
+    /*@RabbitHandler  
+    public void handleStockLockedRelease(OrderTo orderTo, Message message, Channel channel) throws IOException {        log.info("************************从订单模块收到库存解锁的消息********************************");  
+        try {            wareSkuService.unlock(orderTo);            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);        } catch (Exception e) {            channel.basicReject(message.getMessageProperties().getDeliveryTag(),true);        }    }*/}
+```
+ware服务的WareSkuServiceImpl
+``` java
+@Override  
+public void unLockStock(StockLockedTo to) {  
+	System.out.println("收到解锁库存的消息");  
+	StockDetailTo detail = to.getDetailTo();  
+	Long detailId = detail.getId();  
+	//解锁  
+	//1、查询数据库关于这个订单的锁定库存信息  
+	//  有：证明库存锁定成功了  
+	//   解锁：订单情况  
+	//       1、没有这个订单，必须解锁库存  
+	//       2、有这个订单，不一定解锁库存  
+	//           订单状态：已取消：解锁库存  
+	//                   没取消：不能解锁库存  
+	//  没有：库存锁定失败了，库存回滚了，这种情况无需解锁  
+	WareOrderTaskDetailEntity byId = wareOrderTaskDetailService.getById(detailId);  
+	if (byId != null) {  
+		//解锁  
+		Long id = to.getId();  
+		WareOrderTaskEntity taskEntity = wareOrderTaskService.getById(id);  
+		String orderSn = taskEntity.getOrderSn();  
+		//TODO 远程查询订单服务，查询订单状态  
+		R r = orderFeignService.getOrderStatus(orderSn);  
+		if (r.getCode() == 0) {  
+			//订单数据返回成功  
+			OrderVo data = r.getData(new TypeReference<OrderVo>() {  
+			});  
+			if (data == null || data.getStatus() == 4) {  
+				//订单不存在或者订单已经取消了，才能解锁库存  
+				if (byId.getLockStatus() == 1) {  
+					unLockStock(detail.getSkuId(), detail.getWareId(), detail.getSkuNum(), detailId);  
+				}  
+				/*channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);*/  
+			}  
+		} else {  
+			//消息拒绝以后重新放到队列里面，让别人继续消费解锁  
+			/*channel.basicReject(message.getMessageProperties().getDeliveryTag(), true);*/  
+//                throw new RuntimeException("远程服务失败");  
+		}  
+	} else {  
+		//无需解锁  
+		/*channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);*/  
+	}  
+}
+```
+
+
+
+
 ### 支付
 ### 订单服务
 ### 秒杀服务

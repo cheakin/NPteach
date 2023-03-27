@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.ware.service;
 
+import cn.cheakin.common.to.mq.StockLockedTo;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.ware.entity.WareSkuEntity;
 import cn.cheakin.gulimall.ware.vo.SkuHasStockVo;
@@ -37,5 +38,6 @@ public interface WareSkuService extends IService<WareSkuEntity> {
 //    List<LockStockResult> orderLockStock(WareSkuLockVo lockVo);
     Boolean orderLockStock(WareSkuLockVo lockVo);
 
+    void unLockStock(StockLockedTo to);
 }
 
