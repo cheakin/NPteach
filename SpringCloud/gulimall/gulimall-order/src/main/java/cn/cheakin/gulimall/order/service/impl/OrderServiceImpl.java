@@ -3,6 +3,7 @@ package cn.cheakin.gulimall.order.service.impl;
 import cn.cheakin.common.constant.CartConstant;
 import cn.cheakin.common.exception.NoStockException;
 import cn.cheakin.common.to.SkuHasStockVo;
+import cn.cheakin.common.to.mq.OrderTo;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.Query;
 import cn.cheakin.common.utils.R;
@@ -27,6 +28,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -64,9 +67,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
     private ThreadPoolExecutor executor;
     @Autowired
     private StringRedisTemplate redisTemplate;
-    /*@Autowired
-    private RabbitTemplate rabbitTemplate;
     @Autowired
+    private RabbitTemplate rabbitTemplate;
+    /*@Autowired
     private PaymentInfoService paymentInfoService;*/
 
     @Override
@@ -190,9 +193,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
 //                    int i = 10 / 0;   // 订单回滚，库存不会滚
                     responseVo.setOrder(order.getOrder());
                     responseVo.setCode(0);
-
+                    // 订单创建成功发送消息给MQ
                     //发送消息到订单延迟队列，判断过期订单
-//                    rabbitTemplate.convertAndSend("order-event-exchange","order.create.order",order.getOrder());
+                    rabbitTemplate.convertAndSend("order-event-exchange","order.create.order",order.getOrder());
 
                     //清除购物车记录
                     BoundHashOperations<String, Object, Object> ops = redisTemplate.boundHashOps(CartConstant.CART_PREFIX + memberResponseVo.getId());
@@ -217,6 +220,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
     @Override
     public OrderEntity getOrderByOrderSn(String orderSn) {
         return baseMapper.selectOne(new QueryWrapper<OrderEntity>().eq("order_sn", orderSn));
+    }
+
+    @Override
+    public void closeOrder(OrderEntity orderEntity) {
+        //查询当前订单的状态信息
+        OrderEntity order = this.getById(orderEntity.getId());
+        if (order.getStatus() == OrderStatusEnum.CREATE_NEW.getCode()) {
+            //关单
+            OrderEntity updateOrder = new OrderEntity();
+            updateOrder.setId(order.getId());
+            updateOrder.setStatus(OrderStatusEnum.CANCLED.getCode());
+            this.updateById(updateOrder);
+
+            //关单后发送消息通知其他服务进行关单相关的操作，如解锁库存
+            OrderTo orderTo = new OrderTo();
+            BeanUtils.copyProperties(order, orderTo);
+            rabbitTemplate.convertAndSend("order-event-exchange", "order.release.other",orderTo);
+        }
     }
 
     private OrderCreateTo createOrderTo(MemberResponseVo memberResponseVo, OrderSubmitVo submitVo) {

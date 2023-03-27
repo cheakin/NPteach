@@ -1,6 +1,7 @@
 package cn.cheakin.gulimall.ware.service.impl;
 
 import cn.cheakin.common.exception.NoStockException;
+import cn.cheakin.common.to.mq.OrderTo;
 import cn.cheakin.common.to.mq.StockDetailTo;
 import cn.cheakin.common.to.mq.StockLockedTo;
 import cn.cheakin.common.utils.PageUtils;
@@ -149,6 +150,24 @@ public class WareSkuServiceImpl extends ServiceImpl<WareSkuDao, WareSkuEntity> i
         } else {
             //无需解锁
             /*channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);*/
+        }
+    }
+
+    //防止订单服务卡顿，导致订单状态消息一直改不了，库存消息优先到期，查订单状态新建状态，什么都不做
+    //导致卡顿的订单，永远不能解锁库存
+    @Transactional
+    @Override
+    public void unLockStock(OrderTo orderTo) {
+        String orderSn = orderTo.getOrderSn();
+        //查一下最新库存的状态，防止重复解锁库存
+        WareOrderTaskEntity taskEntity = wareOrderTaskService.getOrderTaskByOrderSn(orderSn);
+        Long id = taskEntity.getId();
+        //按照工作单找到所有 没有解锁的库存，进行解锁
+        List<WareOrderTaskDetailEntity> entities = wareOrderTaskDetailService.list(new QueryWrapper<WareOrderTaskDetailEntity>()
+                .eq("task_id", id)
+                .eq("lock_status", 1));
+        for (WareOrderTaskDetailEntity entity : entities) {
+            unLockStock(entity.getSkuId(), entity.getWareId(), entity.getSkuNum(), entity.getId());
         }
     }
 

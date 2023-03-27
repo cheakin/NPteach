@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.ware.listener;
 
+import cn.cheakin.common.to.mq.OrderTo;
 import cn.cheakin.common.to.mq.StockLockedTo;
 import cn.cheakin.gulimall.ware.service.WareSkuService;
 import com.rabbitmq.client.Channel;
@@ -31,14 +32,15 @@ public class StockReleaseListener {
         }
     }
 
-    /*@RabbitHandler
-    public void handleStockLockedRelease(OrderTo orderTo, Message message, Channel channel) throws IOException {
+    @RabbitHandler
+    public void handleOrderCloseRelease(OrderTo orderTo, Message message, Channel channel) throws IOException {
         log.info("************************从订单模块收到库存解锁的消息********************************");
         try {
-            wareSkuService.unlock(orderTo);
+            wareSkuService.unLockStock(orderTo);
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
         } catch (Exception e) {
             channel.basicReject(message.getMessageProperties().getDeliveryTag(),true);
         }
-    }*/
+    }
+
 }
