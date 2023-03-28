@@ -28,6 +28,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -236,7 +237,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
             //关单后发送消息通知其他服务进行关单相关的操作，如解锁库存
             OrderTo orderTo = new OrderTo();
             BeanUtils.copyProperties(order, orderTo);
-            rabbitTemplate.convertAndSend("order-event-exchange", "order.release.other",orderTo);
+            try {
+                //保证消息一定会发送出去，每一个消息都可以做好日志记录（给数据库保存每一个消息的详细信息）
+                //定期扫描数据库将失败的消息再发送一遍
+                rabbitTemplate.convertAndSend("order-event-exchange", "order.release.other",orderTo);
+            } catch (AmqpException e) {
+                //将没发送出去的消息重新发送出去
+
+            }
         }
     }
 
