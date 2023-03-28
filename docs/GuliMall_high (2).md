@@ -7232,8 +7232,10 @@ public WareOrderTaskEntity getOrderTaskByOrderSn(String orderSn) {
 		* 上线更多的消费者，进行正常消费
 		* 上线专门的队列消费服务，将消息先批量取出来，记录数据库，离线慢慢处理
 
-
 ### 支付
+#### 支付宝沙箱&代码
+支付宝开放平台：https: /open.alipay.com/platform/home.htm
+
 ### 订单服务
 ### 秒杀服务
 
