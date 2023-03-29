@@ -7265,12 +7265,36 @@ public WareOrderTaskEntity getOrderTaskByOrderSn(String orderSn) {
 
 
 #### 内网穿透
+内网穿透功能可以允许我们使用外网的网址来访问主机;正常的外网需要访问我们项目的流程是:
+1. 买服务器并且有公网固定 IP
+2. 买域名映射到服务器的 IP
+3. 域名需要进行备案和审核
 ![[Pasted image 20230329000431.png]]
 ![[Pasted image 20230329000454.png]]
 ![[Pasted image 20230329000513.png]]
 
+使用场景
+1. 开发测试(微信、支付宝)
+2. 智慧互联
+3. 远程控制
+4. 私有云
+
+内网穿的几个常用软件
+1. natapp: https://natapp.cn/
+2. 续断: www.zhexi.tech 
+3. 花生壳: https://www.oray.coml
 
 ### 订单服务
+#### 真和支付前需要注意的问题
+
+
+
+![[Pasted image 20230329222101.png]]
+![[Pasted image 20230329222139.png]]
+
+
+
+
 ### 秒杀服务
 
 # 谷粒商城-集群篇(cluster)
