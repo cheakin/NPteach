@@ -4,6 +4,7 @@ import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.order.entity.OrderEntity;
 import cn.cheakin.gulimall.order.vo.OrderConfirmVo;
 import cn.cheakin.gulimall.order.vo.OrderSubmitVo;
+import cn.cheakin.gulimall.order.vo.PayVo;
 import cn.cheakin.gulimall.order.vo.SubmitOrderResponseVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -28,5 +29,7 @@ public interface OrderService extends IService<OrderEntity> {
     OrderEntity getOrderByOrderSn(String orderSn);
 
     void closeOrder(OrderEntity orderEntity);
+
+    PayVo getOrderPay(String orderSn);
 }
 

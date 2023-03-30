@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: alipay
   datasource:
     username: root
     password: root

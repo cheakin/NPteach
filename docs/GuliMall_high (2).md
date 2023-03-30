@@ -7285,7 +7285,139 @@ public WareOrderTaskEntity getOrderTaskByOrderSn(String orderSn) {
 3. 花生壳: https://www.oray.coml
 
 ### 订单服务
-#### 真和支付前需要注意的问题
+#### 整合支付前需要注意的问题
+需要检查所有项目的编码方式都是`utf-8`格式的
+
+#### 整合支付
+在order服务的pom.xml中引入依赖
+``` xml
+<!--导入支付宝的SDK-->  
+<dependency>  
+	<groupId>com.alipay.sdk</groupId>  
+	<artifactId>alipay-sdk-java</artifactId>  
+	<version>4.35.87.ALL</version>  
+</dependency>
+```
+order中新增AlipayTemplate
+``` java
+@ConfigurationProperties(prefix = "alipay")  
+@Component  
+@Data  
+public class AlipayTemplate {  
+  
+	//在支付宝创建的应用的id  
+	// private String app_id = "2016092200568607";  
+	private String app_id = "2021003186669001";  
+	  
+	// 商户私钥，您的PKCS8格式RSA2私钥  
+	private String merchant_private_key = "";  
+	// 支付宝公钥,查看地址：https://openhome.alipay.com/platform/keyManage.htm 对应APPID下的支付宝公钥。  
+	private String alipay_public_key = "";  
+	// 服务器[异步通知]页面路径 需http://格式的完整路径，不能加?id=123这类自定义参数，必须外网可以正常访问  
+	// 支付宝会悄悄的给我们发送一个请求，告诉我们支付成功的信息  
+	private String notify_url;  
+	  
+	// 页面跳转同步通知页面路径 需http://格式的完整路径，不能加?id=123这类自定义参数，必须外网可以正常访问  
+	//同步通知，支付成功，一般跳转到成功页  
+	private String return_url;  
+	  
+	// 签名方式  
+	private String sign_type = "RSA2";  
+	  
+	// 字符编码格式  
+	private String charset = "utf-8";  
+	  
+	// 支付宝网关； https://openapi.alipaydev.com/gateway.doprivate String gatewayUrl = "https://openapi.alipaydev.com/gateway.do";  
+	  
+	public String pay(PayVo vo) throws AlipayApiException {  
+	  
+		//AlipayClient alipayClient = new DefaultAlipayClient(AlipayTemplate.gatewayUrl, AlipayTemplate.app_id, AlipayTemplate.merchant_private_key, "json", AlipayTemplate.charset, AlipayTemplate.alipay_public_key, AlipayTemplate.sign_type);  
+		//1、根据支付宝的配置生成一个支付客户端  
+		AlipayClient alipayClient = new DefaultAlipayClient(gatewayUrl,  
+		app_id, merchant_private_key, "json",  
+		charset, alipay_public_key, sign_type);  
+		  
+		//2、创建一个支付请求 //设置请求参数  
+		AlipayTradePagePayRequest alipayRequest = new AlipayTradePagePayRequest();  
+		alipayRequest.setReturnUrl(return_url);  
+		alipayRequest.setNotifyUrl(notify_url);  
+		  
+		//商户订单号，商户网站订单系统中唯一订单号，必填  
+		String out_trade_no = vo.getOut_trade_no();  
+		//付款金额，必填  
+		String total_amount = vo.getTotal_amount();  
+		//订单名称，必填  
+		String subject = vo.getSubject();  
+		//商品描述，可空  
+		String body = vo.getBody();  
+		  
+		alipayRequest.setBizContent("{\"out_trade_no\":\""+ out_trade_no +"\","  
+		+ "\"total_amount\":\""+ total_amount +"\","  
+		+ "\"subject\":\""+ subject +"\","  
+		+ "\"body\":\""+ body +"\","  
+		+ "\"product_code\":\"FAST_INSTANT_TRADE_PAY\"}");  
+		  
+		String result = alipayClient.pageExecute(alipayRequest).getBody();  
+		  
+		//会收到支付宝的响应，响应的是一个页面，只要浏览器显示这个页面，就会自动来到支付宝的收银台页面  
+		System.out.println("支付宝的响应："+result);  
+		  
+		return result;  
+	  
+	}  
+}
+```
+order服务中新增PayVo
+``` java
+@Data  
+public class PayVo {  
+	private String out_trade_no; // 商户订单号 必填  
+	private String subject; // 订单名称 必填  
+	private String total_amount; // 付款金额 必填  
+	private String body; // 商品描述 可空  
+}
+```
+
+前端页面，略
+
+order服务中新建PayWebController
+``` java
+@Controller  
+public class PayWebController {  
+  
+	@Autowired  
+	private AlipayTemplate alipayTemplate;  
+	@Autowired  
+	private OrderService orderService;  
+	  
+	@ResponseBody  
+	@GetMapping(value = "/aliPayOrder",produces = "text/html")  
+	public String aliPayOrder(@RequestParam("orderSn") String orderSn) throws AlipayApiException {  
+		System.out.println("接收到订单信息orderSn："+orderSn);  
+		PayVo payVo = orderService.getOrderPay(orderSn);  
+		String pay = alipayTemplate.pay(payVo);  
+		return pay;  
+	}  
+  
+}
+```
+order服务的OrderServiceImpl
+``` java
+@Override  
+public PayVo getOrderPay(String orderSn) {  
+	OrderEntity orderEntity = this.getOne(new QueryWrapper<OrderEntity>().eq("order_sn", orderSn));  
+	PayVo payVo = new PayVo();  
+	payVo.setOut_trade_no(orderSn);  
+	BigDecimal payAmount = orderEntity.getPayAmount().setScale(2, BigDecimal.ROUND_UP);  
+	payVo.setTotal_amount(payAmount.toString());  
+	  
+	List<OrderItemEntity> orderItemEntities = orderItemService.list(new QueryWrapper<OrderItemEntity>().eq("order_sn", orderSn));  
+	OrderItemEntity orderItemEntity = orderItemEntities.get(0);  
+	payVo.setSubject(orderItemEntity.getSkuName());  
+	payVo.setBody(orderItemEntity.getSkuAttrsVals());  
+	return payVo;  
+}
+```
 
 
 

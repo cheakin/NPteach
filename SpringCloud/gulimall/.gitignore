@@ -41,3 +41,4 @@ build/
 ### 脱敏 ###
 **/application-oss.yml
 **/application-sms.yml
+**/application-alipay.yml
