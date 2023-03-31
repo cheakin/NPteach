@@ -7420,7 +7420,131 @@ public PayVo getOrderPay(String orderSn) {
 ```
 
 #### 支付成功同步回调
-此节略，可以跳过
+将前端页面拷贝到template目录下，并重命名为orderList.html
+然后将静态资源上传到`/mydata/nginx/html/static/member/`目录下
+前端页面修改，略
+
+member服务中的pom.xml中引入依赖
+``` java
+<!-- thymeleaf 模板引擎 -->  
+<dependency>  
+	<groupId>org.springframework.boot</groupId>  
+	<artifactId>spring-boot-starter-thymeleaf</artifactId>  
+</dependency>
+```
+然后在application.yml中将缓存关闭
+``` yml
+spring.thymeleaf.cache=false
+```
+member服务中新增MemberWebController
+``` java
+@Controller  
+public class MemberWebController {  
+  
+	@GetMapping("/memberOrder.html")  
+	public String memberOrderPage(){  
+	
+		//查出当前登录的用户的所有订单列表数据  
+		return "orderList";  
+	}  
+}
+```
+member服务中新增LoginInterceptor
+``` java
+/**  
+* 登录拦截器，未登录的用户不能进入订单服务  
+*/  
+public class LoginInterceptor implements HandlerInterceptor {  
+	public static ThreadLocal<MemberResponseVo> loginUser = new ThreadLocal<>();  
+	  
+	@Override  
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {  
+		String requestURI = request.getRequestURI();  
+		AntPathMatcher matcher = new AntPathMatcher();  
+		boolean match1 = matcher.match("/member/**", requestURI);
+		boolean match2 = matcher.match("/payed/**", requestURI);  
+		if (match1||match2) return true;  
+		  
+		HttpSession session = request.getSession();  
+		MemberResponseVo memberResponseVo = (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);  
+		if (memberResponseVo != null) {  
+			loginUser.set(memberResponseVo);  
+			return true;  
+		}else {  
+			// 没登陆就去登录  
+			session.setAttribute("msg","请先登录");  
+			response.sendRedirect("http://auth.gulimall.com/login.html");  
+			return false;  
+		}  
+}  
+  
+	@Override  
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {  
+	  
+	}  
+	  
+	@Override  
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {  
+	  
+	}  
+}
+```
+member服务中新增MemberWebConfiguration
+``` java
+@Configuration  
+public class MemberWebConfiguration implements WebMvcConfigurer {  
+	@Autowired  
+	LoginInterceptor loginInterceptor;  
+  
+	@Override  
+	public void addInterceptors(InterceptorRegistry registry) {  
+		registry.addInterceptor(loginInterceptor).addPathPatterns("/**");  
+	}  
+}
+```
+
+在gateway的application.yml中添加路由规则
+``` java
+- id: gulimall_member_rout  
+	uri: lb://gulimall-member  
+	predicates:  
+		- Host=member.gulimall.com
+```
+host文件中添加域名映射
+``` sh
+192.168.56.10   member.gulimall.com
+```
+
+在member服务的pom.xml中引入依赖
+``` java
+<dependency>  
+	<groupId>org.springframework.session</groupId>  
+	<artifactId>spring-session-data-redis</artifactId>  
+</dependency>
+
+<dependency>  
+	<groupId>org.springframework.boot</groupId>  
+	<artifactId>spring-boot-starter-data-redis</artifactId>  
+	<exclusions>  
+		<exclusion>  
+			<groupId>io.lettuce</groupId>  
+			<artifactId>lettuce-core</artifactId>  
+		</exclusion>  
+	</exclusions>  
+</dependency>  
+<dependency>  
+	<groupId>redis.clients</groupId>  
+	<artifactId>jedis</artifactId>  
+</dependency>
+```
+然后在application.yml中开启session，在启动类上加上`@EnableRedisHttpSession`注解
+```
+spring.session.store-type=redis  
+  
+spring.redis.host=192.168.56.10
+```
+把order服务的GulimallSessionConfig拷贝到member服务中
+
 
 #### 订单列表页渲染完成
 

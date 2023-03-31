@@ -12,6 +12,15 @@ spring:
   application:
     name: gulimall-member
 
+  thymeleaf:
+    cache: false
+
+  session:
+    store-type: redis
+
+  redis:
+    host:
+
 mybatis-plus:
   # 指定mapper文件位置
   mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
