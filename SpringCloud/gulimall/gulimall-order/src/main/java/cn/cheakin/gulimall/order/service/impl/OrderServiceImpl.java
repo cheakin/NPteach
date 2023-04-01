@@ -263,6 +263,28 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
         return payVo;
     }
 
+    @Override
+    public PageUtils queryPageWithItem(Map<String, Object> params) {
+        MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();
+        IPage<OrderEntity> page = this.page(
+                new Query<OrderEntity>().getPage(params),
+                new QueryWrapper<OrderEntity>()
+                        .eq("member_id", memberResponseVo.getId())
+                        .orderByDesc("id")
+        );
+
+        List<OrderEntity> orderSn = page.getRecords().stream().map(order -> {
+            List<OrderItemEntity> itemEntities = orderItemService.list(new QueryWrapper<OrderItemEntity>()
+                    .eq("order_sn", order.getOrderSn()));
+            order.setItemEntities(itemEntities);
+            return order;
+        }).collect(Collectors.toList());
+
+        page.setRecords(orderSn);
+
+        return new PageUtils(page);
+    }
+
     private OrderCreateTo createOrderTo(MemberResponseVo memberResponseVo, OrderSubmitVo submitVo) {
         //用IdWorker生成订单号
         String orderSn = IdWorker.getTimeId();

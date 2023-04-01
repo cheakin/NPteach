@@ -7545,9 +7545,78 @@ spring.redis.host=192.168.56.10
 ```
 把order服务的GulimallSessionConfig拷贝到member服务中
 
-
 #### 订单列表页渲染完成
+order服务的OrderController
+``` java
+/**  
+* 分页查询当前登录用户的所有订单  
+* @param params  
+* @return  
+*/
+@PostMapping("/listWithItem")  
+public R listWithItem(@RequestBody Map<String, Object> params){  
+PageUtils page = orderService.queryPageWithItem(params);  
+  
+return R.ok().put("page", page);  
+}
+```
+order服务的OrderServiceImpl
+``` java
+@Override  
+public PageUtils queryPageWithItem(Map<String, Object> params) {  
+	MemberResponseVo memberResponseVo = LoginInterceptor.loginUser.get();  
+	IPage<OrderEntity> page = this.page(  
+		new Query<OrderEntity>().getPage(params),  
+		new QueryWrapper<OrderEntity>()  
+			.eq("member_id", memberResponseVo.getId())  
+			.orderByDesc("id")  
+	);  
+	  
+	List<OrderEntity> orderSn = page.getRecords().stream().map(order -> {  
+	List<OrderItemEntity> itemEntities = orderItemService.list(new QueryWrapper<OrderItemEntity>()  
+			.eq("order_sn", order.getOrderSn()));  
+		order.setItemEntities(itemEntities);  
+		return order;  
+	}).collect(Collectors.toList());  
+	  
+	page.setRecords(orderSn);  
+	  
+	return new PageUtils(page);  
+}
+```
+order服务的OrderEntity
+``` java
+private List<OrderItemEntity> items;
+```
+order服务中新建OrderFeignService
+``` java
+@FeignClient("gulimall-order")  
+public interface OrderFeignService {  
+  
+	@PostMapping("/order/order/listWithItem") // 需要完整的路径  
+	public R listWithItem(@RequestBody Map<String, Object> params);  
+  
+}
+```
+member服务的MemberWebController
+``` java
+@GetMapping("/memberOrder.html")  
+public String memberOrderPage(@RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,  
+Model model){  
+	//查出当前登录的用户的所有订单列表数据  
+	Map<String, Object> page = orderFeignService.listWithItem(null);  
+	page.put("pageNum", pageNum.toString());  
+	orderFeignService.listWithItem(page);  
+	model.addAttribute("orders", page);  
+	return "orderList";  
+}
+```
 
+将order服务的GuliFeignConfig拷贝到member服务中
+
+前端页面修改，略
+
+#### 异步通知内网穿透环境搭建
 
 
 
