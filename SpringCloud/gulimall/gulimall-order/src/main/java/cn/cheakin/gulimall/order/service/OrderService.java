@@ -2,10 +2,7 @@ package cn.cheakin.gulimall.order.service;
 
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.order.entity.OrderEntity;
-import cn.cheakin.gulimall.order.vo.OrderConfirmVo;
-import cn.cheakin.gulimall.order.vo.OrderSubmitVo;
-import cn.cheakin.gulimall.order.vo.PayVo;
-import cn.cheakin.gulimall.order.vo.SubmitOrderResponseVo;
+import cn.cheakin.gulimall.order.vo.*;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Map;
@@ -33,5 +30,7 @@ public interface OrderService extends IService<OrderEntity> {
     PayVo getOrderPay(String orderSn);
 
     PageUtils queryPageWithItem(Map<String, Object> params);
+
+    String handlerPayResult(PayAsyncVo payAsyncVo);
 }
 

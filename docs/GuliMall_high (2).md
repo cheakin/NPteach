@@ -7617,17 +7617,183 @@ Model model){
 前端页面修改，略
 
 #### 异步通知内网穿透环境搭建
+![[Pasted image 20230329000513.png]]
+order服务中新建OrderPayedListener
+``` java
+/**  
+* 异步接收支付宝成功回调  
+*/  
+@RestController  
+public class OrderPayedListener {  
+  
+	@Autowired  
+	private AlipayTemplate alipayTemplate;  
+	  
+	@Autowired  
+	private OrderService orderService;  
+	  
+	@PostMapping("/payed/notify")  
+	public String handlerAlipay(HttpServletRequest request, PayAsyncVo payAsyncVo) throws AlipayApiException {  
+		System.out.println("收到支付宝异步通知******************");  
+		// 只要收到支付宝的异步通知，返回 success 支付宝便不再通知  
+		return "success";  
+	}  
+	  
+	@GetMapping("/payed/test")  
+	public String test() {  
+		return "test";  
+	}  
+}
+```
+在AlipayTemplate中配置好内网穿透的外网访问地址
+在nginx中添加指定的转发地址(在sever_name中添加上内网穿透的外网访问地址)，保存后把nginx重启一下`docker restart nginx`
+``` sh
+location /payed/ {
+	proxy_set_header Host $host;
+	proxy_pass http://order.gulimall.com;
+}
+```
+在order服务的
+``` java
+@Override  
+public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {  
+	String requestURI = request.getRequestURI();  
+	AntPathMatcher matcher = new AntPathMatcher();  
+	boolean match1 = matcher.match("/order/order/status/**", requestURI);  
+	boolean match2 = matcher.match("/payed/**", requestURI);  
+	if (match1||match2) return true;  
+	  
+	HttpSession session = request.getSession();  
+	MemberResponseVo memberResponseVo = (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);  
+	if (memberResponseVo != null) {  
+		loginUser.set(memberResponseVo);  
+		return true;  
+	}else {  
+		// 没登陆就去登录  
+		session.setAttribute("msg","请先登录");  
+		response.sendRedirect("http://auth.gulimall.com/login.html");  
+		return false;  
+	}  
+}
+```
 
+#### 支付完成
+order服务中OrderPayedListener的handlerAlipay
+``` java
+@PostMapping("/payed/notify")  
+public String handlerAlipay(HttpServletRequest request, PayAsyncVo payAsyncVo) throws AlipayApiException {  
+	System.out.println("收到支付宝异步通知******************");  
+	// 只要收到支付宝的异步通知，返回 success 支付宝便不再通知  
+	// 获取支付宝POST过来反馈信息  
+	//TODO 需要验签  
+	Map<String, String> params = new HashMap<>();  
+	Map<String, String[]> requestParams = request.getParameterMap();  
+	for (String name : requestParams.keySet()) {  
+		String[] values = requestParams.get(name);  
+		String valueStr = "";  
+		for (int i = 0; i < values.length; i++) {  
+			valueStr = (i == values.length - 1) ? valueStr + values[i]  
+			: valueStr + values[i] + ",";  
+		}  
+		//乱码解决，这段代码在出现乱码时使用  
+		// valueStr = new String(valueStr.getBytes("ISO-8859-1"), "utf-8");  
+		params.put(name, valueStr);  
+	}  
+	  
+	boolean signVerified = AlipaySignature.rsaCheckV1(params, alipayTemplate.getAlipay_public_key(),  
+	alipayTemplate.getCharset(), alipayTemplate.getSign_type()); //调用SDK验证签名  
+	  
+	if (signVerified){  
+		System.out.println("支付宝异步通知验签成功");  
+		//修改订单状态  
+		String result = orderService.handlerPayResult(payAsyncVo);  
+		return result;  
+	}else {  
+		System.out.println("支付宝异步通知验签失败");  
+		return "error";  
+	}  
+}
+```
+order服务中新建PayAsyncVo，并且在applicaion.properties中配置时间格式`spring.mvc.date-format=yyyy-MM-dd HH:mm:ss`
+``` java
+@ToString  
+@Data  
+public class PayAsyncVo {  
+  
+	private String gmt_create;  
+	private String charset;  
+	private String gmt_payment;  
+	private Date notify_time;  
+	private String subject;  
+	private String sign;  
+	private String buyer_id;//支付者的id  
+	private String body;//订单的信息  
+	private String invoice_amount;//支付金额  
+	private String version;  
+	private String notify_id;//通知id  
+	private String fund_bill_list;  
+	private String notify_type;//通知类型； trade_status_syncprivate String out_trade_no;//订单号  
+	private String total_amount;//支付的总额  
+	private String trade_status;//交易状态 TRADE_SUCCESSprivate String trade_no;//流水号  
+	private String auth_app_id;//  
+	private String receipt_amount;//商家收到的款  
+	private String point_amount;//  
+	private String app_id;//应用id  
+	private String buyer_pay_amount;//最终支付的金额  
+	private String sign_type;//签名类型  
+	private String seller_id;//商家的id  
+  
+}
+```
+order服务中的OrderServiceImpl
+``` java
+@Autowired  
+private PaymentInfoService paymentInfoService;
 
+/**  
+* 处理支付宝的支付结果  
+* @param payAsyncVo  
+*/  
+@Override  
+public String handlerPayResult(PayAsyncVo payAsyncVo) {  
+	//保存交易流水  
+	PaymentInfoEntity infoEntity = new PaymentInfoEntity();  
+	String orderSn = payAsyncVo.getOut_trade_no();  
+	infoEntity.setOrderSn(orderSn);  
+	infoEntity.setAlipayTradeNo(payAsyncVo.getTrade_no());  
+	infoEntity.setSubject(payAsyncVo.getSubject());  
+	String trade_status = payAsyncVo.getTrade_status();  
+	infoEntity.setPaymentStatus(trade_status);  
+	infoEntity.setCreateTime(new Date());  
+	infoEntity.setCallbackTime(payAsyncVo.getNotify_time());  
+	paymentInfoService.save(infoEntity);  
+	  
+	//判断交易状态是否成功  
+	if (trade_status.equals("TRADE_SUCCESS") || trade_status.equals("TRADE_FINISHED")) {  
+		baseMapper.updateOrderStatus(orderSn, OrderStatusEnum.PAYED.getCode(), OrderStatusEnum.PAYED.PAYED.getCode());  
+	}  
+}
+```
+将oms_payment_info的order_sn和alipay_trade_no字段添加上唯一索引，并且将order_sn字段的长度改为64
+order服务的OrderDao.xml中
+``` java
+<update id="updateOrderStatus">  
+	update oms_order set status=#{code} where order_sn=#{outTradeNo}  
+</update>
+```
 
+#### 收单
+1. 订单在支付页，不支付，一直刷新，订单过期了才支付，订单状态改为已支付了，但是库存解锁了。
+	* 使用支付宝自动收单功能解决。只要一段时间不支付，就不能支付了。
+2. 由于时延等问题。订单解锁完成，正在解锁库存的时候，异步通知才到。订单解锁，手动调用收单。
+3. 网络阻塞问题，订单支付成功的异步通知一直不到达查询订单列表时，ajax获取当前未支付的订单状态，查询订单状态时，再获取一下支付宝此订单的状态
+4. 其他各种问题：每天晚上闲时下载支付宝对账单--进行对账
 
+### 秒杀
+![[Pasted image 20230402194914.png]]
+![[Pasted image 20230402194933.png]]
 ![[Pasted image 20230329222101.png]]
 ![[Pasted image 20230329222139.png]]
-
-
-
-
-### 秒杀服务
 
 # 谷粒商城-集群篇(cluster)
 
