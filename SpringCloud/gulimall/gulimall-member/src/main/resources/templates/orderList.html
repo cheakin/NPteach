@@ -221,9 +221,9 @@
               <div style="margin-left:15px;">[[${item.skuQuantity}]]</div>
               <div style="clear:both"></div>
             </td>
-            <td th:if="${itemStat.index==0}" th:rowspan="${itemStat.size}">[[${item.order.receiverName}]]<i><i class="table_i1"></i></i></td>
+            <td th:if="${itemStat.index==0}" th:rowspan="${itemStat.size}">[[${order.receiverName}]]<i><i class="table_i1"></i></i></td>
             <td th:if="${itemStat.index==0}" th:rowspan="${itemStat.size}" style="padding-left:10px;color:#AAAAB1;">
-              <p style="margin-bottom:5px;">总额 ￥[[${item.order.payAmount}]]</p>
+              <p style="margin-bottom:5px;">总额 ￥[[${order.payAmount}]]</p>
               <hr style="width:90%;">
               <p>在线支付</p>
             </td>
