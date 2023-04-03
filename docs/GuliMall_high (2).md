@@ -7872,6 +7872,38 @@ order服务的OrderCloseListener中
 
 
 ### 秒杀
+#### 后台添加秒杀商品
+在getway服务的application.yml中添加
+``` yml
+#将路径为Path=/api/coupon/**转发至优惠服务  
+- id: gulimall-coupon  
+	uri: lb://gulimall-coupon  
+	predicates:  
+		- Path=/api/coupon/**  
+	filters:  
+		- RewritePath=/api/(?<segment>/?.*),/$\{segment}
+```
+coupon服务的SeckillSkuRelationServiceImpl
+``` java
+@Override  
+public PageUtils queryPage(Map<String, Object> params) {  
+	QueryWrapper<SeckillSkuRelationEntity> queryWrapper = new QueryWrapper<>();  
+	// 场次id  
+	String promotionSessionId = (String) params.get("promotionSessionId");  
+	if (StringUtils.isEmpty(promotionSessionId)) {  
+		queryWrapper.eq("promotion_session_id", promotionSessionId);  
+	}  
+	IPage<SeckillSkuRelationEntity> page = this.page(  
+		new Query<SeckillSkuRelationEntity>().getPage(params),  
+		queryWrapper  
+	);  
+	  
+	return new PageUtils(page);  
+}
+```
+
+#### 定时任务&Cron表达式
+
 ![[Pasted image 20230402194914.png]]
 ![[Pasted image 20230402194933.png]]
 ![[Pasted image 20230329222101.png]]
