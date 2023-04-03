@@ -7785,9 +7785,91 @@ order服务的OrderDao.xml中
 #### 收单
 1. 订单在支付页，不支付，一直刷新，订单过期了才支付，订单状态改为已支付了，但是库存解锁了。
 	* 使用支付宝自动收单功能解决。只要一段时间不支付，就不能支付了。
-2. 由于时延等问题。订单解锁完成，正在解锁库存的时候，异步通知才到。订单解锁，手动调用收单。
-3. 网络阻塞问题，订单支付成功的异步通知一直不到达查询订单列表时，ajax获取当前未支付的订单状态，查询订单状态时，再获取一下支付宝此订单的状态
-4. 其他各种问题：每天晚上闲时下载支付宝对账单--进行对账
+2. 由于时延等问题。订单解锁完成，正在解锁库存的时候，异步通知才到。
+	* 订单解锁，手动调用收单。
+3. 网络阻塞问题，订单支付成功的异步通知一直不到达
+	* 查询订单列表时，ajax获取当前未支付的订单状态，查询订单状态时，再获取一下支付宝此订单的状态
+4. 其他各种问题
+	* 每天晚上闲时下载支付宝对账单--进行对账
+
+方案一
+order服务为的
+``` java
+@ConfigurationProperties(prefix = "alipay") // 配置文件中是不认“_”的，需要转换为驼峰的写法  
+@Component  
+@Data  
+public class AlipayTemplate {  
+  
+	//在支付宝创建的应用的id  
+	private String app_id;  
+	  
+	// 商户私钥，您的PKCS8格式RSA2私钥  
+	private String merchant_private_key;  
+	// 支付宝公钥,查看地址：https://openhome.alipay.com/platform/keyManage.htm 对应APPID下的支付宝公钥。  
+	private String alipay_public_key;  
+	  
+	// 服务器[异步通知]页面路径 需http://格式的完整路径，不能加?id=123这类自定义参数，必须外网可以正常访问  
+	// 支付宝会悄悄的给我们发送一个请求，告诉我们支付成功的信息  
+	private String notify_url;  
+	  
+	// 页面跳转同步通知页面路径 需http://格式的完整路径，不能加?id=123这类自定义参数，必须外网可以正常访问  
+	//同步通知，支付成功，一般跳转到成功页  
+	private String return_url = "http://member.gulimall.com/memberOrder.html";  
+	  
+	// 签名方式  
+	private String sign_type = "RSA2";  
+	  
+	// 字符编码格式  
+	private String charset = "utf-8";  
+	  
+	private String timeout = "30m";  
+	  
+	// 支付宝网关； https://openapi.alipaydev.com/gateway.doprivate String gatewayUrl = "https://openapi.alipaydev.com/gateway.do";  
+	  
+	public String pay(PayVo vo) throws AlipayApiException {  
+	  
+		//AlipayClient alipayClient = new DefaultAlipayClient(AlipayTemplate.gatewayUrl, AlipayTemplate.app_id, AlipayTemplate.merchant_private_key, "json", AlipayTemplate.charset, AlipayTemplate.alipay_public_key, AlipayTemplate.sign_type);  
+		//1、根据支付宝的配置生成一个支付客户端  
+		AlipayClient alipayClient = new DefaultAlipayClient(gatewayUrl,  
+		app_id, merchant_private_key, "json",  
+		charset, alipay_public_key, sign_type);  
+		  
+		//2、创建一个支付请求 //设置请求参数  
+		AlipayTradePagePayRequest alipayRequest = new AlipayTradePagePayRequest();  
+		alipayRequest.setReturnUrl(return_url);  
+		alipayRequest.setNotifyUrl(notify_url);  
+		  
+		//商户订单号，商户网站订单系统中唯一订单号，必填  
+		String out_trade_no = vo.getOut_trade_no();  
+		//付款金额，必填  
+		String total_amount = vo.getTotal_amount();  
+		//订单名称，必填  
+		String subject = vo.getSubject();  
+		//商品描述，可空  
+		String body = vo.getBody();  
+		  
+		alipayRequest.setBizContent("{\"out_trade_no\":\""+ out_trade_no +"\","  
+			+ "\"total_amount\":\""+ total_amount +"\","  
+			+ "\"subject\":\""+ subject +"\","  
+			+ "\"body\":\""+ body +"\","  
+			+ "\"timeout_express\":\"" + timeout + "\","  
+			+ "\"product_code\":\"FAST_INSTANT_TRADE_PAY\"}");  
+		  
+		String result = alipayClient.pageExecute(alipayRequest).getBody();  
+		  
+		//会收到支付宝的响应，响应的是一个页面，只要浏览器显示这个页面，就会自动来到支付宝的收银台页面  
+		System.out.println("支付宝的响应："+result);  
+		  
+		return result;  
+	  
+	}  
+}
+```
+
+方式二
+在关单的同时，调用支付宝的收单接口。
+order服务的OrderCloseListener中
+
 
 ### 秒杀
 ![[Pasted image 20230402194914.png]]
