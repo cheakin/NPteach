@@ -7903,6 +7903,91 @@ public PageUtils queryPage(Map<String, Object> params) {
 ```
 
 #### 定时任务&Cron表达式
+秒杀业务
+秒杀具有瞬间高并发的特点，针对这一特点，必须要做限流 + 异步 + 缓存(页面静态化)+ 独立部署。
+
+新建秒杀服务，seckill
+pom.xml依赖如下
+``` java
+<dependencies>  
+	<dependency>  
+		<groupId>cn.cheakin</groupId>  
+		<artifactId>gulimall-common</artifactId>  
+		<version>0.0.1-SNAPSHOT</version>  
+	</dependency>  
+	  
+	<dependency>  
+		<groupId>org.springframework.boot</groupId>  
+		<artifactId>spring-boot-starter-web</artifactId>  
+	</dependency>  
+	<!-- thymeleaf 模板引擎 -->  
+	<dependency>  
+		<groupId>org.springframework.boot</groupId>  
+		<artifactId>spring-boot-starter-thymeleaf</artifactId>  
+	</dependency>  
+	  
+	<dependency>  
+		<groupId>org.springframework.boot</groupId>  
+		<artifactId>spring-boot-starter-amqp</artifactId>  
+	</dependency>  
+	  
+	  
+	<dependency>  
+		<groupId>org.springframework.boot</groupId>  
+		<artifactId>spring-boot-starter-data-redis</artifactId>  
+		<exclusions>  
+			<exclusion>  
+				<groupId>io.lettuce</groupId>  
+				<artifactId>lettuce-core</artifactId>  
+			</exclusion>  
+		</exclusions>  
+	</dependency>  
+	<dependency>  
+		<groupId>redis.clients</groupId>  
+		<artifactId>jedis</artifactId>  
+	</dependency>  
+</dependencies>
+```
+application.properties配置如下
+``` properties
+spring.application.name=gulimall-seckill  
+server.port=2500  
+  
+spring.cloud.nacos.discovery.server-addr=127.0.0.1:8848  
+  
+spring.redis.host=192.168.56.10
+```
+启动类上使用`@EnableDiscoveryClient` 注解开启服务注册
+启动类上使用`@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)`关闭数据库扫描
+然后在启动参数里使用`-Xmx100m`显示内存消耗
+
+![[aHR0cHM6Ly90eXBvcmEtb3NzLm9zcy1jbi1iZWlqaW5nLmFsaXl1bmNzLmNvbS9pbWFnZS0yMDIwMDgxOTIyMTA0MTY3Ny5wbmc.png]]
+
+
+cron表达式
+语法：秒 分 时日 月 周 年 (Spring 不支持）
+|Field Name|Mandatory|Allowed Values|Allowed Special Characters|
+|--|--|--|--|
+|Seconds|YES|0-59|, - * /|
+|Minutes|YES|0-59|, - * /|
+|Hours|YES|0-23|, - * /|
+|Day of month|YES|1-31|, - * ? / L W|
+|Month|YES|1-12 or JAN-DEC|, - * /|
+|Day of weekYear|YES|1-7 or SUN-SAT|, - * ? / L #|
+|Year|NO|empty, 1970-2099|, - * /|
+
+SpringBoot整合定时任务与异步任务
+
+
+
+
+限流方式:
+1.前端限流，一些高并发的网站直接在前端页面开始限流，例如:小米的验证码设计2.nginx 限流，直接负载部分请求到错误的静态页面:令牌算法 漏斗算法
+3.网美限流，限流的过鸿器
+代码中使用分布式信号量
+rabbitmg 限流(能者多劳: chanel.basicQos(11) ，保证发挥所有服务器的性能
+
+
 
 ![[Pasted image 20230402194914.png]]
 ![[Pasted image 20230402194933.png]]
