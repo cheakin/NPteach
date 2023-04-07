@@ -1,9 +1,10 @@
 package cn.cheakin.gulimall.coupon.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.coupon.entity.SeckillSessionEntity;
+import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,5 +17,8 @@ import java.util.Map;
 public interface SeckillSessionService extends IService<SeckillSessionEntity> {
 
     PageUtils queryPage(Map<String, Object> params);
+
+    List<SeckillSessionEntity> getLates3DaySession();
+
 }
 

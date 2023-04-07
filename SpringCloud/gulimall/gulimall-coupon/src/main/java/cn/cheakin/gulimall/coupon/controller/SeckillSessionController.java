@@ -1,19 +1,15 @@
 package cn.cheakin.gulimall.coupon.controller;
 
-import java.util.Arrays;
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import cn.cheakin.gulimall.coupon.entity.SeckillSessionEntity;
-import cn.cheakin.gulimall.coupon.service.SeckillSessionService;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.coupon.entity.SeckillSessionEntity;
+import cn.cheakin.gulimall.coupon.service.SeckillSessionService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 
 
@@ -29,6 +25,12 @@ import cn.cheakin.common.utils.R;
 public class SeckillSessionController {
     @Autowired
     private SeckillSessionService seckillSessionService;
+
+    @RequestMapping("/lates3DaySession")
+    public R getLates3DaySession() {
+        List<SeckillSessionEntity> seckillSessionEntities=seckillSessionService.getLates3DaySession();
+        return R.ok().setData(seckillSessionEntities);
+    }
 
     /**
      * 列表

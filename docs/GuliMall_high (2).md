@@ -8034,14 +8034,367 @@ spring.task.execution.pool.core-size=20
 spring.task.execution.pool.max-size=50
 ```
 
-#### 时间日期处理
+#### 时间日期处理 & 秒杀商品上架
+seckill中在HelloSchedule不需要定时任务所以把使用的注解注释掉
 
+seckill服务中新建ScheduledConfig
+``` java
+@EnableAsync //开启对异步的支持，防止定时任务之间相互阻塞  
+@EnableScheduling //开启对定时任务的支持  
+@Configuration  
+public class ScheduledConfig {  
+}
+```
+seckill服务中新建SecKillScheduled
+``` java
 
+```
+seckill服务中新建SecKillServiceImpl
+``` java
+@Autowired  
+private CouponFeignService couponFeignService;  
+@Autowired  
+private ProductFeignService productFeignService;  
+  
+@Autowired  
+private RedissonClient redissonClient;  
+@Autowired  
+private StringRedisTemplate redisTemplate;
 
+//K: SESSION_CACHE_PREFIX + startTime + "_" + endTime  
+//V: sessionId+"-"+skuId的List  
+private final String SESSION_CACHE_PREFIX = "seckill:sessions:";  
+  
+//K: 固定值SECKILL_CHARE_PREFIX  
+//V: hash，k为sessionId+"-"+skuId，v为对应的商品信息SeckillSkuRedisTo  
+private final String SECKILL_CHARE_PREFIX = "seckill:skus";  
+  
+//K: SKU_STOCK_SEMAPHORE+商品随机码  
+//V: 秒杀的库存件数  
+private final String SKU_STOCK_SEMAPHORE = "seckill:stock:"; //+商品随机码
 
+@Override  
+public void uploadSeckillSkuLatest3Days() {  
+    R r = couponFeignService.getLates3DaySession();  
+    if (r.getCode() == 0) {  
+        List<SeckillSessionWithSkusVo> sessions = r.getData(new TypeReference<List<SeckillSessionWithSkusVo>>() {  
+        });  
+        //在redis中分别保存秒杀场次信息和场次对应的秒杀商品信息  
+        saveSessionInfos(sessions);  
+        saveSessionSkuInfos(sessions);  
+    }  
+}
 
+private void saveSessionInfos(List<SeckillSessionWithSkusVo> sessions) {  
+    sessions.stream().forEach(session->{  
+        String key = SESSION_CACHE_PREFIX + session.getStartTime().getTime() + "_" + session.getEndTime().getTime();  
+        //当前活动信息未保存过  
+        if (!redisTemplate.hasKey(key)){  
+            List<String> values = session.getRelationSkus().stream()  
+                .map(sku -> sku.getSkuId().toString())  
+                .collect(Collectors.toList());  
+            redisTemplate.opsForList().leftPushAll(key,values);  
+        }  
+    });  
+}
 
+private void saveSessionSkuInfos(List<SeckillSessionWithSkusVo> sessions) {  
+    BoundHashOperations<String, Object, Object> ops = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);  
+    sessions.stream().forEach(session->{  
+        session.getRelationSkus().stream().forEach(seckillSkuVo -> {  
+            String key = seckillSkuVo.getSkuId().toString();  
+            if (!ops.hasKey(key)){  
+                // 缓存商品  
+                SeckillSkuRedisTo redisTo = new SeckillSkuRedisTo();  
+                //2.sku的秒杀信息  
+                BeanUtils.copyProperties(seckillSkuVo, redisTo);  
+                  
+                //1.sku的基本数据  
+                R r = productFeignService.getSkuInfo(seckillSkuVo.getSkuId());  
+                if (r.getCode() == 0) {  
+                    SkuInfoVo info = r.getData("skuInfo", new TypeReference<SkuInfoVo>() {  
+                    });  
+                    redisTo.setSkuInfoVo(info);  
+                }  
+                  
+                //3.设置上当前上坪的秒杀时间信息  
+                redisTo.setStartTime(session.getStartTime().getTime());  
+                redisTo.setEndTime(session.getEndTime().getTime());  
+                  
+                //4.生成商品随机码，防止恶意攻击  
+                String token = UUID.randomUUID().toString().replace("-", "");  
+                redisTo.setRandomCode(token);  
+                
+                //5.使用库存作为Redisson信号量限制库存  限流
+                RSemaphore semaphore = redissonClient.getSemaphore(SKU_STOCK_SEMAPHORE + token);  
+                semaphore.trySetPermits(seckillSkuVo.getSeckillCount());  
+                
+                //序列化为json并保存  
+                String jsonString = JSON.toJSONString(redisTo);  
+                ops.put(key, jsonString);  
+                
+            }  
+        });  
+    });  
+}
+```
+seckill的启动类上使用@EnableFeignClients注解开启远程调用功能
+seckill服务中新建CouponFeignService
+``` java
+@FeignClient(value = "gulimall-coupon")  
+public interface CouponFeignService {  
+  
+	@RequestMapping("coupon/seckillsession/getSeckillSessionsIn3Days")  
+	R getSeckillSessionsIn3Days();  
+  
+}
+```
 
+coupon服务的SeckillSessionController
+``` java
+@RequestMapping("/getSeckillSessionsIn3Days")  
+public R getSeckillSessionsIn3Days() {  
+	List<SeckillSessionEntity> seckillSessionEntities=seckillSessionService.getSeckillSessionsIn3Days();  
+	return R.ok().setData(seckillSessionEntities);  
+}
+```
+coupon服务的SeckillSessionServiceImpl
+``` java
+@Autowired  
+private SeckillSkuRelationService seckillSkuRelationService;
+
+@Override  
+public List<SeckillSessionEntity> getLates3DaySession() {  
+	QueryWrapper<SeckillSessionEntity> queryWrapper = new QueryWrapper<SeckillSessionEntity>()  
+		.between("start_time", getStartTime(), getEndTime());  
+	List<SeckillSessionEntity> seckillSessionEntities = this.list(queryWrapper);  
+	List<SeckillSessionEntity> list = seckillSessionEntities.stream().map(session -> {  
+	List<SeckillSkuRelationEntity> skuRelationEntities = seckillSkuRelationService.list(new QueryWrapper<SeckillSkuRelationEntity>()  
+		.eq("promotion_session_id", session.getId()));  
+		session.setRelationSkus(skuRelationEntities);  
+		return session;  
+	}).collect(Collectors.toList());  
+	return list;  
+}  
+  
+//当前天数的 00:00:00
+private String getStartTime() {  
+	LocalDate now = LocalDate.now();  
+	LocalDateTime time = now.atTime(LocalTime.MIN);  
+	String format = time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));  
+	return format;  
+}  
+  
+//当前天数+2 23:59:59..  
+private String getEndTime() {  
+	LocalDate now = LocalDate.now();  
+	LocalDateTime time = now.plusDays(2).atTime(LocalTime.MAX);  
+	String format = time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));  
+	return format;  
+}
+```
+coupon服务的SeckillSessionEntity
+``` java
+@TableField(exist = false)
+private List<SeckillSkuRelationEntity> relationSkus;
+```
+
+seckill服务中新建SeckillSessionWithSkusVo
+``` java
+@Data  
+public class SeckillSessionWithSkusVo {  
+  
+    private Long id;  
+    /**  
+    * 场次名称  
+    */  
+    private String name;  
+    /**  
+    * 每日开始时间  
+    */  
+    private Date startTime;  
+    /**  
+    * 每日结束时间  
+    */  
+    private Date endTime;  
+    /**  
+    * 启用状态  
+    */  
+    private Integer status;  
+    /**  
+    * 创建时间  
+    */  
+    private Date createTime;  
+      
+    private List<SeckillSkuVo> relationSkus;  
+  
+}
+```
+seckill服务中新建SeckillSkuVo
+``` java
+@Data  
+public class SeckillSkuVo {  
+  
+    private Long id;  
+    /**  
+    * 活动id  
+    */  
+    private Long promotionId;  
+    /**  
+    * 活动场次id  
+    */  
+    private Long promotionSessionId;  
+    /**  
+    * 商品id  
+    */  
+    private Long skuId;  
+    /**  
+    * 秒杀价格  
+    */  
+    private BigDecimal seckillPrice;  
+    /**  
+    * 秒杀总量  
+    */  
+    private Integer seckillCount;  
+    /**  
+    * 每人限购数量  
+    */  
+    private Integer seckillLimit;  
+    /**  
+    * 排序  
+    */  
+    private Integer seckillSort;  
+  
+}
+```
+seckill服务中新建SeckillSkuRedisTo
+``` java
+@Data  
+public class SeckillSkuRedisTo {  
+  
+    private Long id;  
+    /**  
+    * 活动id  
+    */  
+    private Long promotionId;  
+    /**  
+    * 活动场次id  
+    */  
+    private Long promotionSessionId;  
+    /**  
+    * 商品id  
+    */  
+    private Long skuId;  
+    /**  
+    * 秒杀价格  
+    */  
+    private BigDecimal seckillPrice;  
+    /**  
+    * 秒杀总量  
+    */  
+    private Integer seckillCount;  
+    /**  
+    * 每人限购数量  
+    */  
+    private Integer seckillLimit;  
+    /**  
+    * 排序  
+    */  
+    private Integer seckillSort;  
+      
+    private SkuInfoVo skuInfoVo;  
+      
+    //当前商品秒杀的开始时间  
+    private Long startTime;  
+      
+    //当前商品秒杀的结束时间  
+    private Long endTime;  
+      
+    //当前商品秒杀的随机码  
+    private String randomCode;  
+  
+}
+```
+seckill服务中新建SkuInfoVo
+``` java
+@Data  
+public class SkuInfoVo {  
+  
+    private Long skuId;  
+    /**  
+    * spuId  
+    */  
+    private Long spuId;  
+    /**  
+    * sku名称  
+    */  
+    private String skuName;  
+    /**  
+    * sku介绍描述  
+    */  
+    private String skuDesc;  
+    /**  
+    * 所属分类id  
+    */  
+    private Long catalogId;  
+    /**  
+    * 品牌id  
+    */  
+    private Long brandId;  
+    /**  
+    * 默认图片  
+    */  
+    private String skuDefaultImg;  
+    /**  
+    * 标题  
+    */  
+    private String skuTitle;  
+    /**  
+    * 副标题  
+    */  
+    private String skuSubtitle;  
+    /**  
+    * 价格  
+    */  
+    private BigDecimal price;  
+    /**  
+    * 销量  
+    */  
+    private Long saleCount;  
+  
+}
+```
+seckill服务中新建ProductFeignService
+``` java
+@FeignClient(value = "gulimall-product")  
+public interface ProductFeignService {  
+  
+    @RequestMapping("product/skuinfo/info/{skuId}")  
+    R getSkuInfo(@PathVariable("skuId") Long skuId);  
+  
+}
+```
+seckill服务中的pom.xml
+``` java
+<dependency>  
+    <groupId>org.redisson</groupId>  
+    <artifactId>redisson</artifactId>  
+    <version>3.17.6</version>  
+</dependency>
+```
+seckill服务中新建RedissonConfig
+``` java
+@Configuration  
+public class RedissonConfig {  
+    @Bean  
+    public RedissonClient redissonClient(){  
+        Config config = new Config();  
+        config.useSingleServer().setAddress("redis://192.168.56.10:6379");  
+        RedissonClient redissonClient = Redisson.create(config);  
+        return redissonClient;  
+    }  
+}
+```
 
 限流方式:
 1.前端限流，一些高并发的网站直接在前端页面开始限流，例如:小米的验证码设计2.nginx 限流，直接负载部分请求到错误的静态页面:令牌算法 漏斗算法
