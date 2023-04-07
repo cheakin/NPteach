@@ -4,7 +4,6 @@ import cn.cheakin.gulimall.seckill.service.SecKillService;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -33,7 +32,7 @@ public class SecKillScheduled {
      * 定时任务
      * 每天三点上架最近三天的秒杀商品
      */
-    @Async
+//    @Async
 //    @Scheduled(cron = "0 0 3 * * ?")
     @Scheduled(cron = "0 55 22 * * ?")
     public void uploadSeckillSkuLatest3Days() {

@@ -8034,7 +8034,7 @@ spring.task.execution.pool.core-size=20
 spring.task.execution.pool.max-size=50
 ```
 
-#### 时间日期处理 & 秒杀商品上架
+#### 时间日期处理 & 秒杀商品上架 & 幂等性保证
 seckill中在HelloSchedule不需要定时任务所以把使用的注解注释掉
 
 seckill服务中新建ScheduledConfig
@@ -8047,7 +8047,47 @@ public class ScheduledConfig {
 ```
 seckill服务中新建SecKillScheduled
 ``` java
-
+/**  
+* 秒杀商品的定时上架  
+* 每天王航3点：上架最近三天需要秒杀的商品  
+* 当天 00:00:00 - 23:59:59  
+* 明天 00:00:00 - 23:59:59  
+* 后天 00:00:00 - 23:59:59  
+*/  
+@Component  
+public class SecKillScheduled {  
+  
+    @Autowired  
+    private RedissonClient redissonClient;  
+      
+    @Autowired  
+    private SecKillService secKillService;  
+      
+    //秒杀商品上架功能的锁  
+    private final String upload_lock = "seckill:upload:lock";  
+      
+    /**  
+    * 定时任务  
+    * 每天三点上架最近三天的秒杀商品  
+    */  
+    @Async  
+    // @Scheduled(cron = "0 0 3 * * ?")  
+    @Scheduled(cron = "0 55 22 * * ?")  
+    public void uploadSeckillSkuLatest3Days() {  
+        // 重复上架无需处理  
+        //为避免分布式情况下多服务同时上架的情况，使用分布式锁  
+        RLock lock = redissonClient.getLock(upload_lock);  
+        try {  
+            lock.lock(10, TimeUnit.SECONDS);  
+            secKillService.uploadSeckillSkuLatest3Days();  
+        }catch (Exception e){  
+            e.printStackTrace();  
+        }finally {  
+            lock.unlock();  
+        }  
+    }  
+  
+}
 ```
 seckill服务中新建SecKillServiceImpl
 ``` java
@@ -8091,7 +8131,8 @@ private void saveSessionInfos(List<SeckillSessionWithSkusVo> sessions) {
         //当前活动信息未保存过  
         if (!redisTemplate.hasKey(key)){  
             List<String> values = session.getRelationSkus().stream()  
-                .map(sku -> sku.getSkuId().toString())  
+                // .map(item -> item.getSkuId().toString())  
+                .map(item -> item.getPromotionSessionId() + "_" + item.getSkuId())
                 .collect(Collectors.toList());  
             redisTemplate.opsForList().leftPushAll(key,values);  
         }  
@@ -8102,7 +8143,8 @@ private void saveSessionSkuInfos(List<SeckillSessionWithSkusVo> sessions) {
     BoundHashOperations<String, Object, Object> ops = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);  
     sessions.stream().forEach(session->{  
         session.getRelationSkus().stream().forEach(seckillSkuVo -> {  
-            String key = seckillSkuVo.getSkuId().toString();  
+            // String key = seckillSkuVo.getSkuId().toString();  
+            String key = seckillSkuVo.getPromotionSessionId() + "_" + seckillSkuVo.getSkuId();
             if (!ops.hasKey(key)){  
                 // 缓存商品  
                 SeckillSkuRedisTo redisTo = new SeckillSkuRedisTo();  
@@ -8395,7 +8437,11 @@ public class RedissonConfig {
     }  
 }
 ```
+![[Pasted image 20230402194914.png]]
+![[Pasted image 20230402194933.png]]
 
+
+#### 查询秒杀商品
 限流方式:
 1.前端限流，一些高并发的网站直接在前端页面开始限流，例如:小米的验证码设计2.nginx 限流，直接负载部分请求到错误的静态页面:令牌算法 漏斗算法
 3.网美限流，限流的过鸿器
@@ -8404,8 +8450,8 @@ rabbitmg 限流(能者多劳: chanel.basicQos(11) ，保证发挥所有服务器
 
 
 
-![[Pasted image 20230402194914.png]]
-![[Pasted image 20230402194933.png]]
+
+
 ![[Pasted image 20230329222101.png]]
 ![[Pasted image 20230329222139.png]]
 

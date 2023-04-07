@@ -169,7 +169,8 @@ public class SecKillServiceImpl implements SecKillService {
             //当前活动信息未保存过
             if (!redisTemplate.hasKey(key)){
                 List<String> values = session.getRelationSkus().stream()
-                        .map(item -> item.getSkuId().toString())
+//                        .map(item -> item.getSkuId().toString())
+                        .map(item -> item.getPromotionSessionId() + "_" + item.getSkuId())
                         .collect(Collectors.toList());
                 redisTemplate.opsForList().leftPushAll(key, values);
             }
@@ -180,7 +181,8 @@ public class SecKillServiceImpl implements SecKillService {
         BoundHashOperations<String, Object, Object> ops = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);
         sessions.stream().forEach(session->{
             session.getRelationSkus().stream().forEach(seckillSkuVo -> {
-                String key = seckillSkuVo.getSkuId().toString();
+//                String key = seckillSkuVo.getSkuId().toString();
+                String key = seckillSkuVo.getPromotionSessionId() + "_" + seckillSkuVo.getSkuId();
                 if (!ops.hasKey(key)){
                     // 缓存商品
                     SeckillSkuRedisTo redisTo = new SeckillSkuRedisTo();
