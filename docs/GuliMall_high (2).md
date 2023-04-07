@@ -8442,6 +8442,72 @@ public class RedissonConfig {
 
 
 #### 查询秒杀商品
+seckill服务的SecKillController
+``` java
+@Autowired  
+private SecKillService secKillService;  
+  
+/**  
+* 当前时间可以参与秒杀的商品信息  
+* @return  
+*/  
+@GetMapping(value = "/currentSeckillSkus")  
+@ResponseBody  
+public R currentSeckillSkus() {  
+    //获取到当前可以参加秒杀商品的信息  
+    List<SeckillSkuRedisTo> vos = secKillService.getCurrentSeckillSkus();  
+      
+    return R.ok().setData(vos);  
+}
+```
+seckill的SecKillServiceImpl
+``` java
+//前时间可以参与秒杀的商品信息  
+@Override  
+public List<SeckillSkuRedisTo> getCurrentSeckillSkus() {  
+    //1.确定当前时间与那个秒杀场次  
+    Set<String> keys = redisTemplate.keys(SESSION_CACHE_PREFIX + "*");  
+    long time = System.currentTimeMillis();  
+    for (String key : keys) {  
+        String replace = key.replace(SESSION_CACHE_PREFIX, "");  
+        String[] split = replace.split("_");  
+        long start = Long.parseLong(split[0]);  
+        long end = Long.parseLong(split[1]);  
+        //当前秒杀活动处于有效期内  
+        if (time > start && time < end) {  
+            //2.获取当前场需要的所有商品信息  
+            List<String> range = redisTemplate.opsForList().range(key, -100, 100);  
+            BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);  
+            List<String> list = hashOps.multiGet(range);
+            if (list != null) {  
+                List<SeckillSkuRedisTo> collect = list.stream().map((item) -> {  
+                    SeckillSkuRedisTo to = JSON.parseObject((String) item, SeckillSkuRedisTo.class);  
+                    // to.setRandomCode(null);//当前秒杀开始就需要随机码  
+                    return to;  
+                }).collect(Collectors.toList());  
+                return collect;  
+            }  
+            break;  
+        }  
+    }  
+    return null;  
+}
+```
+
+gateway服务的application.yml新增秒杀服务的映射
+``` yml
+- id: gulimall_seckill_rout  
+    uri: lb://gulimall-seckill  
+    predicates:  
+    - Host=seckill.gulimall.com
+```
+hosts文件中新dns解析记录
+``` sh
+192.168.56.10   seckill.gulimall.com
+```
+
+前端页面修改，略
+
 限流方式:
 1.前端限流，一些高并发的网站直接在前端页面开始限流，例如:小米的验证码设计2.nginx 限流，直接负载部分请求到错误的静态页面:令牌算法 漏斗算法
 3.网美限流，限流的过鸿器

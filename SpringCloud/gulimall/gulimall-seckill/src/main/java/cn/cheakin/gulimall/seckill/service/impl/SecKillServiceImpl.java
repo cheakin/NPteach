@@ -19,6 +19,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -65,29 +66,36 @@ public class SecKillServiceImpl implements SecKillService {
         }
     }
 
-    /*@Override
+    //前时间可以参与秒杀的商品信息
+    @Override
     public List<SeckillSkuRedisTo> getCurrentSeckillSkus() {
+        //1.确定当前时间与那个秒杀场次
         Set<String> keys = redisTemplate.keys(SESSION_CACHE_PREFIX + "*");
-        long currentTime = System.currentTimeMillis();
+        long time = System.currentTimeMillis();
         for (String key : keys) {
             String replace = key.replace(SESSION_CACHE_PREFIX, "");
             String[] split = replace.split("_");
-            long startTime = Long.parseLong(split[0]);
+            long start = Long.parseLong(split[0]);
             long endTime = Long.parseLong(split[1]);
             //当前秒杀活动处于有效期内
-            if (currentTime > startTime && currentTime < endTime) {
+            if (time > start && time < endTime) {
+                //2.获取当前场需要的所有商品信息
                 List<String> range = redisTemplate.opsForList().range(key, -100, 100);
-                BoundHashOperations<String, Object, Object> ops = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);
-                List<SeckillSkuRedisTo> collect = range.stream().map(s -> {
-                    String json = (String) ops.get(s);
-                    SeckillSkuRedisTo redisTo = JSON.parseObject(json, SeckillSkuRedisTo.class);
-                    return redisTo;
-                }).collect(Collectors.toList());
-                return collect;
+                    BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);
+                    List<String> list = hashOps.multiGet(range);
+                if (list != null) {
+                    List<SeckillSkuRedisTo> collect = list.stream().map((item) -> {
+                        SeckillSkuRedisTo to = JSON.parseObject((String) item, SeckillSkuRedisTo.class);
+//                        to.setRandomCode(null);//当前秒杀开始就需要随机码
+                        return to;
+                    }).collect(Collectors.toList());
+                    return collect;
+                }
+                break;
             }
         }
         return null;
-    }*/
+    }
 
     /*@Override
     public SeckillSkuRedisTo getSeckillSkuInfo(Long skuId) {
