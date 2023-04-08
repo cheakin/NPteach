@@ -8774,8 +8774,9 @@ public SkuItemVo item(Long skuId) throws ExecutionException, InterruptedExceptio
 前端修改页面，略
 
 #### 秒杀系统设计
-
-
+秒杀（高并发）系统关注的问题
+![[Pasted image 20230329222101.png]]
+![[Pasted image 20230329222139.png]]
 
 
 
@@ -8808,8 +8809,8 @@ rabbitmg 限流(能者多劳: chanel.basicQos(11) ，保证发挥所有服务器
 
 
 
-![[Pasted image 20230329222101.png]]
-![[Pasted image 20230329222139.png]]
+
+
 
 # 谷粒商城-集群篇(cluster)
 
