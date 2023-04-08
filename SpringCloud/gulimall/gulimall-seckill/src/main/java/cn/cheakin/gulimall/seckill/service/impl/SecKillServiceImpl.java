@@ -18,6 +18,7 @@ import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -44,7 +45,7 @@ public class SecKillServiceImpl implements SecKillService {
 
     //K: 固定值SECKILL_CHARE_PREFIX
     //V: hash，k为sessionId+"-"+skuId，v为对应的商品信息SeckillSkuRedisTo
-    private final String SECKILL_CHARE_PREFIX = "seckill:skus";
+    private final String SKUKILL_CACHE_PREFIX = "seckill:skus";
 
     //K: SKU_STOCK_SEMAPHORE+商品随机码
     //V: 秒杀的库存件数
@@ -81,7 +82,7 @@ public class SecKillServiceImpl implements SecKillService {
             if (time > start && time < endTime) {
                 //2.获取当前场需要的所有商品信息
                 List<String> range = redisTemplate.opsForList().range(key, -100, 100);
-                    BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);
+                    BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SKUKILL_CACHE_PREFIX);
                     List<String> list = hashOps.multiGet(range);
                 if (list != null) {
                     List<SeckillSkuRedisTo> collect = list.stream().map((item) -> {
@@ -97,28 +98,37 @@ public class SecKillServiceImpl implements SecKillService {
         return null;
     }
 
-    /*@Override
-    public SeckillSkuRedisTo getSeckillSkuInfo(Long skuId) {
-        BoundHashOperations<String, String, String> ops = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);
-        Set<String> keys = ops.keys();
-        for (String key : keys) {
-            if (Pattern.matches("\\d-" + skuId,key)) {
-                String v = ops.get(key);
-                SeckillSkuRedisTo redisTo = JSON.parseObject(v, SeckillSkuRedisTo.class);
-                //当前商品参与秒杀活动
-                if (redisTo!=null){
-                    long current = System.currentTimeMillis();
-                    //当前活动在有效期，暴露商品随机码返回
-                    if (redisTo.getStartTime() < current && redisTo.getEndTime() > current) {
-                        return redisTo;
+    //根据skuId获取该商品是否有秒杀活动
+    @Override
+    public SeckillSkuRedisTo getSkuSeckillInfoById(Long skuId) {
+        List<SeckillSkuRedisTo> skuRedisTos = new ArrayList<>();
+
+        //1、获取redis中所有参与秒杀的key信息
+        BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SKUKILL_CACHE_PREFIX);
+        Set<String> keys = hashOps.keys();
+        if (keys != null && keys.size() > 0) {
+            //定义正则
+            String regx = "\\d-" + skuId;
+            for (String key : keys) {
+                if (key.matches(regx)) {
+                    //正则匹配成功返回数据
+                    String json = hashOps.get(key);
+                    SeckillSkuRedisTo skuRedisTo = JSON.parseObject(json, SeckillSkuRedisTo.class);
+                    //2、处理随机码，只有到商品秒杀时间才能显示随机码
+                    if (skuRedisTo != null) {
+                        Long startTime = skuRedisTo.getStartTime();
+                        long currentTime = System.currentTimeMillis();
+                        if (currentTime < startTime) {
+                            //秒杀还未开始，将随机码置空
+                            skuRedisTo.setRandomCode(null);
+                        }
+                        return skuRedisTo;
                     }
-                    redisTo.setRandomCode(null);
-                    return redisTo;
                 }
             }
         }
         return null;
-    }*/
+    }
 
     /*@Override
     public String kill(String killId, String key, Integer num) throws InterruptedException {
@@ -186,7 +196,7 @@ public class SecKillServiceImpl implements SecKillService {
     }
 
     private void saveSessionSkuInfos(List<SeckillSessionWithSkusVo> sessions) {
-        BoundHashOperations<String, Object, Object> ops = redisTemplate.boundHashOps(SECKILL_CHARE_PREFIX);
+        BoundHashOperations<String, Object, Object> ops = redisTemplate.boundHashOps(SKUKILL_CACHE_PREFIX);
         sessions.stream().forEach(session->{
             session.getRelationSkus().stream().forEach(seckillSkuVo -> {
 //                String key = seckillSkuVo.getSkuId().toString();

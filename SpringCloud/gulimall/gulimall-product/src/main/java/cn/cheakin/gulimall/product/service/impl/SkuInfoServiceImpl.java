@@ -1,11 +1,23 @@
 package cn.cheakin.gulimall.product.service.impl;
 
+import cn.cheakin.common.utils.PageUtils;
+import cn.cheakin.common.utils.Query;
+import cn.cheakin.common.utils.R;
+import cn.cheakin.gulimall.product.dao.SkuInfoDao;
 import cn.cheakin.gulimall.product.entity.SkuImagesEntity;
+import cn.cheakin.gulimall.product.entity.SkuInfoEntity;
 import cn.cheakin.gulimall.product.entity.SpuInfoDescEntity;
+import cn.cheakin.gulimall.product.feign.SeckillFeignService;
 import cn.cheakin.gulimall.product.service.*;
+import cn.cheakin.gulimall.product.vo.SeckillSkuVo;
 import cn.cheakin.gulimall.product.vo.SkuItemVo;
+import cn.hutool.core.lang.TypeReference;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -13,16 +25,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
-
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.cheakin.common.utils.PageUtils;
-import cn.cheakin.common.utils.Query;
-
-import cn.cheakin.gulimall.product.dao.SkuInfoDao;
-import cn.cheakin.gulimall.product.entity.SkuInfoEntity;
-import org.springframework.util.StringUtils;
 
 
 @Service("skuInfoService")
@@ -35,6 +37,9 @@ public class SkuInfoServiceImpl extends ServiceImpl<SkuInfoDao, SkuInfoEntity> i
     AttrGroupService attrGroupService;
     @Autowired
     SkuSaleAttrValueService skuSaleAttrValueService;
+
+    @Autowired
+    SeckillFeignService seckillFeignService;
 
     @Autowired
     ThreadPoolExecutor executor;
@@ -150,9 +155,9 @@ public class SkuInfoServiceImpl extends ServiceImpl<SkuInfoDao, SkuInfoEntity> i
             skuItemVo.setImages(imagesEntities);
         }, executor);
 
-        /*CompletableFuture<Void> seckillFuture = CompletableFuture.runAsync(() -> {
+        CompletableFuture<Void> seckillFuture = CompletableFuture.runAsync(() -> {
             //3、远程调用查询当前sku是否参与秒杀优惠活动
-            R skuSeckilInfo = seckillFeignService.getSkuSeckilInfo(skuId);
+            R skuSeckilInfo = seckillFeignService.getSkuSeckillInfoById(skuId);
             if (skuSeckilInfo.getCode() == 0) {
                 //查询成功
                 SeckillSkuVo seckilInfoData = skuSeckilInfo.getData("data", new TypeReference<SeckillSkuVo>() {
@@ -165,7 +170,7 @@ public class SkuInfoServiceImpl extends ServiceImpl<SkuInfoDao, SkuInfoEntity> i
                     }
                 }
             }
-        }, executor);*/
+        }, executor);
 
         //等到所有任务都完成
         // CompletableFuture.allOf(saleAttrFuture, descFuture, baseAttrFuture, imageFuture, seckillFuture).get();

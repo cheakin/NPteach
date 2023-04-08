@@ -510,9 +510,13 @@
 									<span>￥</span>
 									<span th:text="${#numbers.formatDecimal(item.info.price,3,2)}">4499.00</span>
 								</li>
-								<li>
-									预约享资格
-								</li>
+                <li th:each="seckillSkuVo,index:${item.getSeckillSkuVos()}">
+                  <span th:rows="${index.size}" style="color: #ff6700;margin-left: 10px"
+                        th:if="${(#dates.createNow().getTime()>=seckillSkuVo.getStartTime())&&(#dates.createNow().getTime()<=seckillSkuVo.getEndTime())}">
+                      <i>活动秒杀价￥<b>[[${#numbers.formatDecimal(seckillSkuVo.getSeckillPrice(),1,2)}]]</b></i>&nbsp;&nbsp;&nbsp;<span
+                    style="color: #C81623">每人限购[[${seckillSkuVo.getSeckillLimit()}]]件</span>
+                      </span>
+                </li>
 								<li>
 									<a href="static/item/">
 										预约说明

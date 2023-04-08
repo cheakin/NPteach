@@ -8508,6 +8508,296 @@ hosts文件中新dns解析记录
 
 前端页面修改，略
 
+#### 秒杀页面渲染
+seckill服务的SecKillController
+``` java
+/**  
+* 根据skuId获取该商品是否有秒杀活动  
+*  
+* @param skuId skuId  
+* @return R  
+*/  
+@GetMapping("/sku/seckill/{skuId}")  
+@ResponseBody  
+    public R getSkuSeckillInfoById(@PathVariable("skuId") Long skuId) {  
+    SeckillSkuRedisTo skuRedisTos = secKillService.getSkuSeckillInfoById(skuId);  
+    return R.ok().setData(skuRedisTos);  
+}
+```
+seckill的SecKillServiceImpl
+``` java
+//根据skuId获取该商品是否有秒杀活动  
+@Override  
+public SeckillSkuRedisTo getSkuSeckillInfoById(Long skuId) {  
+    List<SeckillSkuRedisTo> skuRedisTos = new ArrayList<>();  
+      
+    //1、获取redis中所有参与秒杀的key信息  
+    BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SKUKILL_CACHE_PREFIX);  
+    Set<String> keys = hashOps.keys();  
+    if (keys != null && keys.size() > 0) {  
+        //定义正则  
+        String regx = "\\d-" + skuId;  
+        for (String key : keys) {  
+            if (key.matches(regx)) {  
+                //正则匹配成功返回数据  
+                String json = hashOps.get(key);  
+                SeckillSkuRedisTo skuRedisTo = JSON.parseObject(json, SeckillSkuRedisTo.class);  
+                //2、处理随机码，只有到商品秒杀时间才能显示随机码  
+                if (skuRedisTo != null) {  
+                    Long startTime = skuRedisTo.getStartTime();  
+                    long currentTime = System.currentTimeMillis();  
+                    if (currentTime < startTime) {  
+                        //秒杀还未开始，将随机码置空  
+                        skuRedisTo.setRandomCode(null);  
+                    }  
+                    return skuRedisTo;
+                }  
+            }  
+        }  
+        return skuRedisTos;  
+    }  
+    return null;  
+}
+```
+
+product服务新建SeckillFeignService
+``` java
+@FeignClient(value = "gulimall-seckill")  
+public interface SeckillFeignService {  
+  
+    /**  
+    * 根据skuId获取该商品是否有秒杀活动  
+    * @param skuId skuId  
+    * @return R  
+    */  
+    @GetMapping("/sku/seckill/{skuId}")  
+    R getSkuSeckillInfoById(@PathVariable("skuId") Long skuId);  
+  
+}
+```
+product服务的SkuItemVo
+``` java
+//6、秒杀商品的优惠信息  
+private SeckillSkuVo seckillSkuVo;
+```
+product服务的新建SeckillSkuVo
+``` java
+@Data  
+public class SeckillSkuVo implements Serializable {  
+  
+    /**  
+    * id  
+    */  
+    private Long id;  
+    /**  
+    * 活动id  
+    */  
+    private Long promotionId;  
+    /**  
+    * 活动场次id  
+    */  
+    private Long promotionSessionId;  
+    /**  
+    * 商品id  
+    */  
+    private Long skuId;  
+    /**  
+    * 秒杀价格  
+    */  
+    private BigDecimal seckillPrice;  
+    /**  
+    * 秒杀总量  
+    */  
+    private BigDecimal seckillCount;  
+    /**  
+    * 每人限购数量  
+    */  
+    private BigDecimal seckillLimit;  
+    /**  
+    * 排序  
+    */  
+    private Integer seckillSort;  
+    /**  
+    * 当前商品的开始时间  
+    */  
+    private Long startTime;  
+    /**  
+    * 当前商品的结束时间  
+    */  
+    private Long endTime;  
+    /**  
+    * 秒杀随机码  
+    */  
+    private String randomCode;  
+    /**  
+    * 商品的详细信息  
+    */  
+    private SkuInfoVo skuInfoTo;  
+  
+}
+```
+product服务的SkuInfoVo
+``` java
+@Data  
+public class SkuInfoVo implements Serializable {  
+  
+    /**  
+    * skuId  
+    */  
+    private Long skuId;  
+    /**  
+    * spuId  
+    */  
+    private Long spuId;  
+    /**  
+    * sku名称  
+    */  
+    private String skuName;  
+    /**  
+    * sku介绍描述  
+    */  
+    private String skuDesc;  
+    /**  
+    * 所属分类id  
+    */  
+    private Long catalogId;  
+    /**  
+    * 品牌id  
+    */  
+    private Long brandId;  
+    /**  
+    * 默认图片  
+    */  
+    private String skuDefaultImg;  
+    /**  
+    * 标题  
+    */  
+    private String skuTitle;  
+    /**  
+    * 副标题  
+    */  
+    private String skuSubtitle;  
+    /**  
+    * 价格  
+    */  
+    private BigDecimal price;  
+    /**  
+    * 销量  
+    */  
+    private Long saleCount;  
+  
+}
+```
+product服务的
+``` java
+@Override  
+public SkuItemVo item(Long skuId) throws ExecutionException, InterruptedException {  
+    SkuItemVo skuItemVo = new SkuItemVo();  
+      
+    //1、sku基本信息的获取 
+    pms_sku_infoCompletableFuture<SkuInfoEntity> infoFuture = CompletableFuture.supplyAsync(() -> {  
+        SkuInfoEntity info = this.getById(skuId);  
+        skuItemVo.setInfo(info);  
+        return info;  
+    }, executor);  
+      
+    //3、获取spu的销售属性组合  
+    CompletableFuture<Void> saleAttrFuture = infoFuture.thenAcceptAsync((res) -> {  
+        List<SkuItemVo.SkuItemSaleAttrVo> saleAttrVos = skuSaleAttrValueService.getSaleAttrBySpuId(res.getSpuId());  
+        skuItemVo.setSaleAttr(saleAttrVos);  
+    }, executor);  
+          
+    //4、获取spu的介绍 
+    pms_spu_info_descCompletableFuture<Void> descFuture = infoFuture.thenAcceptAsync((res) -> {  
+        SpuInfoDescEntity spuInfoDescEntity = spuInfoDescService.getById(res.getSpuId());  
+        skuItemVo.setDesc(spuInfoDescEntity);  
+    }, executor);  
+      
+    //5、获取spu的规格参数信息  
+    CompletableFuture<Void> baseAttrFuture = infoFuture.thenAcceptAsync((res) -> {  
+        List<SkuItemVo.SpuItemAttrGroupVo> attrGroupVos = attrGroupService.getAttrGroupWithAttrsBySpuId(res.getSpuId(), res.getCatalogId());  
+        skuItemVo.setGroupAttrs(attrGroupVos);  
+    }, executor);  
+      
+      
+    //2、sku的图片信息 
+    pms_sku_imagesCompletableFuture<Void> imageFuture = CompletableFuture.runAsync(() -> {  
+        List<SkuImagesEntity> imagesEntities = skuImagesService.getImagesBySkuId(skuId);  
+        skuItemVo.setImages(imagesEntities);  
+    }, executor);  
+      
+    CompletableFuture<Void> seckillFuture = CompletableFuture.runAsync(() -> {  
+        //3、远程调用查询当前sku是否参与秒杀优惠活动  
+        R skuSeckilInfo = seckillFeignService.getSkuSeckillInfoById(skuId);  
+        if (skuSeckilInfo.getCode() == 0) {  
+            //查询成功  
+            SeckillSkuVo seckilInfoData = skuSeckilInfo.getData("data", new TypeReference<SeckillSkuVo>() {  
+            });  
+            skuItemVo.setSeckillSkuVo(seckilInfoData);  
+            if (seckilInfoData != null) {  
+                long currentTime = System.currentTimeMillis();  
+                if (currentTime > seckilInfoData.getEndTime()) {  
+                    skuItemVo.setSeckillSkuVo(null);  
+                }  
+            }  
+        }  
+    }, executor);  
+      
+    //等到所有任务都完成  
+    // CompletableFuture.allOf(saleAttrFuture, descFuture, baseAttrFuture, imageFuture, seckillFuture).get();  
+    CompletableFuture.allOf(saleAttrFuture, descFuture, baseAttrFuture, imageFuture).get();  
+      
+    // 非异步编排  
+    /*//1、sku基本信息的获取 pms_sku_infoSkuInfoEntity info = this.getById(skuId);  
+    skuItemVo.setInfo(info);  
+    Long spuId = info.getSpuId();  
+    Long catalogId = info.getCatalogId();  
+      
+    //2、sku的图片信息 pms_sku_imagesList<SkuImagesEntity> imagesEntities = skuImagesService.getImagesBySkuId(skuId);  
+    skuItemVo.setImages(imagesEntities);  
+      
+    //3、获取spu的销售属性组合  
+    List<SkuItemVo.SkuItemSaleAttrVo> saleAttrVos = skuSaleAttrValueService.getSaleAttrBySpuId(spuId);  
+    skuItemVo.setSaleAttr(saleAttrVos);  
+      
+    //4、获取spu的介绍 pms_spu_info_descSpuInfoDescEntity spuInfoDescEntity = spuInfoDescService.getById(spuId);  
+    skuItemVo.setDesc(spuInfoDescEntity);  
+      
+    //5、获取spu的规格参数信息  
+    List<SkuItemVo.SpuItemAttrGroupVo> attrGroupVos = attrGroupService.getAttrGroupWithAttrsBySpuId(spuId, catalogId);  
+    skuItemVo.setGroupAttrs(attrGroupVos);*/  
+      
+    return skuItemVo;  
+}
+```
+
+前端修改页面，略
+
+#### 秒杀系统设计
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### 其他
 限流方式:
 1.前端限流，一些高并发的网站直接在前端页面开始限流，例如:小米的验证码设计2.nginx 限流，直接负载部分请求到错误的静态页面:令牌算法 漏斗算法
 3.网美限流，限流的过鸿器
