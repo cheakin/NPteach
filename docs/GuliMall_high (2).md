@@ -8778,9 +8778,123 @@ public SkuItemVo item(Long skuId) throws ExecutionException, InterruptedExceptio
 ![[Pasted image 20230329222101.png]]
 ![[Pasted image 20230329222139.png]]
 
+#### 登录检查
+前端页面修改，略
 
+seckill服务的pom.xml
+``` xml
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-data-redis</artifactId>  
+    <exclusions>  
+        <exclusion>  
+            <groupId>io.lettuce</groupId>  
+            <artifactId>lettuce-core</artifactId>  
+        </exclusion>  
+    </exclusions>  
+    </dependency>  
+<dependency>  
+    <groupId>redis.clients</groupId>  
+    <artifactId>jedis</artifactId>  
+</dependency>
+```
+seckill服务的qpplicaiont.properties
+``` properties
+spring.session.store-type=redis
+```
+然后将其他服务的GulimallSessionConfig复制到seckill服务，并且加上@EnableRedisHttpSession注解
 
+seckill服务的
+``` java
+@Component  
+public class LoginUserInterceptor implements HandlerInterceptor {  
+  
+    public static ThreadLocal<MemberResponseVo> loginUser = new ThreadLocal<>();  
+  
+    @Override  
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {  
+  
+        String uri = request.getRequestURI();  
+        AntPathMatcher antPathMatcher = new AntPathMatcher();  
+        boolean match = antPathMatcher.match("/kill", uri);  
+          
+        if (match) {  
+            HttpSession session = request.getSession();  
+            //获取登录的用户信息  
+            MemberResponseVo attribute = (MemberResponseVo) session.getAttribute(AuthServerConstant.LOGIN_USER);  
+            if (attribute != null) {  
+            //把登录后用户的信息放在ThreadLocal里面进行保存  
+                loginUser.set(attribute);  
+                return true;  
+            } else {  
+                //未登录，返回登录页面  
+                response.setContentType("text/html;charset=UTF-8");  
+                PrintWriter out = response.getWriter();  
+                out.println("<script>alert('请先进行登录，再进行后续操作！');location.href='http://auth.gulimall.com/login.html'</script>");  
+                // session.setAttribute("msg", "请先进行登录");  
+                // response.sendRedirect("http://auth.gulimall.com/login.html");  
+                return false;  
+            }  
+        }  
+        return true;  
+    }  
+      
+    @Override  
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {  
+      
+    }  
+      
+    @Override  
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {  
+      
+    }  
+}
+```
+seckill服务新增SeckillWebConfig
+``` java
+/**  
+* springWEB自定义配置  
+*/  
+@Configuration  
+public class SeckillWebConfig implements WebMvcConfigurer {  
+    /**  
+    * 添加自定义的拦截器  
+    * @param registry 注册  
+    */  
+    @Override  
+    public void addInterceptors(InterceptorRegistry registry) {  
+        registry.addInterceptor(new LoginUserInterceptor()).addPathPatterns("/**");  
+    }  
+}
+```
 
+#### 秒杀流程
+seckill服务的SecKillController
+``` java
+/**  
+* 商品进行秒杀(秒杀开始)  
+* @param killId  
+* @param key  
+* @param num  
+* @return  
+*/  
+@GetMapping(value = "/kill")  
+public String seckill(@RequestParam("killId") String killId,  
+                    @RequestParam("key") String key,  
+                    @RequestParam("num") Integer num,  
+                    Model model) {  
+  
+    String orderSn = null;  
+    try {  
+        //1、判断是否登录  
+        orderSn = secKillService.kill(killId,key,num);  
+        model.addAttribute("orderSn",orderSn);  
+    } catch (Exception e) {  
+        e.printStackTrace();  
+    }  
+    return "success";  
+}
+```
 
 
 
