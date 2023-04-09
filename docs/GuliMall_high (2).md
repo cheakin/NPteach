@@ -9113,7 +9113,19 @@ public void createSeckillOrder(SeckillOrderTo seckillOrder) {
 }
 ```
 
-
+#### 秒杀页面完成
+前端页面修改，略
+seckill的pom.xml
+``` xml
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>  
+</dependency>
+```
+seckill的application.properties
+``` properties
+spring.thymeleaf.cache=false
+```
 
 
 
