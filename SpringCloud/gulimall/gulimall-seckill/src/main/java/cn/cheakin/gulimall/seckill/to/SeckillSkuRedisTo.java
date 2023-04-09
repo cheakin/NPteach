@@ -6,7 +6,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class SeckillSkuRedisTo {
+public class SecKillSkuRedisTo {
 
     private Long id;
     /**

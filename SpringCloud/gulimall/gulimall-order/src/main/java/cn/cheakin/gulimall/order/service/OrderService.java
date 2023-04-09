@@ -1,5 +1,6 @@
 package cn.cheakin.gulimall.order.service;
 
+import cn.cheakin.common.to.mq.SeckillOrderTo;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.gulimall.order.entity.OrderEntity;
 import cn.cheakin.gulimall.order.vo.*;
@@ -32,5 +33,7 @@ public interface OrderService extends IService<OrderEntity> {
     PageUtils queryPageWithItem(Map<String, Object> params);
 
     String handlerPayResult(PayAsyncVo payAsyncVo);
+
+    void createSeckillOrder(SeckillOrderTo seckillOrder);
 }
 

@@ -2,7 +2,7 @@ package cn.cheakin.gulimall.seckill.controller;
 
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.seckill.service.SecKillService;
-import cn.cheakin.gulimall.seckill.to.SeckillSkuRedisTo;
+import cn.cheakin.gulimall.seckill.to.SecKillSkuRedisTo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,7 +27,7 @@ public class SecKillController {
     @ResponseBody
     public R currentSeckillSkus() {
         //获取到当前可以参加秒杀商品的信息
-        List<SeckillSkuRedisTo> vos = secKillService.getCurrentSeckillSkus();
+        List<SecKillSkuRedisTo> vos = secKillService.getCurrentSeckillSkus();
 
         return R.ok().setData(vos);
     }
@@ -41,26 +41,33 @@ public class SecKillController {
     @GetMapping("/sku/seckill/{skuId}")
     @ResponseBody
     public R getSkuSeckillInfoById(@PathVariable("skuId") Long skuId) {
-        SeckillSkuRedisTo skuRedisTos = secKillService.getSkuSeckillInfoById(skuId);
+        SecKillSkuRedisTo skuRedisTos = secKillService.getSkuSeckillInfoById(skuId);
         return R.ok().setData(skuRedisTos);
     }
 
 
     /**
-     * 秒杀商品加入购物车
-     *
-     * @param seckillId 商品在redis中的key
-     * @param num       数量
-     * @param code      随机码
-     * @return R
+     * 商品进行秒杀(秒杀开始)
+     * @param killId
+     * @param key
+     * @param num
+     * @return
      */
-    @GetMapping("/seckill")
-    public String seckill(@RequestParam("seckillId") String seckillId,
-                          @RequestParam("num") String num,
-                          @RequestParam("code") String code,
+    @GetMapping(value = "/kill")
+    public String seckill(@RequestParam("killId") String killId,
+                          @RequestParam("key") String key,
+                          @RequestParam("num") Integer num,
                           Model model) {
 
-        return null;
+        String orderSn = null;
+        try {
+            //1、判断是否登录
+            orderSn = secKillService.kill(killId,key,num);
+            model.addAttribute("orderSn",orderSn);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "success";
     }
 
 }

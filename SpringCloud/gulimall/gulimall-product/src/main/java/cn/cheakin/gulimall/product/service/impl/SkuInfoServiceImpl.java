@@ -9,7 +9,7 @@ import cn.cheakin.gulimall.product.entity.SkuInfoEntity;
 import cn.cheakin.gulimall.product.entity.SpuInfoDescEntity;
 import cn.cheakin.gulimall.product.feign.SeckillFeignService;
 import cn.cheakin.gulimall.product.service.*;
-import cn.cheakin.gulimall.product.vo.SeckillSkuVo;
+import cn.cheakin.gulimall.product.vo.SeckillInfoVo;
 import cn.cheakin.gulimall.product.vo.SkuItemVo;
 import cn.hutool.core.lang.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -160,21 +160,22 @@ public class SkuInfoServiceImpl extends ServiceImpl<SkuInfoDao, SkuInfoEntity> i
             R skuSeckilInfo = seckillFeignService.getSkuSeckillInfoById(skuId);
             if (skuSeckilInfo.getCode() == 0) {
                 //查询成功
-                SeckillSkuVo seckilInfoData = skuSeckilInfo.getData("data", new TypeReference<SeckillSkuVo>() {
-                });
-                skuItemVo.setSeckillSkuVo(seckilInfoData);
-                if (seckilInfoData != null) {
-                    long currentTime = System.currentTimeMillis();
+                if (skuSeckilInfo.getData() != null) {
+                    SeckillInfoVo seckilInfoData = skuSeckilInfo.getData("data", new TypeReference<SeckillInfoVo>() {
+                    });
+                    skuItemVo.setSeckillInfo(seckilInfoData);
+                    /*long currentTime = System.currentTimeMillis();
                     if (currentTime > seckilInfoData.getEndTime()) {
-                        skuItemVo.setSeckillSkuVo(null);
-                    }
+                        skuItemVo.setSeckillInfo(null);
+                    }*/
                 }
             }
         }, executor);
 
         //等到所有任务都完成
-        // CompletableFuture.allOf(saleAttrFuture, descFuture, baseAttrFuture, imageFuture, seckillFuture).get();
-        CompletableFuture.allOf(saleAttrFuture, descFuture, baseAttrFuture, imageFuture).get();
+//        CompletableFuture.allOf(saleAttrFuture, descFuture, baseAttrFuture, imageFuture).get();
+         CompletableFuture.allOf(saleAttrFuture, descFuture, baseAttrFuture, imageFuture, seckillFuture).get();
+
 
         // 非异步编排
         /*//1、sku基本信息的获取  pms_sku_info

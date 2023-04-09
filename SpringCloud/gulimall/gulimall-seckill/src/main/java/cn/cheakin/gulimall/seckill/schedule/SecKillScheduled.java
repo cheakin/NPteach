@@ -34,7 +34,7 @@ public class SecKillScheduled {
      */
 //    @Async
 //    @Scheduled(cron = "0 0 3 * * ?")
-    @Scheduled(cron = "0 55 22 * * ?")
+    @Scheduled(cron = "0 27 23 * * ?")
     public void uploadSeckillSkuLatest3Days() {
         // 重复上架无需处理
         //为避免分布式情况下多服务同时上架的情况，使用分布式锁

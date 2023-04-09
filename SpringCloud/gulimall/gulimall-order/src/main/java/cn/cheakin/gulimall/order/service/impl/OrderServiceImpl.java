@@ -4,6 +4,7 @@ import cn.cheakin.common.constant.CartConstant;
 import cn.cheakin.common.exception.NoStockException;
 import cn.cheakin.common.to.SkuHasStockVo;
 import cn.cheakin.common.to.mq.OrderTo;
+import cn.cheakin.common.to.mq.SeckillOrderTo;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.Query;
 import cn.cheakin.common.utils.R;
@@ -310,6 +311,29 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderEntity> impleme
             baseMapper.updateOrderStatus(outTradeNo, OrderStatusEnum.PAYED.PAYED.getCode());
         }
         return "success";
+    }
+
+    @Override
+    public void createSeckillOrder(SeckillOrderTo seckillOrder) {
+        //TODO 保存订单信息
+        OrderEntity orderEntity = new OrderEntity();
+        orderEntity.setOrderSn(seckillOrder.getOrderSn());
+        orderEntity.setMemberId(seckillOrder.getMemberId());
+
+        orderEntity.setStatus(OrderStatusEnum.CREATE_NEW.getCode());
+
+        BigDecimal multiply = seckillOrder.getSeckillPrice().multiply(new BigDecimal("" + seckillOrder.getNum()));
+        orderEntity.setPayAmount(multiply);
+        this.save(orderEntity);
+
+        //TODO 保存订单项信息
+        OrderItemEntity orderItemEntity = new OrderItemEntity();
+        orderItemEntity.setOrderSn(seckillOrder.getOrderSn());
+        orderItemEntity.setRealAmount(multiply);
+        //TODO 获取当前SKU的详细信息进行设置  productFeignService.getSpuInfoBySkuId()
+        orderItemEntity.setSkuQuantity(seckillOrder.getNum());
+
+        orderItemService.save(orderItemEntity);
     }
 
     private OrderCreateTo createOrderTo(MemberResponseVo memberResponseVo, OrderSubmitVo submitVo) {

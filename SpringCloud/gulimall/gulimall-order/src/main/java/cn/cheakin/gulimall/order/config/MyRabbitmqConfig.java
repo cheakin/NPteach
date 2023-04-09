@@ -106,13 +106,13 @@ public class MyRabbitmqConfig {
      * 商品秒杀队列
      * @return
      */
-    /*@Bean
+    @Bean
     public Queue orderSecKillOrrderQueue() {
         Queue queue = new Queue("order.seckill.order.queue", true, false, false);
         return queue;
-    }*/
+    }
 
-    /*@Bean
+    @Bean
     public Binding orderSecKillOrrderQueueBinding() {
         //String destination, DestinationType destinationType, String exchange, String routingKey,
         // 			Map<String, Object> arguments
@@ -124,5 +124,5 @@ public class MyRabbitmqConfig {
                 null);
 
         return binding;
-    }*/
+    }
 }
