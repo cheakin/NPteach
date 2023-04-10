@@ -9158,8 +9158,44 @@ common服务的pom.xml
 </dependency>
 ```
 下载对应版本的的文件，[Releases · alibaba/Sentinel (github.com)](https://github.com/alibaba/Sentinel/releases)
+seckill的application.properties
+``` properties
+spring.cloud.sentinel.transport.dashboard=localhost:8080  
+spring.cloud.sentinel.transport.port=8719
+```
 
-#### 自定义流控相应
+#### 自定义流控响应
+导入依赖
+``` xml
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-actuator</artifactId>  
+</dependency>
+```
+seckill的application.properties
+``` properties
+management.endpoints.web.exposure.include=*
+```
+seckill服务新建SeckillSentinelConfig
+``` java
+@Configuration  
+public class SeckillSentinelConfig implements BlockExceptionHandler {  
+  
+    @Override  
+    public void handle(HttpServletRequest request, HttpServletResponse response, BlockException e) throws Exception {  
+        R error = R.error(BizCodeEnum.TOO_MANY_REQUEST.getCode(), BizCodeEnum.TOO_MANY_REQUEST.getMsg());
+        response.setCharacterEncoding("UTF-8");  
+        response.setContentType("application/json");  
+        response.getWriter().write(JSON.toJSONString(error));  
+    }  
+  
+}
+```
+common的BizCodeEnum中
+``` java
+TOO_MANY_REQUEST(10002, "请求流量过大"),
+```
+
 
 
 #### 其他
