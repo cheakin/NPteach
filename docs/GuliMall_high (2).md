@@ -2020,7 +2020,7 @@ public R sendCode(@RequestParam("phone") String phone) {
         long currentTime = Long.parseLong(redisCode.split("_")[1]);  
         if (System.currentTimeMillis() - currentTime < 60000) {  
             //60s内不能再发  
-            return R.error(BizCodeEnum.SMS_CODE_EXCEPTION.getCode(), BizCodeEnum.SMS_CODE_EXCEPTION.getMsg());  
+            return R.error(BizCodeEnume.SMS_CODE_EXCEPTION.getCode(), BizCodeEnume.SMS_CODE_EXCEPTION.getMsg());  
         }  
     }  
   
@@ -2238,7 +2238,7 @@ SELECT * FROM ums_member_level WHERE default_status = 1
 
 ![[Pasted image 20230130224421.png]]
 
-common服务的BizCodeEnum中新增异常消息
+common服务的BizCodeEnume中新增异常消息
 ``` java
 USER_EXIST_EXCEPTION(15001, "存在相同的用户"),  
 PHONE_EXIST_EXCEPTION(15002, "存在相同的手机号");
@@ -2292,7 +2292,7 @@ public R login(@RequestBody MemberUserLoginVo vo) {
     if (memberEntity != null) {  
         return R.ok().setData(memberEntity);  
     } else {  
-        return R.error(BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());  
+        return R.error(BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());  
     }  
 }
 ```
@@ -2562,7 +2562,7 @@ return R.ok().setData(memberEntity);
 
 } else {
 
-return R.error(BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
+return R.error(BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
 
 }
 
@@ -6028,7 +6028,7 @@ public R orderLockStock(@RequestBody WareSkuLockVo lockVo) {
         Boolean lock = wareSkuService.orderLockStock(lockVo);  
         return R.ok();  
     } catch (NoStockException e) {  
-        return R.error(BizCodeEnum.NO_STOCK_EXCEPTION.getCode(), BizCodeEnum.NO_STOCK_EXCEPTION.getMsg());  
+        return R.error(BizCodeEnume.NO_STOCK_EXCEPTION.getCode(), BizCodeEnume.NO_STOCK_EXCEPTION.getMsg());  
     }  
 }
 ```
@@ -6136,7 +6136,7 @@ ware服务的WareSkuDao.xml
     UPDATE wms_ware_sku  
     SET stock_locked=stock_locked+#{num}    WHERE sku_id=#{skuId}      AND ware_id=#{wareId}      AND stock-stock_locked>#{num}</update>
 ```
-common服务的BizCodeEnum
+common服务的BizCodeEnume
 ``` java
 NO_STOCK_EXCEPTION(21000, "商品库存不足");
 ```
@@ -8519,8 +8519,8 @@ seckill服务的SecKillController
 */  
 @GetMapping("/sku/seckill/{skuId}")  
 @ResponseBody  
-    public R getSkuSeckillInfoById(@PathVariable("skuId") Long skuId) {  
-    SecKillSkuRedisTo skuRedisTos = secKillService.getSkuSeckillInfoById(skuId);  
+    public R getSkuSeckillInfo(@PathVariable("skuId") Long skuId) {  
+    SecKillSkuRedisTo skuRedisTos = secKillService.getSkuSeckillInfo(skuId);  
     return R.ok().setData(skuRedisTos);  
 }
 ```
@@ -8528,7 +8528,7 @@ seckill的SecKillServiceImpl
 ``` java
 //根据skuId获取该商品是否有秒杀活动  
 @Override  
-public SecKillSkuRedisTo getSkuSeckillInfoById(Long skuId) {  
+public SecKillSkuRedisTo getSkuSeckillInfo(Long skuId) {  
     List<SecKillSkuRedisTo> skuRedisTos = new ArrayList<>();  
       
     //1、获取redis中所有参与秒杀的key信息  
@@ -8571,7 +8571,7 @@ public interface SeckillFeignService {
     * @return R  
     */  
     @GetMapping("/sku/seckill/{skuId}")  
-    R getSkuSeckillInfoById(@PathVariable("skuId") Long skuId);  
+    R getSkuSeckillInfo(@PathVariable("skuId") Long skuId);  
   
 }
 ```
@@ -8775,7 +8775,7 @@ public SkuItemVo item(Long skuId) throws ExecutionException, InterruptedExceptio
       
     CompletableFuture<Void> seckillFuture = CompletableFuture.runAsync(() -> {  
         //3、远程调用查询当前sku是否参与秒杀优惠活动  
-        R skuSeckilInfo = seckillFeignService.getSkuSeckillInfoById(skuId);  
+        R skuSeckilInfo = seckillFeignService.getSkuSeckillInfo(skuId);  
         if (skuSeckilInfo.getCode() == 0) {  
             //查询成功  
             if (skuSeckilInfo.getData() != null) {  
@@ -9183,7 +9183,7 @@ public class SeckillSentinelConfig implements BlockExceptionHandler {
   
     @Override  
     public void handle(HttpServletRequest request, HttpServletResponse response, BlockException e) throws Exception {  
-        R error = R.error(BizCodeEnum.TOO_MANY_REQUEST.getCode(), BizCodeEnum.TOO_MANY_REQUEST.getMsg());
+        R error = R.error(BizCodeEnume.TOO_MANY_REQUEST.getCode(), BizCodeEnume.TOO_MANY_REQUEST.getMsg());
         response.setCharacterEncoding("UTF-8");  
         response.setContentType("application/json");  
         response.getWriter().write(JSON.toJSONString(error));  
@@ -9191,7 +9191,7 @@ public class SeckillSentinelConfig implements BlockExceptionHandler {
   
 }
 ```
-common的BizCodeEnum中
+common的BizCodeEnume中
 ``` java
 TOO_MANY_REQUEST(10002, "请求流量过大"),
 ```
@@ -9217,8 +9217,30 @@ order服务的循环依赖，略
 流控效果：快速失败、预热、排队等候
 
 #### 熔断降级
+product服务的application.properties
+``` properties
+feign.sentinel.enabled=true
+```
+pruduct服务新建SeckillFeignServiceFallBack，SeckillFeignService上使用`@FeignClient(value = "gulimall-seckill", fallback = SeckillFeignServiceFallBack.class)`
+``` java
+@Slf4j  
+@Component  
+public class SeckillFeignServiceFallBack implements SeckillFeignService {  
+    @Override  
+    public R getSkuSeckillInfo(Long skuId) {  
+        log.info("熔断方法调用...getSkuSeckillInfo");  
+        return R.error(BizCodeEnume.TOO_MANY_REQUEST.getCode(), BizCodeEnume.TOO_MANY_REQUEST.getMsg());  
+    }  
+}
+```
+降级策略：平均响应时间、异常比例、异常数
 
+在每个服务配置中都开启远程调用的熔断降级
+``` properties
+feign.sentinel.enabled=true
+```
 
+#### 自动逸受保护资源
 
 #### 其他
 限流方式:

@@ -1,7 +1,7 @@
 package cn.cheakin.gulimall.auth.controller;
 
 import cn.cheakin.common.constant.AuthServerConstant;
-import cn.cheakin.common.exception.BizCodeEnum;
+import cn.cheakin.common.exception.BizCodeEnume;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.common.vo.MemberResponseVo;
 import cn.cheakin.gulimall.auth.feign.MemberFeignService;
@@ -67,7 +67,7 @@ public class LoginController {
             long currentTime = Long.parseLong(redisCode.split("_")[1]);
             if (System.currentTimeMillis() - currentTime < 60000) {
                 //60s内不能再发
-                return R.error(BizCodeEnum.SMS_CODE_EXCEPTION.getCode(), BizCodeEnum.SMS_CODE_EXCEPTION.getMsg());
+                return R.error(BizCodeEnume.SMS_CODE_EXCEPTION.getCode(), BizCodeEnume.SMS_CODE_EXCEPTION.getMsg());
             }
         }
 

@@ -157,7 +157,7 @@ public class SkuInfoServiceImpl extends ServiceImpl<SkuInfoDao, SkuInfoEntity> i
 
         CompletableFuture<Void> seckillFuture = CompletableFuture.runAsync(() -> {
             //3、远程调用查询当前sku是否参与秒杀优惠活动
-            R skuSeckilInfo = seckillFeignService.getSkuSeckillInfoById(skuId);
+            R skuSeckilInfo = seckillFeignService.getSkuSeckillInfo(skuId);
             if (skuSeckilInfo.getCode() == 0) {
                 //查询成功
                 if (skuSeckilInfo.getData() != null) {

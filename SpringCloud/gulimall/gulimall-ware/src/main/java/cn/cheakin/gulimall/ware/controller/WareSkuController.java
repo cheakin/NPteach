@@ -1,6 +1,6 @@
 package cn.cheakin.gulimall.ware.controller;
 
-import cn.cheakin.common.exception.BizCodeEnum;
+import cn.cheakin.common.exception.BizCodeEnume;
 import cn.cheakin.common.exception.NoStockException;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.R;
@@ -43,7 +43,7 @@ public class WareSkuController {
             Boolean lock = wareSkuService.orderLockStock(lockVo);
             return R.ok();
         } catch (NoStockException e) {
-            return R.error(BizCodeEnum.NO_STOCK_EXCEPTION.getCode(), BizCodeEnum.NO_STOCK_EXCEPTION.getMsg());
+            return R.error(BizCodeEnume.NO_STOCK_EXCEPTION.getCode(), BizCodeEnume.NO_STOCK_EXCEPTION.getMsg());
         }
     }
 

@@ -43,7 +43,7 @@ mybatis-plus:
 logging:
   level:
 #    cn.cheakin.gulimall: debug
-    cn.cheakin.gulimall: error
+    cn.cheakin.gulimall: info
 
 server:
   port: 10000

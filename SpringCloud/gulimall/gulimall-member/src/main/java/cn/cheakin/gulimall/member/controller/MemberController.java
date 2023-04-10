@@ -1,6 +1,6 @@
 package cn.cheakin.gulimall.member.controller;
 
-import cn.cheakin.common.exception.BizCodeEnum;
+import cn.cheakin.common.exception.BizCodeEnume;
 import cn.cheakin.common.utils.PageUtils;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.member.entity.MemberEntity;
@@ -53,7 +53,7 @@ public class  MemberController {
         if (memberEntity != null) {
             return R.ok().setData(memberEntity);
         } else {
-            return R.error(BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
+            return R.error(BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
         }
     }
 
@@ -65,7 +65,7 @@ public class  MemberController {
         if (memberEntity != null) {
             return R.ok().setData(memberEntity);
         } else {
-            return R.error(BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnum.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
+            return R.error(BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getCode(), BizCodeEnume.LOGIN_ACCOUNT_PASSWORD_EXCEPTION.getMsg());
         }
     }
 
@@ -75,9 +75,9 @@ public class  MemberController {
         try {
             memberService.register(vo);
         } catch (PhoneException e) {
-            return R.error(BizCodeEnum.PHONE_EXIST_EXCEPTION.getCode(), BizCodeEnum.PHONE_EXIST_EXCEPTION.getMsg());
+            return R.error(BizCodeEnume.PHONE_EXIST_EXCEPTION.getCode(), BizCodeEnume.PHONE_EXIST_EXCEPTION.getMsg());
         } catch (UsernameException e) {
-            return R.error(BizCodeEnum.USER_EXIST_EXCEPTION.getCode(), BizCodeEnum.USER_EXIST_EXCEPTION.getMsg());
+            return R.error(BizCodeEnume.USER_EXIST_EXCEPTION.getCode(), BizCodeEnume.USER_EXIST_EXCEPTION.getMsg());
         }
 
         return R.ok();

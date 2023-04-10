@@ -43,6 +43,12 @@ public class SecKillController {
     @GetMapping("/sku/seckill/{skuId}")
     @ResponseBody
     public R getSkuSeckillInfoById(@PathVariable("skuId") Long skuId) {
+        /*try {
+            Thread.sleep(300);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
+
         SecKillSkuRedisTo skuRedisTos = secKillService.getSkuSeckillInfoById(skuId);
         return R.ok().setData(skuRedisTos);
     }

@@ -1,6 +1,6 @@
 package cn.cheakin.gulimall.search.controller;
 
-import cn.cheakin.common.exception.BizCodeEnum;
+import cn.cheakin.common.exception.BizCodeEnume;
 import cn.cheakin.common.to.es.SkuEsModel;
 import cn.cheakin.common.utils.R;
 import cn.cheakin.gulimall.search.service.ProductSaveService;
@@ -39,11 +39,11 @@ public class ElasticSaveController {
             status = productSaveService.productStatusUp(skuEsModels);
         } catch (IOException e) {
             log.error("ElasticSaveController - 商品上架错误: ", e);
-            return R.error(BizCodeEnum.PRODUCT_UP_EXCEPTION.getCode(), BizCodeEnum.PRODUCT_UP_EXCEPTION.getMsg());
+            return R.error(BizCodeEnume.PRODUCT_UP_EXCEPTION.getCode(), BizCodeEnume.PRODUCT_UP_EXCEPTION.getMsg());
         }
 
         if (status) {
-            return R.error(BizCodeEnum.PRODUCT_UP_EXCEPTION.getCode(), BizCodeEnum.PRODUCT_UP_EXCEPTION.getMsg());
+            return R.error(BizCodeEnume.PRODUCT_UP_EXCEPTION.getCode(), BizCodeEnume.PRODUCT_UP_EXCEPTION.getMsg());
         } else {
             return R.ok();
         }

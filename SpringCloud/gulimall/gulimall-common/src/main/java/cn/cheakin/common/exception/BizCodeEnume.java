@@ -21,7 +21,7 @@ package cn.cheakin.common.exception;
  * <p>
  * Create by botboy on 2022/07/26.
  **/
-public enum BizCodeEnum {
+public enum BizCodeEnume {
 
     UNKNOW_EXEPTION(10000, "系统未知异常"),
     VALID_EXCEPTION(10001, "参数格式校验失败"),
@@ -39,7 +39,7 @@ public enum BizCodeEnum {
     private int code;
     private String msg;
 
-    BizCodeEnum(int code, String msg) {
+    BizCodeEnume(int code, String msg) {
         this.code = code;
         this.msg = msg;
     }
