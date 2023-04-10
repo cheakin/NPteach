@@ -9240,7 +9240,57 @@ public class SeckillFeignServiceFallBack implements SeckillFeignService {
 feign.sentinel.enabled=true
 ```
 
-#### 自动逸受保护资源
+#### 自定义受保护资源
+方式一：
+seckill服务的SecKillServiceImpl
+``` java
+//当前时间可以参与秒杀的商品信息  
+@Override  
+public List<SecKillSkuRedisTo> getCurrentSeckillSkus() {  
+    try (Entry entry = SphU.entry("seckillSku")) {  
+        //1.确定当前时间与那个秒杀场次  
+        Set<String> keys = redisTemplate.keys(SESSION_CACHE_PREFIX + "*");  
+        long time = System.currentTimeMillis();  
+        for (String key : keys) {  
+            String replace = key.replace(SESSION_CACHE_PREFIX, "");  
+            String[] split = replace.split("_");  
+            long start = Long.parseLong(split[0]);  
+            long endTime = Long.parseLong(split[1]);  
+            //当前秒杀活动处于有效期内  
+            if (time > start && time < endTime) {  
+                //2.获取当前场需要的所有商品信息  
+                List<String> range = redisTemplate.opsForList().range(key, -100, 100);  
+                BoundHashOperations<String, String, String> hashOps = redisTemplate.boundHashOps(SKUKILL_CACHE_PREFIX);  
+                List<String> list = hashOps.multiGet(range);  
+                if (list != null) {  
+                    List<SecKillSkuRedisTo> collect = list.stream().map((item) -> {  
+                    SecKillSkuRedisTo to = JSON.parseObject((String) item, SecKillSkuRedisTo.class);  
+                    // to.setRandomCode(null);//当前秒杀开始就需要随机码  
+                    return to;  
+                    }).collect(Collectors.toList());  
+                    return collect;  
+                }  
+                break;  
+            }  
+        }  
+    } catch (BlockException e) {  
+        log.error("资源被限流", e.getMessage());  
+    }  
+    return null;  
+}
+```
+
+方式二
+在seckill服务SecKillServiceImpl的getCurrentSeckillSkus上使用`@SentinelResource(value = "getCurrentSeckillSkusResource",blockHandler = "blockHandler")`注解，并新增降级方法
+``` java
+public List<SecKillSkuRedisTo> blockHandler(BlockException e){  
+    log.error("getCurrentSeckillSkusResource被限流了..");  
+    return null;  
+}
+```
+blockHandler 函数会在原方法被限流/降级/系统保护的时候调用，而 fallback 函数会针对所有类型的异常。
+
+
 
 #### 其他
 限流方式:

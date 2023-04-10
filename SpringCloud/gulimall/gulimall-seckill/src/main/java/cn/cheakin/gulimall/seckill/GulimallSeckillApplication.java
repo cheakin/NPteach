@@ -22,6 +22,16 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  *  3) 超大浏览的时候，必须牺牲一些远程服务。在服务的提供方（远程服务）指定降级策略
  *      提供方事在运行。但是不运行自己的业务逻辑，返回的是默认的熔断数据（限流的数据）
  *
+ * 5.自定义受保护的资源
+ *  1) 代码
+ *      try (Entry entry = SphU.entry("seckillSku")) {
+ *          // 业务逻辑
+ *      } catch(Exception e) {}
+ *  2) 基于注解
+ *      @SentinelResource(value = "getCurrentSeckillSkusResource",blockHandler = "blockHandler")
+ *  无论是1，2方式，一定要配置被限流以后的默认返回
+ *  url请求可以设置统一返回
+ *
  */
 @EnableFeignClients
 @EnableDiscoveryClient
