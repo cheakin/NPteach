@@ -26,6 +26,8 @@ public class SecKillController {
     @GetMapping(value = "/currentSeckillSkus")
     @ResponseBody
     public R currentSeckillSkus() {
+        System.out.println("正在执行");
+
         //获取到当前可以参加秒杀商品的信息
         List<SecKillSkuRedisTo> vos = secKillService.getCurrentSeckillSkus();
 
