@@ -63,6 +63,11 @@
 			<artifactId>jedis</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
 		<!--使用热加载-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

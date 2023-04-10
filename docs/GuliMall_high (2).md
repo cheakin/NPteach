@@ -9196,7 +9196,21 @@ common的BizCodeEnum中
 TOO_MANY_REQUEST(10002, "请求流量过大"),
 ```
 
+#### 全服务引入
+在auth, cart, coupon, gateway, member, order, product, search, third-party, ware服务的pom引入
+``` xml
+<dependency>  
+    <groupId>org.springframework.boot</groupId>  
+    <artifactId>spring-boot-starter-actuator</artifactId>  
+</dependency>
+```
+并且在配置文件中加上
+``` properties
+spring.cloud.sentinel.transport.dashboard=localhost:8080  
+management.endpoints.web.exposure.include=*
+```
 
+order服务的循环依赖，略
 
 #### 其他
 限流方式:
