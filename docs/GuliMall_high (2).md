@@ -9290,6 +9290,16 @@ public List<SecKillSkuRedisTo> blockHandler(BlockException e){
 ```
 blockHandler 函数会在原方法被限流/降级/系统保护的时候调用，而 fallback 函数会针对所有类型的异常。
 
+#### 网关流控
+gateway服务的pom.xml中引入依赖
+``` xml
+<dependency>  
+    <groupId>com.alibaba.cloud</groupId>  
+    <artifactId>spring-cloud-alibaba-sentinel-gateway</artifactId>  
+    <version>2.1.0.RELEASE</version>  
+</dependency>
+```
+网关限流相较于不同的熔断降级，可以有更多的选择。比如对指定的网关限流，对API分组
 
 
 #### 其他

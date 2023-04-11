@@ -32,6 +32,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  *  无论是1，2方式，一定要配置被限流以后的默认返回
  *  url请求可以设置统一返回
  *
+ *
  */
 @EnableFeignClients
 @EnableDiscoveryClient
