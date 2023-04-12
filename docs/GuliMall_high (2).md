@@ -9301,6 +9301,28 @@ gateway服务的pom.xml中引入依赖
 ```
 网关限流相较于不同的熔断降级，可以有更多的选择。比如对指定的网关限流，对API分组
 
+#### 定制网关流控返回
+gateway服务中新建
+``` java
+@Configuration  
+public class SentinelGatewayConfig implements BlockRequestHandler {  
+  
+    //网关限流了请求，就会调用此回调 Mono Flux@Override  
+    public Mono<ServerResponse> handleRequest(ServerWebExchange exchange, Throwable t) {  
+        R error = R.error(BizCodeEnume.TOO_MANY_REQUEST.getCode(), BizCodeEnume.TOO_MANY_REQUEST.getMsg());  
+        String errJson = JSON.toJSONString(error);  
+          
+        // Mono<String> aaa = Mono.just("aaa");  
+        Mono<ServerResponse> body = ServerResponse.ok().body(Mono.just(errJson), String.class);  
+        return body;  
+    }  
+      
+    // FlowRule flowRule = new FlowRule();  
+    // flowRule.setRefResource("gulimall_seckill_route");  
+    //// flowRule.set  
+    // FlowRuleManager.loadRules(Arrays.asList(flowRule));  
+}
+```
 
 #### 其他
 限流方式:
