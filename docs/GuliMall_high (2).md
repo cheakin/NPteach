@@ -9324,12 +9324,66 @@ public class SentinelGatewayConfig implements BlockRequestHandler {
 }
 ```
 
-#### 其他
-限流方式:
-1.前端限流，一些高并发的网站直接在前端页面开始限流，例如:小米的验证码设计2.nginx 限流，直接负载部分请求到错误的静态页面:令牌算法 漏斗算法
-3.网美限流，限流的过鸿器
-代码中使用分布式信号量
-rabbitmg 限流(能者多劳: chanel.basicQos(11) ，保证发挥所有服务器的性能
+### Sleuth-链路追踪
+#### 基本概念&整合
+基本术语
+* Span (跨度): 基本工作单元，发送一个远程调度任务 就会产生一个 Span，Span 是一个64 位 ID 唯一标识的，Trace 是用另一个 64 位ID 唯一标识的，Span 还有其他数据信息，比如摘要、时间戳事件、Span 的ID、以及进度ID。
+* Trace (跟踪) : 一系列 Span 组成的一个树状结构。请求一个微服务系统的 API 接口，这个API 接口，需要调用多个微服务，调用每个微服务都会产生一个新的 Span，所有由这个请求产生的 Span 组成了这个 Trace。
+* Annotation(标注): 用来及时记录一个事件的，一些核心注解用来定义一个请求的开始和结束 。这些注解包括以下:
+    * cs - cient Sent -客户端发送一个请求，这个注解描述了这个 Span 的开始
+    * sr- Server Received-服务端获得请求并准备开始处理它,如果将其 sr 减去 cs 时间戳便可得到网络传输的时间。
+    * ss- Server Sent (服务端发送响应) -该注解表明请求处理的完成(当请求返回客户端)，如果 ss 的时间戳减去 sr 时间戳，就可以得到服务器请求的时间。
+    * cr- Client Received (客户端接收响应) -此时 Span 的结束，如果 cr 的时间戳减去cs 时间戳便可以得到整个请求所消耗的时间。
+![[Pasted image 20230413214622.png]]
+
+整合Sleuth
+在common服务中引入依赖
+``` xml
+<dependency>  
+    <groupId>com.alibaba.cloud</groupId>  
+    <artifactId>spring-cloud-alibaba-dependencies</artifactId>  
+    <version>2021.0.1.0</version>  
+</dependency>
+```
+``` xml
+<!--链路追踪-->  
+<dependency>  
+    <groupId>org.springframework.cloud</groupId>  
+    <artifactId>spring-cloud-starter-sleuth</artifactId>  
+</dependency>
+```
+在配置中开启日志服务
+``` properties
+logging.level.org.springframework.cloud.openfeign:debug  
+logging.level.org.springframework.cloud.sleuth: debug
+```
+
+#### 整合Zipkin效果
+在docker中安装zipkin服务器
+``` sh
+docker run -d -p 9411:9411 openzipkin/zipkin
+```
+在common中引入依赖
+``` xml
+<!--zipkin中包含了sleuth-->  
+<dependency>  
+    <groupId>org.springframework.cloud</groupId>  
+    <artifactId>spring-cloud-starter-zipkin</artifactId>  
+</dependency>
+```
+在添加相关配置
+``` properties
+#服务追踪  
+spring.zipkin.base-url=http://192.168.56.10:9411/  
+spring.zipkin.discovery-client-enabled=false  
+spring.zipkin.sender.type=web  
+spring.sleuth.sampler.probability=1
+```
+
+zipkin数据的数据持久化，略
+
+#### zipkin界面分析
+略
 
 
 
