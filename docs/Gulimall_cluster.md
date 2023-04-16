@@ -204,6 +204,7 @@ k8s 里的所有的资源对象都可以采用 yaml 或JSON 格式的文件定�
 4. 部署 Kubernetes Node，将节点加入 Kubernetes 集群中5.部署 Dashboard Web 页面，可视化查看 Kubernetes 资源
 ![[Pasted image 20230416205816.png]]
 
+#### 创建三个虚拟机
 ``` bat
 vagrant ssh k8s-node1
 ```
@@ -219,10 +220,68 @@ exit;
 exit;
 ```
 
+#### NAT网络和前置环境
+``` sh
+ip route show
 
+ip addr show
+```
+全局设置添加一个NAT网络
+将3个节点的网卡1的连接方式都设置为`NAT网络`，并且刷新MAC地址
 
+为了和教程保持一致，可以修改一些ip
+``` sh
+vi /etc/sysconfig/network-scripts/ifcfg-eth0
 
+BOOTPROTO=“static” # 使用静态IP地址，默认为dhcp
+IPADDR=10.0.2.5 # ip地址
+GATEWAY=10.0.2.1  # 网关
+NETMASK=255.255.255.0  # 子网掩码
+DNS1=0.0.0.0 # DNS服务器
 
+service network restart
+```
+设置linux环境（三个节点都执行）
+``` sh
+# 关闭防火墙
+systemctl stop firewalld
+systemctl disable firewalld
+
+# 关闭selinux
+cat /etc/selinux/config 
+sed -i 's/enforcing/disabled/' /etc/selinux/config
+cat /etc/selinux/config 
+setenforce 0
+
+# 关闭swap
+swapoff -a # 临时
+cat /etc/fstab
+sed -ri 's/.*swap.*/#&/' /etc/fstab # 永久
+free -g # 验证，swap 必须为 0:
+
+# 添加主机名与 IP 对应关系
+vi /etc/hosts
+10.0.2.15 k8s-node1
+10.0.2.24 k8s-node2
+10.0.2.25 k8s-node3
+cat /etc/hosts
+# hostnamectl set-hostname <newhostname> :指定新的 hostname
+# su 切换过来
+
+#将桥接的 IPv4 流量传递到 iptables 的链
+cat > /etc/sysctl.d/k8s.conf << EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl --system
+
+# 疑难问题遇见提示是只读的文件系统，运行如下命令
+mount -o remount rw
+
+# date 查看时间 (可选）
+yum install -y ntpdate
+ntpdate time.windows.com # 同步最新时间
+```
 
 
 
