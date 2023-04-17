@@ -340,3 +340,93 @@ yum install -y kubelet-1.17.3 kubeadm-1.17.3 kubectl-1.17.3
 systemctl enable kubelet
 systemctl start kubelet
 ```
+
+#### 集群安装完成
+**master节点初始化**
+``` sh
+chmod 700 master_images.sh
+```
+master_images.sh内容
+``` sh
+#!/bin/bash
+
+images=(
+	kube-apiserver:v1.17.3
+    kube-proxy:v1.17.3
+	kube-controller-manager:v1.17.3
+	kube-scheduler:v1.17.3
+	coredns:1.6.5
+	etcd:3.4.3-0
+    pause:3.1
+)
+
+for imageName in ${images[@]} ; do
+    docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName
+#   docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/$imageName  k8s.gcr.io/$imageName
+done
+```
+初始化master节点
+``` sh
+kubeadm init \
+--apiserver-advertise-address=10.0.2.15 \
+--image-repository registry.aliyuncs.com/google_containers \
+--kubernetes-version v1.17.3 \
+--service-cidr=10.96.0.0/16 \
+--pod-network-cidr=10.244.0.0/16
+
+# 初始化完后，根据提示知悉
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+# https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+# 根据mater节点自动生成的密钥, 让node节点加入
+kubeadm join 10.0.2.15:6443 --token p7p9jr.kdlwlgywze84j93h \
+    --discovery-token-ca-cert-hash sha256:004442540f3c0a9a83e96b533804b4c042b299d73944aa02435f1d04ebd036dc 
+```
+由于默认拉取镜像地址 k8s.gcr.io 国内无法访问，这里指定阿里云镜像仓库地址。可以手动按照我们的 images.sh 先拉取镜像,地址变为 registry.aliyuncs.com/google containers 也可以。
+科普: 无类别域间路由 (Classless Inter-Domain Routing、CIDR) 是一个用于给用户分配 IP地址以及在互联网上有效地路由 IP 数据包的对 IP 地址进行归类的方法。拉取可能失败，需要下载镜像。
+运行完成提前复制: 加入集群的令牌
+
+安装 Pod 网络插件 (CNI)
+``` sh
+# 安装 Pod 网络插件 (CNI)
+kubectl apply -f\
+https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.ym
+# 或是运行本地的
+kubeadm apply -f kube-flannel.yml
+
+# 检查
+kubectl get pods
+kubectl get ns
+kubectl get pods --all-namespaces
+
+kubectl get nodes
+```
+
+将node节点加入mater中
+``` sh
+# 使用刚才mater节点生成的密钥，在node节点中直接运行
+kubeadm join 10.0.2.15:6443 --token p7p9jr.kdlwlgywze84j93h \
+    --discovery-token-ca-cert-hash sha256:004442540f3c0a9a83e96b533804b4c042b299d73944aa02435f1d04ebd036dc 
+```
+
+``` sh
+# 查看节点信息
+kubectl get nodes
+
+# 监控节点状态
+watch kubectl get pod -n kube-system -o wide
+```
+
+
+
+
+
+
+
+``` sh
+kubeadm token create --print-join-command
+kubeadm token create --ttl 0 --print-join-command
+```
+
