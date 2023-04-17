@@ -237,7 +237,7 @@ BOOTPROTO=“static” # 使用静态IP地址，默认为dhcp
 IPADDR=10.0.2.5 # ip地址
 GATEWAY=10.0.2.1  # 网关
 NETMASK=255.255.255.0  # 子网掩码
-DNS1=0.0.0.0 # DNS服务器
+DNS1=114.114.114.114 # DNS服务器
 
 service network restart
 ```
@@ -283,6 +283,60 @@ yum install -y ntpdate
 ntpdate time.windows.com # 同步最新时间
 ```
 
+#### 安装docker、kubelet、kubeadm、kubectl
+安装docker
+``` sh
+# 卸载旧版本
+sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine
 
+# 安装所需的软件包
+sudo yum install -y yum-utils device-mapper-persistent-data lvm2
 
+# 设置稳定的仓库（阿里）
+sudo yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
 
+# 安装Docker，以及cli
+sudo yum -y install docker-ce docker-ce-cli containerd.io
+
+#配置docker加速
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json <<-'EOF'
+{
+  "registry-mirrors": ["https://wh9z3wm8.mirror.aliyuncs.com"]
+}
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+# 设置docker开机自启
+systemctl enable docker
+```
+
+安装kubeadm, kebelet, kubectl
+``` sh
+# 添加阿里云yum源
+cat > /etc/yum.repos.d/kubernetes.repo << EOF
+[kubernetes]
+name=Kubernetes
+baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+EOF
+
+# 安装 kubeadm，kubelet 和 kubectl
+yum list|grep kube
+yum install -y kubelet-1.17.3 kubeadm-1.17.3 kubectl-1.17.3
+
+# 设置kuvelet启动，并开机启动
+systemctl enable kubelet
+systemctl start kubelet
+```
