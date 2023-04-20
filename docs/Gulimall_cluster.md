@@ -488,4 +488,32 @@ kubectl get pod tomcat6-5f7ccf4cb9-lkwl9 -o yaml > mypod.yaml
 kubectl apply -f mypod.yaml
 ```
 
+#### Pod、Service等概念 & Ingress
+1. Pod 是什么，Controller 是什么 
+    https://kubernetes.io/zh/docs/concepts/workloads/pods/#pods-and-controllers 
+    Pod 和控制器 
+    控制器可以为您创建和管理多个 Pod，管理副本和上线，并在集群范围内提供自修复能力。 例如，如果一个节点失败，控制器可以在不同的节点上调度一样的替身来自动替换 Pod。 包含一个或多个 Pod 的控制器一些示例包括： Deployment StatefulSet DaemonSet 
+    控制器通常使用您提供的 Pod 模板来创建它所负责的 Pod
+    ![[Pasted image 20230420080216.png]]
+2. Deployment&Service 是什么
+    ![[Pasted image 20230420080504.png]]
+3. Service 的意义 
+    统一应用访问入口； 
+    Service 管理一组 Pod。 
+    防止 Pod 失联（服务发现）、定义一组 Pod 的访问策略 
+    现在 Service 我们使用 NodePort 的方式暴露，这样访问每个节点的端口，都可以访问到这 个 Pod，如果节点宕机，就会出现问题。
+4. abels and selectors
+    ![[Pasted image 20230420081511.png]]
+5. Ingress 
+    通过 Service 发现 Pod 进行关联。基于域名访问。 
+    通过 Ingress Controller 实现 Pod 负载均衡 
+    支持 TCP/UDP 4 层负载均衡和 HTTP 7 层负载均衡
+
+
+
+
+
+
+
+
 
