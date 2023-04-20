@@ -309,7 +309,7 @@ sudo tee /etc/docker/daemon.json <<-'EOF'
 {  
 "registry-mirrors": ["https://wh9z3wm8.mirror.aliyuncs.com"]  
 }  
-EOF  
+EOF
 sudo systemctl daemon-reload  
 sudo systemctl restart docker  
   
@@ -486,6 +486,8 @@ kubectl get pod tomcat6-5f7ccf4cb9-lkwl9 -o yaml
 kubectl get pod tomcat6-5f7ccf4cb9-lkwl9 -o yaml > mypod.yaml
 
 kubectl apply -f mypod.yaml
+
+kubectl delete deployment.apps/tomcat6
 ```
 
 #### Pod、Service等概念 & Ingress
@@ -508,8 +510,26 @@ kubectl apply -f mypod.yaml
     通过 Service 发现 Pod 进行关联。基于域名访问。 
     通过 Ingress Controller 实现 Pod 负载均衡 
     支持 TCP/UDP 4 层负载均衡和 HTTP 7 层负载均衡
+    ![[Pasted image 20230420201532.png]]
 
 
+
+``` sh
+kubectl create deployment tomcat6 --image=tomcat:6.0.53-jre8 --dry-run -o yaml > tomcat6-deployment.yaml
+kubectl apply -f tomcat6-deployment.yaml
+
+kubectl expose deployment tomcat6 --port=80 --target-port=8080 --type=NodePort --dry-run -o yaml
+kubectl delete deployment.apps/tomcat6
+kubectl apply -f tomcat6-deployment.yaml
+
+kubectl apply -f ingress-controller.yaml
+
+kubectl get pods --all-namespaces
+```
+配置hosts
+``` sh
+192.168.56.102 tomcat6.atguigu.com
+```
 
 
 
