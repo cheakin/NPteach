@@ -531,9 +531,40 @@ kubectl get pods --all-namespaces
 192.168.56.102 tomcat6.atguigu.com
 ```
 
+## KubeSphere
+#### kubernetes-dashboard
+略
 
+### 安装
+#### 最小化安装
+文档：[前提条件 | KubeSphere Documents](https://v2-1.docs.kubesphere.io/docs/zh-CN/installation/prerequisites/)
 
+安装
+新版本已经不需要再单独安装helm和tiller了， 
+文档：https://v3-1.docs.kubesphere.io/zh/docs/quick-start/minimal-kubesphere-on-k8s/
+``` sh
+# v3-1 也需要一个有一个默认的 StorageClass，这里我也用openebs，但安装方式有所差异
+kubectl apply -f https://openebs.github.io/charts/openebs-operator.yaml
+# 设置 openebs-hostpath 为默认
+kubectl patch sc openebs-hostpath -p '{"metadata": {"annotations": {"storageclass.beta.kubernetes.io/is-default-class": "true"}}}'
+# 查看
+kubectl sc
 
+# 安装 KubeSphere
+kubectl apply -f https://github.com/kubesphere/ks-installer/releases/download/v3.1.1/kubesphere-installer.yaml
 
+kubectl apply -f https://github.com/kubesphere/ks-installer/releases/download/v3.1.1/cluster-configuration.yaml
 
+# 检查日志
+kubectl logs -n kubesphere-system $(kubectl get pod -n kubesphere-system -l app=ks-install -o jsonpath='{.items[0].metadata.name}') -f 
+# 查看端口
+kubectl get svc/ks-console -n kubesphere-system
+kubectl get pod --all-namespaces
+kubectl get svc/ks-console -n kubesphere-system
+```
 
+#### 定制化安装&界面介绍
+至此以后，电脑配置已经撑不住了，各位看教程继续吧！
+
+### 进阶
+略，*电脑配置已经撑不住了，各位看教程继续吧！*
