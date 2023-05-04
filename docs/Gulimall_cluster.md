@@ -567,4 +567,321 @@ kubectl get svc/ks-console -n kubesphere-system
 至此以后，电脑配置已经撑不住了，各位看教程继续吧！
 
 ### 进阶
+#### KubeSphere
 略，*电脑配置已经撑不住了，各位看教程继续吧！*
+
+## 集群
+### 集群常见的基本形式
+![[Pasted image 20230504091527.png]]
+
+### MySQL
+#### 常见集群形式(集群原理)
+* MySQL-MMM 是Master-Master Replication Manager for MySQL (mysgl主主复制管理器)的简称，是 Google 的开源项目(Perl 脚本)。MMM 基于 MySQL Replication 做的扩展架构，主要用来监控 mysgl 主主复制并做失败转移。其原理是将真实数据库节点的IP (RIP) 映射为虚拟P (VIP) 集。mysol-mmm 的监管端会提供多人虚拟 IP (VIP)，包括一个可写 VIP多个可读 VIP，通过监管的管理，这些P 会绑定在可用 mysql之上，当某一台 mysgl 宕机时,监管会将 VIP迁移至其他 mysql。在整个监管过程中，需要在 mysql 中添加相关授权用户，以便让 mysgl 可以支持监理机的维护。授权的用户包括一个mmm monitor 用户和一个 mmm agent 用户，如果想使用mmm 的备份工具则还要添加一个 mmm tools 用户。
+	![[Pasted image 20230504092916.png]]
+* MHA (Master High Availability) 目前在 MySQL 高可用方面是一个相对成熟的解决方案由日本 DeNA 公司 youshimaton (现就职于 Facebook 公司) 开发，是一套优秀的作为MySOL高可用性环境下故障切换和主从提升的高可用软件。在 MySOL故障切换过程中MHA 能做到在 0~30 秒之内自动完成数据库的故障切换操作(以2019 年的眼光来说太慢了)，并且在进行故障切换的过程中，MHA 能在最大程度上保证数据的一致性，以达到真正意义上的高可用。
+* InnoDB Cluster 支持自动 Failover、强一致性、读写分离、读库高可用、读请求负载均衡，横向扩展的特性，是比较完备的一套方案。但是部署起来复杂，想要解决 router单点问题好需要新增组件，如没有其他更好的方案可考虑该方案。 InnoDB CIuster 主要由 MySOL Shell、MySOL Router 和 MySOL 服务器集群组成，三者协同工作，共同为MySOL 提供完整的高可用性解决方案。MySOL Shell 对管理人员提供管理接口，可以很方便的对集群进行配置和管理,MySOL Router 可以根据部署的集群状况自动的初始化，是客户端连接实例。如果有节点 down 机，集群会自动更新配置。集群包含单点写入和多点写入两种模式。在单主模式下，如果主节点 down 掉，从节点自动替换上来MySOL Router 会自动探测，并将客户端连接到新节点。
+	![[Pasted image 20230504094725.png]]
+
+以下可以作为企业中常用的数据库解决方案
+![[Pasted image 20230504095205.png]]
+
+#### 主从同步
+Master实例
+``` sh 
+docker run -p 3307:3306 --name mysql-master \
+-v /mydata/mysql/master/log:/var/log/mysql \
+-v /mydata/mysql/master/data:/var/lib/mysql \
+-v /mydata/mysql/master/conf:/etc/mysql \
+-e MYSQL_ROOT_PASSWORD=root \
+-d mysql:5.7
+
+# 参数说明 
+-p 3307:3306：将容器的 3306 端口映射到主机的 3307 端口
+-v /mydata/mysql/master/conf:/etc/mysql：将配置文件夹挂在到主机
+-v /mydata/mysql/master/log:/var/log/mysql：将日志文件夹挂载到主机
+-v /mydata/mysql/master/data:/var/lib/mysql/：将配置文件夹挂载到主机
+-e MYSQL_ROOT_PASSWORD=root：初始化 root
+
+
+# 修改 master 基本配置 
+vi /mydata/mysql/master/conf/my.cnf 
+
+[client] 
+default-character-set=utf8 
+
+[mysql] 
+default-character-set=utf8 
+
+[mysqld] 
+init_connect='SET collation_connection = utf8_unicode_ci' 
+init_connect='SET NAMES utf8' 
+character-set-server=utf8 
+collation-server=utf8_unicode_ci 
+skip-character-set-client-handshake 
+skip-name-resolve 
+# 注意：skip-name-resolve 一定要加，不然连接 mysql 会超级慢
+
+# 添加 master 主从复制部分配置 
+server_id=1 
+log-bin=mysql-bin 
+read-only=0 
+binlog-do-db=gulimall_ums 
+binlog-do-db=gulimall_pms 
+binlog-do-db=gulimall_oms 
+binlog-do-db=gulimall_sms 
+binlog-do-db=gulimall_wms 
+binlog-do-db=gulimall_admin 
+
+replicate-ignore-db=mysql 
+replicate-ignore-db=sys 
+replicate-ignore-db=information_schema 
+replicate-ignore-db=performance_schema
+
+# 重启 master
+```
+
+Slave实例
+``` sh
+docker run -p 3317:3306 --name mysql-slaver-01 \
+-v /mydata/mysql/slaver/log:/var/log/mysql \
+-v /mydata/mysql/slaver/data:/var/lib/mysql \
+-v /mydata/mysql/slaver/conf:/etc/mysql \
+-e MYSQL_ROOT_PASSWORD=root \
+-d mysql:5.7
+
+# 修改 slave 基本配置 
+vi /mydata/mysql/slaver/conf/my.cnf 
+
+[client] 
+default-character-set=utf8 
+
+[mysql] 
+default-character-set=utf8 
+
+[mysqld] 
+init_connect='SET collation_connection = utf8_unicode_ci' 
+init_connect='SET NAMES utf8' 
+character-set-server=utf8 
+collation-server=utf8_unicode_ci 
+skip-character-set-client-handshake 
+skip-name-resolve 
+
+#添加 master 主从复制部分配置 
+server_id=2 
+log-bin=mysql-bin 
+read-only=1 
+binlog-do-db=gulimall_ums 
+binlog-do-db=gulimall_pms 
+binlog-do-db=gulimall_oms 
+binlog-do-db=gulimall_sms 
+binlog-do-db=gulimall_wms 
+binlog-do-db=gulimall_admin 
+
+replicate-ignore-db=mysql 
+replicate-ignore-db=sys 
+replicate-ignore-db=information_schema 
+replicate-ignore-db=performance_schema
+
+# 重启 slaver
+```
+重启
+``` sh
+docker restart mysql-master mysql-slaver-01
+```
+
+为 master 授权用户来他的同步数据
+``` sh 
+# 1.进入 master 容器 
+docker exec -it mysql /bin/bash 
+# 2.进入 mysql 内部 （mysql –uroot -p）
+# 2.1.授权 root 可以远程访问（ 主从无关，为了方便我们远程连接 mysql） 
+grant all privileges on *.* to 'root'@'%' identified by 'root' with grant option;
+flush privileges; 
+# 2.2.添加用来同步的用户 
+GRANT REPLICATION SLAVE ON *.* to 'backup'@'%' identified by '123456'; 
+# 3.查看 master 状态 
+show master status
+```
+配置 slaver 同步 master 数据
+``` sh
+# 1.进入 slaver 容器 
+docker exec -it mysql-slaver-01 /bin/bash 
+# 2.进入 mysql 内部（mysql –uroot -p） 
+# 2.1.授权 root 可以远程访问（ 主从无关，为了方便我们远程连接 mysql） 
+grant all privileges on *.* to 'root'@'%' identified by 'root' with grant option; 
+flush privileges; 
+# 2.2.设置主库连接 
+change master to master_host='192.168.56.10',master_user='backup',master_password='123456',master_log_file='mysql-bin.000001',master_log_pos=0,master_port=3307; 
+# 3.启动从库同步 
+start slave; 
+# 4.查看从库状态 
+show slave status
+```
+![[Pasted image 20230504105146.png]]
+总结：
+1. 主从数据库在自己配置文件中声明需要同步哪个数据库，忽略哪个数据库等信息。 并且 server-id 不能一样 
+2. 主库授权某个账号密码来同步自己的数据
+3. 从库使用这个账号密码连接主库来同步数据
+
+### SharedingSphere
+#### 简介
+shardingSphere: http://shardingsphere.apache.org/index_zh.html 
+auto_increment_offset: 1 从几开始增长 
+auto_increment_increment: 2 每次的步长
+
+#### 分库分表&读写分离配置
+![[Pasted image 20230504110224.png]]
+账户配置 server.yaml
+``` yaml
+authority:
+  users:
+    - user: root@%
+      password: root
+    - user: sharding
+      password: sharding
+
+props:
+  kernel-executor-size: 16  # Infinite by default.
+  sql-show: false
+```
+分库分表配置 config-sharding.yaml
+``` yaml
+databaseName: sharding_db
+#
+dataSources:
+  ds_0:
+    url: jdbc:mysql://192.168.56.10:3307/demo_ds_0?serverTimezone=UTC&useSSL=false
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+  ds_1:
+    url: jdbc:mysql://192.168.56.10:3307/demo_ds_1?serverTimezone=UTC&useSSL=false
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+#
+rules:
+- !SHARDING
+  tables:
+    t_order:
+      actualDataNodes: ds_${0..1}.t_order_${0..1}
+      tableStrategy:
+        standard:
+          shardingColumn: order_id
+          shardingAlgorithmName: t_order_inline
+      keyGenerateStrategy:
+        column: order_id
+        keyGeneratorName: snowflake
+    t_order_item:
+      actualDataNodes: ds_${0..1}.t_order_item_${0..1}
+      tableStrategy:
+        standard:
+          shardingColumn: order_id
+          shardingAlgorithmName: t_order_item_inline
+      keyGenerateStrategy:
+        column: order_item_id
+        keyGeneratorName: snowflake
+  bindingTables:
+    - t_order,t_order_item
+  defaultDatabaseStrategy:
+    standard:
+      shardingColumn: user_id
+      shardingAlgorithmName: database_inline
+  defaultTableStrategy:
+    none:
+#
+  shardingAlgorithms:
+    database_inline:
+      type: INLINE
+      props:
+        algorithm-expression: ds_${user_id % 2}
+    t_order_inline:
+      type: INLINE
+      props:
+        algorithm-expression: t_order_${order_id % 2}
+    t_order_item_inline:
+      type: INLINE
+      props:
+        algorithm-expression: t_order_item_${order_id % 2}
+#
+  keyGenerators:
+    snowflake:
+      type: SNOWFLAKE
+```
+读写分离配置 config-readwrite-splitting.yaml
+``` yaml
+databaseName: readwrite_splitting_db
+#
+dataSources:
+  write_ds:
+    url: jdbc:mysql://192.168.56.10:3307/demo_ds_0?serverTimezone=UTC&useSSL=false
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+  read_ds_0:
+    url: jdbc:mysql://192.168.56.10:3307/demo_ds_0?serverTimezone=UTC&useSSL=false
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+  read_ds_1:
+    url: jdbc:mysql://192.168.56.10:3317/demo_ds_0?serverTimezone=UTC&useSSL=false
+    username: root
+    password: root
+    connectionTimeoutMilliseconds: 30000
+    idleTimeoutMilliseconds: 60000
+    maxLifetimeMilliseconds: 1800000
+    maxPoolSize: 50
+    minPoolSize: 1
+#
+rules:
+- !READWRITE_SPLITTING
+  dataSources:
+    readwrite_ds:
+      staticStrategy:
+        writeDataSourceName: write_ds
+        readDataSourceNames:
+          - read_ds_0
+          - read_ds_1
+      loadBalancerName: random
+  loadBalancers:
+    random:
+      type: RANDOM
+```
+
+redis
+![[Pasted image 20230504110253.png]]
+
+![[Pasted image 20230504110332.png]]
+
+
+es
+![[Pasted image 20230504110344.png]]
+
+
+
+
+
+![[Pasted image 20230504110413.png]]
+
+
+![[Pasted image 20230504110446.png]]
+
+![[Pasted image 20230504110506.png]]
+
+![[Pasted image 20230504110529.png]]
