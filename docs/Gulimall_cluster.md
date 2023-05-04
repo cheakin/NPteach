@@ -780,6 +780,10 @@ rules:
       keyGenerateStrategy:
         column: order_id
         keyGeneratorName: snowflake
+#      auditStrategy:
+#        auditorNames:
+#          - sharding_key_required_auditor
+#        allowHintDisable: true
     t_order_item:
       actualDataNodes: ds_${0..1}.t_order_item_${0..1}
       tableStrategy:
@@ -797,6 +801,10 @@ rules:
       shardingAlgorithmName: database_inline
   defaultTableStrategy:
     none:
+#  defaultAuditStrategy:
+#    auditorNames:
+#      - sharding_key_required_auditor
+#    allowHintDisable: true
 #
   shardingAlgorithms:
     database_inline:
@@ -815,6 +823,10 @@ rules:
   keyGenerators:
     snowflake:
       type: SNOWFLAKE
+#
+#  auditors:
+#    sharding_key_required_auditor:
+#      type: DML_SHARDING_CONDITIONS
 ```
 读写分离配置 config-readwrite-splitting.yaml
 ``` yaml
@@ -864,13 +876,87 @@ rules:
       type: RANDOM
 ```
 
-redis
-![[Pasted image 20230504110253.png]]
+### Redis
+#### Cluster基本原理
+* 客户端分区
+	![[Pasted image 20230504160140.png]]
+	客户端分区方案 的代表为 Redis Sharding，Redis Sharding 是 Redis Cluster 出来之前，业界普遍使用的 Redis 多实例集群 方法。Java 的 Redis 客户端驱动库 Jedis，支持 RedisSharding 功能，即 ShardedJedis 以及 结合缓存池的 ShardedJedisPool。
+	优点：不使用 第三方中间件，分区逻辑 可控，配置 简单，节点之间无关联，容易 线性扩展，灵活性强。
+	缺点：客户端 无法 动态增删 服务节点，客户端需要自行维护 分发逻辑，客户端之间 无连接共享会造成 连接浪费
 
+* 代理分区
+	![[Pasted image 20230504160316.png]]
+	代理分区常用方案有 Twemproxy 和 Codis
+
+* redis-cluster
+	1. 槽
+		https://redis.io/topics/cluster-tutorial/ 
+		Redis 的官方多机部署方案，Redis Cluster。一组 Redis Cluster 是由多个 Redis 实例组成，官 方推荐我们使用 6 实例，其中 3 个为主节点，3 个为从结点。一旦有主节点发生故障的时候， Redis Cluster 可以选举出对应的从结点成为新的主节点，继续对外服务，从而保证服务的高 可用性。那么对于客户端来说，知道知道对应的 key 是要路由到哪一个节点呢？Redis Cluster 把所有的数据划分为 16384 个不同的槽位，可以根据机器的性能把不同的槽位分配给不同 的 Redis 实例，对于 Redis 实例来说，他们只会存储部分的 Redis 数据，当然，槽的数据是 可以迁移的，不同的实例之间，可以通过一定的协议，进行数据迁移。
+		![[Pasted image 20230504165559.png]]
+		Redis 集群的功能限制；Redis 集群相对 单机 在功能上存在一些限制，需要开发人员提前 了解，在使用时做好规避。JAVA CRC16 校验算法
+		* key 批量操作 支持有限。 
+			* 类似 mset、mget 操作，目前只支持对具有相同 slot 值的 key 执行 批量操作。 对于 映射为不同 slot 值的 key 由于执行 mget、mget 等操作可能存在于多个节点上，因此不被支持。
+		* key 事务操作支持有限。 
+			* 只支持多 key 在 同一节点上 的 事务操作，当多个 key 分布在不同的节点上时无法使用事务功能。 
+		* key 作为 数据分区 的最小粒度 
+		* 不能将一个 大的键值 对象如 hash、list 等映射到不同的节点。 
+		* 不支持多数据库空间
+			* 单机 下的 Redis 可以支持 16 个数据库（db0 ~ db15），集群模式下只能使用一个 数据库空间，即 db0。 
+		* 复制结构只支持一层
+			* 从节点 只能复制 主节点，不支持嵌套树状复制结构。 
+		* 命令大多会重定向，耗时多
+		![[Pasted image 20230504165833.png]]
+	2. 一致性哈希
+		一致性哈希 可以很好的解决 稳定性问题，可以将所有的存储节点排列在收尾相接的 Hash 环上，每个 key 在计算 Hash 后会顺时针找到临接的存储节点 存放。而当有节点加入或 退出 时，仅影响该节点在 Hash 环上顺时针相邻的
+		![[Pasted image 20230504170313.png]]
+		Hash 倾斜 如果节点很少，容易出现倾斜，负载不均衡问题。一致性哈希算法，引入了虚拟节点，在整 个环上，均衡增加若干个节点。比如 a1，a2，b1，b2，c1，c2，a1 和 a2 都是属于 A 节点 的。解决 hash 倾斜问
+
+#### Cluster集群搭建
 ![[Pasted image 20230504110332.png]]
+创建 6 个 redis 节点
+``` sh
+# 3 主 3 从方式，从为了同步备份，主进行 slot 数据分片
+for port in $(seq 7001 7006); \
+do \
+mkdir -p /mydata/redis/node-${port}/conf
+touch /mydata/redis/node-${port}/conf/redis.conf
+cat << EOF >/mydata/redis/node-${port}/conf/redis.conf
+port ${port}
+cluster-enabled yes
+cluster-config-file nodes.conf
+cluster-node-timeout 5000
+cluster-announce-ip 192.168.56.10
+cluster-announce-port ${port}
+cluster-announce-bus-port 1${port}
+appendonly yes
+EOF
+docker run -p ${port}:${port} -p 1${port}:1${port} --name redis-${port} \
+-v /mydata/redis/node-${port}/data:/data \
+-v /mydata/redis/node-${port}/conf/redis.conf:/etc/redis/redis.conf \
+-d redis:5.0.7 redis-server /etc/redis/redis.conf; \
+done
+```
+使用 redis 建立集群
+``` sh
+docker exec -it redis-7001 bash
 
+redis-cli --cluster create 192.168.56.10:7001 192.168.56.10:7002 192.168.56.10:7003 192.168.56.10:7004 192.168.56.10:7005 192.168.56.10:7006 --cluster-replicas 1
+```
+测试集群效果
+``` sh
+# 随便进入某个 redis 容器 
+docker exec -it redis-7002 /bin/bash 
+# 使用 redis-cli 的 cluster 方式进行连接 
+redis-cli -c -h 192.168.56.10 -p 7006 
 
-es
+cluster info；# 获取集群信息 
+cluster nodes；# 获取集群节点 
+# Get/Set 命令测试，将会重定向 
+# 节点宕机，slave 会自动提升为 master，master 开启后变为 slav
+```
+
+### ElasticSearch
+#### 集群原理
 ![[Pasted image 20230504110344.png]]
 
 
