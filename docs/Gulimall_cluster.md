@@ -957,7 +957,221 @@ cluster nodes；# 获取集群节点
 
 ### ElasticSearch
 #### 集群原理
+https://www.elastic.co/guide/cn/elasticsearch/guide/current/index.html https://www.elastic.co/guide/cn/elasticsearch/guide/current/distributed-cluster.html elasticsearch 是天生支持集群的，他不需要依赖其他的服务发现和注册的组件，如 zookeeper 这些，因为他内置了一个名字叫 ZenDiscovery 的模块，是 elasticsearch 自己实现的一套用 于节点发现和选主等功能的组件，所以 elasticsearch 做起集群来非常简单，不需要太多额外 的配置和安装额外的第三方组件
+
+单节点
+* 一个运行中的 Elasticsearch 实例称为一个节点，而集群是由一个或者多个拥有相同 cluster.name 配置的节点组成， 它们共同承担数据和负载的压力。当有节点加入集群 中或者从集群中移除节点时，集群将会重新平均分布所有的数据。
+* 当一个节点被选举成为 主节点时， 它将负责管理集群范围内的所有变更，例如增加、 删除索引，或者增加、删除节点等。 而主节点并不需要涉及到文档级别的变更和搜索 等操作，所以当集群只拥有一个主节点的情况下，即使流量的增加它也不会成为瓶颈。 任何节点都可以成为主节点。我们的示例集群就只有一个节点，所以它同时也成为了主 节点。 
+* 作为用户，我们可以将请求发送到 集群中的任何节点 ，包括主节点。 每个节点都知 道任意文档所处的位置，并且能够将我们的请求直接转发到存储我们所需文档的节点。 无论我们将请求发送到哪个节点，它都能负责从各个包含我们所需文档的节点收集回数 据，并将最终结果返回給客户端。 Elasticsearch 对这一切的管理都是透明的。
 ![[Pasted image 20230504110344.png]]
+
+集群健康
+Elasticsearch 的集群监控信息中包含了许多的统计数据，其中最为重要的一项就是 集群健 康 ， 它在 status 字段中展示为 green 、 yellow 或者 red 。 
+`GET /_cluster/health status` 
+字段指示着当前集群在总体上是否工作正常。它的三种颜色含义如下： 
+green：所有的主分片和副本分片都正常运行。 
+yellow：所有的主分片都正常运行，但不是所有的副本分片都正常运行。 
+red：有主分片没能正常运行。
+
+分片 
+* 一个 分片 是一个底层的 工作单元 ，它仅保存了全部数据中的一部分。我们的文档被 存储和索引到分片内，但是应用程序是直接与索引而不是与分片进行交互。分片就认为 是一个数据区 
+* 一个分片可以是 主 分片或者 副本 分片。索引内任意一个文档都归属于一个主分片， 所以主分片的数目决定着索引能够保存的最大数据量。 
+* **在索引建立的时候就已经确定了主分片数**，但是副本分片数可以随时修改。 
+* 让我们在包含一个空节点的集群内创建名为 blogs 的索引。 索引在默认情况下会被分 配 5 个主分片， 但是为了演示目的，我们将分配 3 个主分片和一份副本（每个主分片 拥有一个副本分片）：
+	`PUT /blogs{ "settings" : { "number_of_shards" : 3, "number_of_replicas" : 1 }} `
+	![[Pasted image 20230509075238.png]]
+此时集群的健康状况为 yellow 则表示全部 主分片都正常运行（集群可以正常服务所有请 求），但是 副本 分片没有全部处在正常状态。 实际上，所有 3 个副本分片都是 unassigned —— 它们都没有被分配到任何节点。在同一个节点上既保存原始数据又保存副本是没有意 义的，因为一旦失去了那个节点，我们也将丢失该节点上的所有副本数据。
+当前我们的集群是正常运行的，但是在硬件故障时有丢失数据的风险
+
+新增节点 
+当你在同一台机器上启动了第二个节点时，只要它和第一个节点有同样的 cluster.name 配 置，它就会自动发现集群并加入到其中。 但是在不同机器上启动节点的时候，为了加入到 同一集群，你需要配置一个可连接到的单播主机列表。 详细信息请查看最好使用单播代替 组播 
+![[Pasted image 20230509075408.png]]
+此时，cluster-health 现在展示的状态为 green ，这表示所有 6 个分片（包括 3 个主分片和 3 个副本分片）都在正常运行。我们的集群现在不仅仅是正常运行的，并且还处于 始终可 用 的状态。
+
+水平扩容-启动第三个节点 
+![[Pasted image 20230509075522.png]]
+Node 1 和 Node 2 上各有一个分片被迁移到了新的 Node 3 节点，现在每个节点上都拥 有 2 个分片，而不是之前的 3 个。 这表示每个节点的硬件资源（CPU, RAM, I/O）将被更少 的分片所共享，每个分片的性能将会得到提升。 
+在运行中的集群上是可以动态调整副本分片数目的，我们可以按需伸缩集群。让我们把副本 数从默认的 1 增加到 2 
+`PUT /blogs/_settings { "number_of_replicas" : 2 }` 
+blogs 索引现在拥有 9 个分片：3 个主分片和 6 个副本分片。 这意味着我们可以将集群扩 容到 9 个节点，每个节点上一个分片。相比原来 3 个节点时，集群搜索性能可以提升 3 倍。 
+
+应对故障 
+![[Pasted image 20230509075632.png]]
+* 我们关闭的节点是一个主节点。而集群必须拥有一个主节点来保证正常工作，所以发生 的第一件事情就是选举一个新的主节点： Node 2 。 
+* 在我们关闭 Node 1 的同时也失去了主分片 1 和 2 ，并且在缺失主分片的时候索引 也不能正常工作。 如果此时来检查集群的状况，我们看到的状态将会为 red ：不是所 有主分片都在正常工作。 
+* 幸运的是，在其它节点上存在着这两个主分片的完整副本， 所以新的主节点立即将这 些分片在 Node 2 和 Node 3 上对应的副本分片提升为主分片， 此时集群的状态将会 为 yellow 。 这个提升主分片的过程是瞬间发生的，如同按下一个开关一般。 
+* 为什么我们集群状态是 yellow 而不是 green 呢？ 虽然我们拥有所有的三个主分片， 但是同时设置了每个主分片需要对应 2 份副本分片，而此时只存在一份副本分片。 所 以集群不能为 green 的状态，不过我们不必过于担心：如果我们同样关闭了 Node 2 ， 我们的程序 依然 可以保持在不丢任何数据的情况下运行，因为 Node 3 为每一个分 片都保留着一份副本。 
+* 如果我们重新启动 Node 1 ，集群可以将缺失的副本分片再次进行分配。如果 Node 1 依然拥有着之前的分片，它将尝试去重用它们，同时仅从主分片复制发生了修改的数据 文件。
+
+问题与解决 
+1. 主节点 主节点负责创建索引、删除索引、分配分片、追踪集群中的节点状态等工作。Elasticsearch 中的主节点的工作量相对较轻，用户的请求可以发往集群中任何一个节点，由该节点负责分 发和返回结果，而不需要经过主节点转发。**而主节点是由候选主节点通过 ZenDiscovery 机 制选举出来的，所以要想成为主节点，首先要先成为候选主节点。** 
+2. 候选主节点 在 elasticsearch 集群初始化或者主节点宕机的情况下，由候选主节点中选举其中一个作为主 节点。指定候选主节点的配置为：node.master: true。 
+	当主节点负载压力过大，或者集中环境中的网络问题，导致其他节点与主节点通讯的时候， 主节点没来的及响应，这样的话，某些节点就认为主节点宕机，重新选择新的主节点，这样 的话整个集群的工作就有问题了，比如我们集群中有 10 个节点，其中 7 个候选主节点，1 个候选主节点成为了主节点，这种情况是正常的情况。但是如果现在出现了我们上面所说的 主节点响应不及时，导致其他某些节点认为主节点宕机而重选主节点，那就有问题了，这剩 下的 6 个候选主节点可能有 3 个候选主节点去重选主节点，最后集群中就出现了两个主节点 的情况，这种情况官方成为“脑裂现象”； 
+	集群中不同的节点对于 master 的选择出现了分歧，出现了多个 master 竞争，导致主分片 和副本的识别也发生了分歧，**对一些分歧中的分片标识为了坏片**。 
+3. 数据节点 数据节点负责数据的存储和相关具体操作，比如 CRUD、搜索、聚合。所以，数据节点对机 器配置要求比较高，首先需要有足够的磁盘空间来存储数据，其次数据操作对系统 CPU、 Memory 和 IO 的性能消耗都很大。通常随着集群的扩大，需要增加更多的数据节点来提高 可用性。指定数据节点的配置：node.data: true。 
+	elasticsearch 是允许一个节点既做候选主节点也做数据节点的，但是数据节点的负载较重， 所以需要考虑将二者分离开，设置专用的候选主节点和数据节点，避免因数据节点负载重导 致主节点不响应。 
+4. 客户端节点 客户端节点就是既不做候选主节点也不做数据节点的节点，只负责请求的分发、汇总等等， 但是这样的工作，其实任何一个节点都可以完成，因为在 elasticsearch 中一个集群内的节点 都可以执行任何请求，其会负责将请求转发给对应的节点进行处理。所以单独增加这样的节 点更多是为了负载均衡。指定该节点的配置为： 
+	node.master: false 
+	node.data: false 
+5. 脑裂”问题可能的成因 
+	1. 网络问题：集群间的网络延迟导致一些节点访问不到 master，认为 master 挂掉了从而选 举出新的 master，并对 master 上的分片和副本标红，分配新的主分片 
+	2. 节点负载：主节点的角色既为 master 又为 data，访问量较大时可能会导致 ES 停止响应造 成大面积延迟，此时其他节点得不到主节点的响应认为主节点挂掉了，会重新选取主节点。 
+	3. 内存回收：data 节点上的 ES 进程占用的内存较大，引发 JVM 的大规模内存回收，造成 ES 进程失去响应。 
+	* 脑裂问题解决方案（旧版）： 
+		* 角色分离：即 master 节点与 data 节点分离，限制角色；数据节点是需要承担存储 和搜索的工作的，压力会很大。所以如果该节点同时作为候选主节点和数据节点， 那么一旦选上它作为主节点了，这时主节点的工作压力将会非常大，出现脑裂现象 的概率就增加了。 
+		* 减少误判：配置主节点的响应时间，在默认情况下，主节点 3 秒没有响应，其他节 点就认为主节点宕机了，那我们可以把该时间设置的长一点，该配置是： `discovery.zen.ping_timeout`
+		* 选举触发：discovery.zen.minimum_master_nodes:1（默认是 1），该属性定义的是 为了形成一个集群，有主节点资格并互相连接的节点的最小数目。 
+			* 一 个 有 10 节 点 的 集 群 ， 且 每 个 节 点 都 有 成 为 主 节 点 的 资 格 ， discovery.zen.minimum_master_nodes 参数设置为 6。 
+			* 正常情况下，10 个节点，互相连接，大于 6，就可以形成一个集群。 
+			* 若某个时刻，其中有 3 个节点断开连接。剩下 7 个节点，大于 6，继续运行之 前的集群。而断开的 3 个节点，小于 6，不能形成一个集群。 
+			* 该参数就是为了防止”脑裂”的产生。 
+			* 建议设置为(候选主节点数 / 2) + 1
+
+集群结构 
+以三台物理机为例。在这三台物理机上，搭建了 6 个 ES 的节点，三个 data 节点，三个 master 节点（每台物理机分别起了一个 data 和一个 master），3 个 master 节点，目的是达到（n/2） +1 等于 2 的要求，这样挂掉一台 master 后（不考虑 data），n 等于 2，满足参数，其他两 个 master 节点都认为 master 挂掉之后开始重新选举， 
+master 节点上 
+``` sh
+node.master = true 
+node.data = false 
+discovery.zen.minimum_master_nodes = 2 
+```
+data 节点上 
+``` sh
+node.master = false 
+node.data = true
+```
+![[Pasted image 20230509080535.png]]
+
+#### 集群搭建
+所有之前先运行：
+``` sh
+sysctl -w vm.max_map_count=262144
+
+# 我们只是测试，所以临时修改。永久修改使用下面 
+# 防止 JVM 报错 
+echo vm.max_map_count=262144 >> /etc/sysctl.conf sysctl -p
+``` 
+
+准备 docker 网络 
+Docker 创建容器时默认采用 bridge 网络，自行分配 ip，不允许自己指定。 
+在实际部署中，我们需要指定容器 ip，不允许其自行分配 ip，尤其是搭建集群时，固定 ip 是必须的。 
+我们可以创建自己的 bridge 网络 ： mynet，创建容器的时候指定网络为 mynet 并指定 ip 即可。
+查看网络模式 `docker network ls;` 
+创建一个新的 bridge 网络 `docker network create --driver bridge --subnet=172.18.12.0/16 --gateway=172.18.1.1 mynet` 
+查看网络信息 `docker network inspect mynet` 
+以后使用 `--network=mynet --ip 172.18.12.x` 指定 ip
+
+3-Master 节点创建
+``` sh
+for port in $(seq 1 3); \
+do \
+mkdir -p /mydata/elasticsearch/master-${port}/config 
+mkdir -p /mydata/elasticsearch/master-${port}/data 
+chmod -R 777 /mydata/elasticsearch/master-${port} 
+cat << EOF >/mydata/elasticsearch/master-${port}/config/elasticsearch.yml
+cluster.name: my-es #集群的名称，同一个集群该值必须设置成相同的 
+node.name: es-master-${port} #该节点的名字 
+node.master: true #该节点有机会成为 master 节点 
+node.data: false #该节点可以存储数据 
+network.host: 0.0.0.0 
+http.host: 0.0.0.0 #所有 http 均可访问 
+http.port: 920${port} transport.tcp.port: 930${port} 
+# discovery.zen.minimum_master_nodes: 2 #设置这个参数来保证集群中的节点可以知道其 它 N 个有 master 资格的节点。官方推荐（N/2）+1，新版可忽略 
+discovery.zen.ping_timeout: 10s #设置集群中自动发现其他节点时 ping 连接的超时时间 
+discovery.seed_hosts: ["172.18.12.21:9301", "172.18.12.22:9302", "172.18.12.23:9303"] #设置集 群中的 Master 节点的初始列表，可以通过这些节点来自动发现其他新加入集群的节点，es7 的新增配置 
+cluster.initial_master_nodes: ["172.18.12.21"] #新集群初始时的候选主节点，es7 的新增配置 
+EOF
+docker run --name elasticsearch-node-${port} \
+-p 920${port}:920${port} -p 930${port}:930${port} \
+--network=mynet --ip 172.18.12.2${port} \
+-e ES_JAVA_OPTS="-Xms300m -Xmx300m" \
+-v /mydata/elasticsearch/master-${port}/config/elasticsearch.yml:/usr/share/elasticsearch/config/el asticsearch.yml \
+-v /mydata/elasticsearch/master-${port}/data:/usr/share/elasticsearch/data \
+-v /mydata/elasticsearch/master-${port}/plugins:/usr/share/elasticsearch/plugins \
+-d elasticsearch:7.4.2 
+done
+```
+
+3-Data-Node 创建
+``` sh
+for port in $(seq 4 6); \
+do \
+mkdir -p /mydata/elasticsearch/node-${port}/config
+mkdir -p /mydata/elasticsearch/node-${port}/data
+chmod -R 777 /mydata/elasticsearch/node-${port}
+cat << EOF >/mydata/elasticsearch/node-${port}/config/elasticsearch.yml
+cluster.name: my-es #集群的名称，同一个集群该值必须设置成相同的
+node.name: es-node-${port} #该节点的名字
+node.master: false #该节点有机会成为 master 节点
+node.data: true #该节点可以存储数据
+network.host: 0.0.0.0 #network.publish_host: 192.168.56.10 #互相通信 ip，要设置为本机可被外界访问的 ip，否则 无法通信
+http.host: 0.0.0.0 #所有 http 均可访问
+http.port: 920${port} transport.tcp.port: 930${port}
+# discovery.zen.minimum_master_nodes: 2 #设置这个参数来保证集群中的节点可以知道其 它 N 个有 master 资格的节点。官方推荐（N/2）+1，新版可忽略 
+discovery.zen.ping_timeout: 10s #设置集群中自动发现其他节点时 ping 连接的超时时间 
+discovery.seed_hosts: ["172.18.12.21:9301", "172.18.12.22:9302", "172.18.12.23:9303"] #设置集 群中的 Master 节点的初始列表，可以通过这些节点来自动发现其他新加入集群的节点，es7 的新增配置
+cluster.initial_master_nodes: ["172.18.12.21"] #新集群初始时的候选主节点，es7 的新增配置
+EOF
+docker run --name elasticsearch-node-${port} \
+-p 920${port}:920${port} -p 930${port}:930${port} \
+--network=mynet --ip 172.18.12.2${port} \
+-e ES_JAVA_OPTS="-Xms300m -Xmx300m" \
+-v /mydata/elasticsearch/node-${port}/config/elasticsearch.yml:/usr/share/elasticsearch/config/ela sticsearch.yml \
+-v /mydata/elasticsearch/node-${port}/data:/usr/share/elasticsearch/data \
+-v /mydata/elasticsearch/node-${port}/plugins:/usr/share/elasticsearch/plugins \
+-d elasticsearch:7.4.2
+done
+```
+
+测试集群 
+``` sh
+http://192.168.56.10:9201/_nodes/process?pretty 查看节点状况 http://192.168.56.10:9201/_cluster/stats?pretty 查看集群状态 http://192.168.56.10:9201/_cluster/health?pretty 查看集群健康状况 http://192.168.56.10:9202/_cat/nodes 查看各个节点信息 
+curl localhost:9200/_cat 
+/_cat/allocation
+/_cat/shards
+/_cat/shards/{index}
+/_cat/master
+/_cat/nodes
+/_cat/indices
+/_cat/indices/{index}
+/_cat/segments
+/_cat/segments/{index}
+/_cat/count
+/_cat/count/{index}
+/_cat/recovery
+/_cat/recovery/{index}
+/_cat/health
+/_cat/pending_tasks
+/_cat/aliases
+/_cat/aliases/{alias}
+/_cat/thread_pool
+/_cat/plugins
+/_cat/fielddata
+/_cat/fielddata/{fields}
+/_cat/nodeattrs
+/_cat/repositories
+/_cat/snapshots/{repository}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
