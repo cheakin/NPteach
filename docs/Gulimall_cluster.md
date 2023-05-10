@@ -1153,7 +1153,74 @@ curl localhost:9200/_cat
 /_cat/snapshots/{repository}
 ```
 
+### RabbitMQ
+集群形式
+RabbiMQ 是用 Erlang 开发的，集群非常方便，因为 Erlang 天生就是一门分布式语言，但其 本身并不支持负载均衡。
+RabbitMQ 集群中节点包括内存节点(RAM)、磁盘节点(Disk，消息持久化)，集群中至少有 一个 Disk 节点。
+* 普通模式(默认) 
+	对于普通模式，集群中各节点有相同的队列结构，但消息只会存在于集群中的一个节 点。对于消费者来说，若消息进入 A 节点的 Queue 中，当从 B 节点拉取时，RabbitMQ 会 将消息从 A 中取出，并经过 B 发送给消费者。
+	应用场景：该模式各适合于消息无需持久化的场合，如日志队列。当队列非持久化，且 创建该队列的节点宕机，客户端才可以重连集群其他节点，并重新创建队列。若为持久化， 只能等故障节点恢复。
+* 镜像模式
+	与普通模式不同之处是消息实体会主动在镜像节点间同步，而不是在取数据时临时拉 取，高可用；该模式下，mirror queue 有一套选举算法，即 1 个 master、n 个 slaver，生产 者、消费者的请求都会转至 master。
+	应用场景：可靠性要求较高场合，如下单、库存队列。
+	缺点：若镜像队列过多，且消息体量大，集群内部网络带宽将会被此种同步通讯所消 耗。
+（1）镜像集群也是基于普通集群，即只有先搭建普通集群，然后才能设置镜像队列。
+（2）若消费过程中，master 挂掉，则选举新 master，若未来得及确认，则可能会重复消费。 
 
+搭建集群
+``` sh
+mkdir /mydata/rabbitmq
+cd rabbitmq/
+mkdir rabbitmq01 rabbitmq02 rabbitmq03
+
+docker run -d --hostname rabbitmq01 --name rabbitmq01 -v /mydata/rabbitmq/rabbitmq01:/var/lib/rabbitmq -p 15673:15672 -p 5673:5672 -e RABBITMQ_ERLANG_COOKIE='atguigu' rabbitmq:management
+
+docker run -d --hostname rabbitmq02 --name rabbitmq02 -v /mydata/rabbitmq/rabbitmq02:/var/lib/rabbitmq -p 15674:15672 -p 5674:5672 -e RABBITMQ_ERLANG_COOKIE='atguigu' --link rabbitmq01:rabbitmq01 rabbitmq:management
+
+docker run -d --hostname rabbitmq03 --name rabbitmq03 -v /mydata/rabbitmq/rabbitmq03:/var/lib/rabbitmq -p 15675:15672 -p 5675:5672 -e RABBITMQ_ERLANG_COOKIE='atguigu' --link rabbitmq01:rabbitmq01 --link rabbitmq02:rabbitmq02 rabbitmq:management
+
+# --hostname 设置容器的主机名
+# RABBITMQ_ERLANG_COOKIE 节点认证作用，部署集成时 需要同步该值 
+```
+节点加入集群
+``` sh
+# 进入第一个节点
+docker exec -it rabbitmq01 /bin/bash
+rabbitmqctl stop_app
+rabbitmqctl reset
+rabbitmqctl start_app
+exit
+
+# 进入第二个节点 
+docker exec -it rabbitmq02 /bin/bash
+rabbitmqctl stop_app
+rabbitmqctl reset
+rabbitmqctl join_cluster --ram rabbit@rabbitmq01
+rabbitmqctl start_app
+exit
+
+# 进入第三个节点
+docker exec -it rabbitmq03 bash
+rabbitmqctl stop_app
+rabbitmqctl reset
+rabbitmqctl join_cluster --ram rabbit@rabbitmq01
+rabbitmqctl start_app
+exit
+```
+实现镜像集群
+``` sh
+docker exec -it rabbitmq01 bash
+rabbitmqctl set_policy -p / ha "^" '{"ha-mode":"all","ha-sync-mode":"automatic"}'
+
+# 查看 vhost/下面的所有 policy
+rabbitmqctl list_policies -p /;
+
+# 在 cluster 中任意节点启用策略，策略会自动同步到集群节点
+rabbitmqctl set_policy-p/ha-all"^"’{“ha-mode”:“all”}’
+# 策略模式 all 即复制到所有节点，包含新增节点，策略正则表达式为 “^” 表示所有匹配所 有队列名称。“^hello”表示只匹配名为 hello 开始的队列
+```
+ 集群测试
+ 随便在 mq 上创建一个队列，发送一个消息，保证整个集群其他节点都有这个消息。如果 master 宕机，其他节点也能成为新的 maste
 
 
 
