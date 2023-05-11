@@ -700,7 +700,7 @@ flush privileges;
 # 2.2.添加用来同步的用户 
 GRANT REPLICATION SLAVE ON *.* to 'backup'@'%' identified by '123456'; 
 # 3.查看 master 状态 
-show master status
+show master status\G
 ```
 配置 slaver 同步 master 数据
 ``` sh
@@ -1222,32 +1222,133 @@ rabbitmqctl set_policy-p/ha-all"^"’{“ha-mode”:“all”}’
  集群测试
  随便在 mq 上创建一个队列，发送一个消息，保证整个集群其他节点都有这个消息。如果 master 宕机，其他节点也能成为新的 maste
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## 部署
+### 如何在k8s上部署有状态应用
+* 有状态服务抽取配置为 ConfigMap 
+* 有状态服务必须使用 pvc 持久化数据 
+* 服务集群内访问使用 DNS 提供的稳定域名
 ![[Pasted image 20230504110413.png]]
 
+### 部署 MySQL
+启动参照docker
+``` sh
+ocker run -p 3307:3306 --name mysql-master \
+-v /mydata/mysql/master/log:/var/log/mysql \
+-v /mydata/mysql/master/data:/var/lib/mysql \
+-v /mydata/mysql/master/conf:/etc/mysql \
+-e MYSQL_ROOT_PASSWORD=root \
+-d mysql:5.7
+```
+master的conf参照
+``` sh
+[client] 
+default-character-set=utf8 
 
+[mysql] 
+default-character-set=utf8 
+
+[mysqld] 
+init_connect='SET collation_connection = utf8_unicode_ci' 
+init_connect='SET NAMES utf8' 
+character-set-server=utf8 
+collation-server=utf8_unicode_ci 
+skip-character-set-client-handshake 
+skip-name-resolve 
+# 注意：skip-name-resolve 一定要加，不然连接 mysql 会超级慢
+
+# 添加 master 主从复制部分配置 
+server_id=1 
+log-bin=mysql-bin 
+read-only=0 
+binlog-do-db=gulimall_ums 
+binlog-do-db=gulimall_pms 
+binlog-do-db=gulimall_oms 
+binlog-do-db=gulimall_sms 
+binlog-do-db=gulimall_wms 
+binlog-do-db=gulimall_admin 
+
+replicate-ignore-db=mysql 
+replicate-ignore-db=sys 
+replicate-ignore-db=information_schema 
+replicate-ignore-db=performance_schema
+```
+
+slave的conf参照
+``` sh
+[client] 
+default-character-set=utf8 
+
+[mysql] 
+default-character-set=utf8 
+
+[mysqld] 
+init_connect='SET collation_connection = utf8_unicode_ci' 
+init_connect='SET NAMES utf8' 
+character-set-server=utf8 
+collation-server=utf8_unicode_ci 
+skip-character-set-client-handshake 
+skip-name-resolve 
+
+#添加 master 主从复制部分配置 
+server_id=2 
+log-bin=mysql-bin 
+read-only=1 
+binlog-do-db=gulimall_ums 
+binlog-do-db=gulimall_pms 
+binlog-do-db=gulimall_oms 
+binlog-do-db=gulimall_sms 
+binlog-do-db=gulimall_wms 
+binlog-do-db=gulimall_admin 
+
+replicate-ignore-db=mysql 
+replicate-ignore-db=sys 
+replicate-ignore-db=information_schema 
+replicate-ignore-db=performance_schema
+```
+
+开启同步参照
+``` sh
+# master节点
+RANT REPLICATION SLAVE ON *.* to 'backup'@'%' identified by '123456'; 
+# 查看状态
+show master status\G
+
+# savle节点
+change master to master_host='192.168.56.10',master_user='backup',master_password='123456',master_log_file='mysql-bin.000001',master_log_pos=0,master_port=3307; 
+# 启动从库同步 
+start slave; 
+# 查看从库状态 
+show slave status
+```
+
+### k8s部署Redis
+略
+
+### k8s部署ElasticSearch
+略
+
+### k8s部署RabbitMQ
+略
+
+### k8s部署Nacos
+略
+
+### k8s部署Zipkin
+略
+
+### k8s部署Sentinel
+略
+
+### k8s部署应用的流程
 ![[Pasted image 20230504110446.png]]
+
+
+
+
+
+
+
+
 
 ![[Pasted image 20230504110506.png]]
 
