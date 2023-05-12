@@ -1342,6 +1342,15 @@ show slave status
 ### k8s部署应用的流程
 ![[Pasted image 20230504110446.png]]
 
+### 生产环境配置抽取
+拷贝并修改配置文件中的内容
+``` yaml
+spring.redis.host=redis.gulimall  
+spring.cloud.sentinel.transport.dashboard=sentinel-service:8080  
+spring.cloud.nacos.discovery.server-addr=nacos-service.gulimall:8848  
+spring.zipkin.base-url=http://zipkin-service.gulimall:9411/  
+spring.datasource.url=jdbc:mysql://mysql-master.gulimall:3306/xxx
+```
 
 
 
