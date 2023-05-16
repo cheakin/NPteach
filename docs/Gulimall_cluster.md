@@ -1356,10 +1356,34 @@ spring.datasource.url=jdbc:mysql://mysql-master.gulimall:3306/xxx
 ```
 
 #### 创建微服务dockerfile
+dockerfile例子
+``` sh
+FROM java:8  
+EXPOSE 8080  
+  
+VOLUME /tmp  
+ADD renren-fast.jar /app.jar  
+RUN bash -c 'touch /app.jar'  
+ENTRYPOINT ["java","-jar","/app.jar"]
+```
+打包命令
+``` sh 
+# 打包为镜像
+docker build -f Dockerfile -t docker io/leifengyang/cart v1.0 .
+```
 
+将所有服务的端口都修改为8080
 
-
-
+为每个服务都新增Dockerfile文件
+``` sh
+FROM java:8  
+EXPOSE 8080  
+  
+VOLUME /tmp  
+ADD target/*.jar /app.jar  
+RUN bash -c 'touch /app.jar'  
+ENTRYPOINT ["java","-jar","/app.jar","--spring.profiles.active=prod"]
+```
 
 
 ![[Pasted image 20230504110506.png]]
