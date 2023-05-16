@@ -1,49 +1,49 @@
-spring:
-  main:
-    allow-circular-references: true # 解决升级 Spring Boot 2.6后，因循环引用导致启动时报告的问题
-
-  #  profiles:
-#    active: oss
-  datasource:
-    username: root
-    password: root
-    url: jdbc:mysql://192.168.56.10:3306/gulimall_pms
-    driverClassName: com.mysql.cj.jdbc.Driver
-
-  cloud:
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848
-  application:
-    name: gulimall-product
-  jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-  thymeleaf:
-    cache: false
-#    cache: true
-  redis:
-    host: 192.168.56.10
-    port: 6379
-
-  session:
-    store-type: redis
-    timeout: 30m
-
-
-mybatis-plus:
-  # 指定mapper文件位置
-  mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
-  # 指定主键自增
-  global-config:
-    db-config:
-      id-type: auto
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-
-logging:
-  level:
-#    cn.cheakin.gulimall: debug
-    cn.cheakin.gulimall: info
-
-server:
-  port: 10000
+#spring:
+#  main:
+#    allow-circular-references: true # 解决升级 Spring Boot 2.6后，因循环引用导致启动时报告的问题
+#
+#  #  profiles:
+##    active: oss
+#  datasource:
+#    username: root
+#    password: root
+#    url: jdbc:mysql://192.168.56.10:3306/gulimall_pms
+#    driverClassName: com.mysql.cj.jdbc.Driver
+#
+#  cloud:
+#    nacos:
+#      discovery:
+#        server-addr: 127.0.0.1:8848
+#  application:
+#    name: gulimall-product
+#  jackson:
+#    date-format: yyyy-MM-dd HH:mm:ss
+#  thymeleaf:
+#    cache: false
+##    cache: true
+#  redis:
+#    host: 192.168.56.10
+#    port: 6379
+#
+#  session:
+#    store-type: redis
+#    timeout: 30m
+#
+#
+#mybatis-plus:
+#  # 指定mapper文件位置
+#  mapper-locations: classpath*:/mapper/**/*.xml # classpath指当前项目的classpath, classpath*则不指定当前项目
+#  # 指定主键自增
+#  global-config:
+#    db-config:
+#      id-type: auto
+#      logic-delete-value: 1
+#      logic-not-delete-value: 0
+#
+#logging:
+#  level:
+##    cn.cheakin.gulimall: debug
+#    cn.cheakin.gulimall: info
+#
+#server:
+#  port: 10000

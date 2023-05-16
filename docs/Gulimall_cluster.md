@@ -1223,13 +1223,14 @@ rabbitmqctl set_policy-p/ha-all"^"’{“ha-mode”:“all”}’
  随便在 mq 上创建一个队列，发送一个消息，保证整个集群其他节点都有这个消息。如果 master 宕机，其他节点也能成为新的 maste
 
 ## 部署
-### 如何在k8s上部署有状态应用
+### 基础服务
+#### 如何在k8s上部署有状态应用
 * 有状态服务抽取配置为 ConfigMap 
 * 有状态服务必须使用 pvc 持久化数据 
 * 服务集群内访问使用 DNS 提供的稳定域名
 ![[Pasted image 20230504110413.png]]
 
-### 部署 MySQL
+#### 部署 MySQL
 启动参照docker
 ``` sh
 ocker run -p 3307:3306 --name mysql-master \
@@ -1321,28 +1322,30 @@ start slave;
 show slave status
 ```
 
-### k8s部署Redis
+#### k8s部署Redis
 略
 
-### k8s部署ElasticSearch
+#### k8s部署ElasticSearch
 略
 
-### k8s部署RabbitMQ
+#### k8s部署RabbitMQ
 略
 
-### k8s部署Nacos
+#### k8s部署Nacos
 略
 
-### k8s部署Zipkin
+#### k8s部署Zipkin
 略
 
-### k8s部署Sentinel
+#### k8s部署Sentinel
 略
 
-### k8s部署应用的流程
+
+### 应用服务
+#### k8s部署应用的流程
 ![[Pasted image 20230504110446.png]]
 
-### 生产环境配置抽取
+#### 生产环境配置抽取
 拷贝并修改配置文件中的内容
 ``` yaml
 spring.redis.host=redis.gulimall  
@@ -1352,7 +1355,7 @@ spring.zipkin.base-url=http://zipkin-service.gulimall:9411/
 spring.datasource.url=jdbc:mysql://mysql-master.gulimall:3306/xxx
 ```
 
-
+#### 创建微服务dockerfile
 
 
 
