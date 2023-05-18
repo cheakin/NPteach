@@ -1385,6 +1385,122 @@ RUN bash -c 'touch /app.jar'
 ENTRYPOINT ["java","-jar","/app.jar","--spring.profiles.active=prod"]
 ```
 
+#### 创建微服务k8s部署描述文件
+描述文件解释
+``` yaml
+kind: Deployment # 接口类型
+apiVersion: v1 # 接口版本
+metadata:
+  name: gulimall-auth-server # Deployment名称
+  namespace: gulimall # 命名空间
+  labels:
+    app: gulimall-auth-server # 标签
+spec:
+  replicas: 1 # 副本数
+  selector: # 选择器
+    matchLabels:
+      app: gulimall-auth-server # 匹配pod标签
+  template: # pod模板
+    metadata: # pod元数据
+      labels:
+        app: gulimall-auth-server # pod模板名称标签，必填
+    spec: # pod模板名称标签，必填
+      containers:
+        name: gulimall-auth-server # 镜像名称
+        image: $REGISTRY/$DOCKERHUB_NAMESPACE/$APP_NAME:$TAG_NAME # 镜像地址
+        ports:
+            - containerPort: 8080 # 对service暴露端口
+              protocol: TCP
+        resources: # CPU内存等资源限制
+            limits:
+              cpu: 1000m
+              memory: 500Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: Always # 一直重新拉取
+        restartPolicy: Always # 自启动
+      terminationGracePeriodSeconds: 30 # 中断停机时长
+      dnsPolicy: ClusterFirst # DNS策略
+    strategy: # 更新策略
+      type: RollingUpdate
+      rollingUpdate: # 若replicas为3,则整个升级,pod个数在2-4个之间
+        maxUnavailable: 25% # 滚动升级时允许的最大Unavailable的pod数
+        maxSurge: 25% # 更新时的最大存活数
+      revisionHistoryLimit: 10 # 保留的历史版本数
+      progressDeadkuneSeconds: 600 # 执行上限时间
+```
+描述文件
+``` sh
+kind: Deployment
+apiVersion: v1
+metadata:
+  name: gulimall-auth-server
+  namespace: gulimall
+  labels:
+    app: gulimall-auth-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gulimall-auth-server
+  template:
+    metadata:
+      labels:
+        app: gulimall-auth-server
+    spec:
+      containers:
+        name: gulimall-auth-server
+        image: $REGISTRY/$DOCKERHUB_NAMESPACE/$APP_NAME:$TAG_NAME
+        ports:
+            - containerPort: 8080
+              protocol: TCP
+        resources:
+            limits:
+              cpu: 1000m
+              memory: 500Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        imagePullPolicy: Always
+        restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 25%
+        maxSurge: 25%
+revisionHistoryLimit: 10
+progressDeadkuneSeconds: 600
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: gulimall-auth-server
+  namespace: gulimall
+  labels:
+    app: gulimall-auth-server
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 20001
+  selector:
+    app: gulimall-auth-server
+  type: NodePort
+  sessionAffinity: None
+```
+
+
+
 
 ![[Pasted image 20230504110506.png]]
 
