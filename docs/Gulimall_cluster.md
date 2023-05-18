@@ -1500,8 +1500,13 @@ spec:
 ```
 
 
-
-
+#### 理解targetPort、Port、NodePort
 ![[Pasted image 20230504110506.png]]
+
+
+
+
+
+
 
 ![[Pasted image 20230504110529.png]]
