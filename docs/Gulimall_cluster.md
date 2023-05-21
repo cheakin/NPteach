@@ -1506,14 +1506,15 @@ spec:
 ## 流水线
 ### 第一步
 #### gitee拉取代码 & 参数化构建&环境变量
+Jenkinsfile
 ``` 
 pipeline {
   agent {
     node {
       label 'maven'
     }
-
   }
+  
   stages {
     stage('拉取代码') {
       steps {
@@ -1586,8 +1587,8 @@ pipeline {
         }
       }
     }
-
   }
+  
   environment {
     DOCKER_CREDENTIAL_ID = 'aliyun-hub-id'
     GITEE_CREDENTIAL_ID = 'gitee-id'
@@ -1605,9 +1606,86 @@ pipeline {
 }
 ```
 
-#### 参数化构建&环境变量
+
+### 第二步
+#### Sonar代码质量分析
+mvn-settings.xml
+``` xml
+<settings>
+    <mirrors>
+        <mirror>
+            <id>nexus-aliyun</id>
+            <mirrorOf>central</mirrorOf>
+            <name>Nexus aliyun</name>
+            <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+        </mirror>
+    </mirrors>
+    <profiles>
+        <profile>
+            <id>jdk-1.8</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+                <jdk>1.8</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.source>1.8</maven.compiler.source>
+                <maven.compiler.target>1.8</maven.compiler.target>
+                <maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
+            </properties>
+        </profile>
+    </profiles>
+</settings>
+```
+根路径的pom.xml
+``` xml
+<!--sonar.java.binaries-->  
+<sonar.jacoco.reportPaths>${PWD}/./target/jacoco.exec</sonar.jacoco.reportPaths>  
+<sonar.groovy.binaries>target/classes</sonar.groovy.binaries>
 
 
+<!--sonar-->
+<plugin>
+	<groupId>org.jacoco</groupId>
+	<artifactId>jacoco-maven-plugin</artifactId>
+	<version>0.8.2</version>
+	<configuration>
+		<append>true</append>
+	</configuration>
+	<executions>
+		<execution>
+			<id>agent-for-ut</id>
+			<goals>
+				<goal>prepare-agent</goal>
+			</goals>
+		</execution>
+		<execution>
+			<id>agent-for-it</id>
+			<goals>
+				<goal>prepare-agent-integration</goal>
+			</goals>
+		</execution>
+		<execution>
+			<id>jacoco-site</id>
+			<phase>verify</phase>
+			<goals>
+				<goal>report</goal>
+			</goals>
+		</execution>
+	</executions>
+</plugin>
+<plugin>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-maven-plugin</artifactId>
+	<configuration>
+		<fork>true</fork>
+	</configuration>
+</plugin>
+<plugin>
+	<groupId>org.sonarsource.scanner.maven</groupId>
+	<artifactId>sonar-maven-plugin</artifactId>
+	<version>3.6.0.1398</version>
+</plugin>
+```
 
 
 ![[Pasted image 20230504110529.png]]
