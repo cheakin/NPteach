@@ -1699,7 +1699,7 @@ mvn-settings.xml
 ### 流水线部署所有微服务
 略
 
-### Docker镜像服务&整合阿里云镜像仓库
+### Docker镜像服务 & 整合阿里云镜像仓库
 ![[Pasted image 20230504110529.png]]
 
 1. 创建项目 dockerfile 
@@ -1733,4 +1733,57 @@ mvn-settings.xml
     3) 推送镜像 
         `docker tag [ImageId] registry.cn-hangzhou.aliyuncs.com/atguigumall/gulimall-nginx:v1`
         `docker push registry.cn-hangzhou.aliyuncs.com/atguigumall/gulimall-nginx:v1
-`
+
+### Jenkins修改阿里云镜像仓库
+略
+
+### 部署gateway & 部署auth-server & 部署cart & 部署coupon
+略
+
+### 部署完成&bug修改
+seckill服务的MyRedissonConfig
+``` java
+@Bean
+public RedissonClient redissonClient(@Value("${spring.redis.host}")String host){
+	Config config = new Config();
+	config.useSingleServer().setAddress("redis://" + host + ":6379");
+	RedissonClient redissonClient = Redisson.create(config);
+	return redissonClient;
+}
+```
+product服务的RedissonConfig
+``` java
+@Bean(destroyMethod = "shutdown")
+public RedissonClient redisson(@Value("${spring.redis.host}")String host) throws IOException {
+	// 1、创建配置
+	Config config = new Config();
+	// Redis url should start with redis:// or rediss://
+	config.useSingleServer().setAddress("redis://" + host + ":6379");
+
+	// 2、根据 Config 创建出 RedissonClient 实例
+	return Redisson.create(config);
+}
+```
+
+### 修改为共有仓库
+略
+
+## 最终部署
+### 第一次部署前置nginx
+
+
+### 商城系统上线
+nginx的Dockerfile
+``` sh
+FROM nginx
+MAINTAINER leifengyang
+ADD html.tar.gz /usr/share/nginx/html
+ADD conf.tar.gz /etc/nginx
+EXPOSE 80
+ENTRYPOINT nginx -g "daemon off;"
+```
+docker 
+
+
+
+
