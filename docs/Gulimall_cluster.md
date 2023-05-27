@@ -1696,5 +1696,41 @@ mvn-settings.xml
 
 修改各个项目的Dockerfile里的启动参数，加上`"-Xms128m","-Xmx300m",`
 
+### 流水线部署所有微服务
+略
 
+### Docker镜像服务&整合阿里云镜像仓库
 ![[Pasted image 20230504110529.png]]
+
+1. 创建项目 dockerfile 
+2. 上传项目到服务器。 
+3. 进入项目，构建镜像到本地仓库； 
+    1) `docker build -t nginx:GA-1.0 -f ./Dockerfile .` 别忘了最后的小数点。 
+    2) `docker images` 查看镜像 
+    3) `docker exec -it 容器 id /bin/bash;`进入容器，修改容器 
+    4) `docker commit -a “leifengyang” -m “nginxxx” 容器 id mynginx:GA-2.0 1 `
+        * docker commit [OPTIONS] CONTAINER [REPOSITORY[:TAG]] 2 
+        * OPTIONS 说明： 
+            * -a :提交的镜像作者； 
+            * -c :使用 Dockerfile 指令来创建镜像；
+            * -m :提交时的说明文字；
+            * -p :在 commit 时，将容器暂停。     
+    5) `docker login` : 登陆到一个 Docker 镜像仓库，如果未指定镜像仓库地址，默认为官 方仓库 Docker Hub 
+        * `docker login -u 用户名 -p 密码 `
+    6) `docker logout` : 登出一个 Docker 镜像仓库，如果未指定镜像仓库地址，默认为官 方仓库 Docker Hub 
+4. 推送镜像到 docker hub 
+    1) 标记镜像，`docker tag local-image:tagname username/new-repo:tagname `
+    2) 上传镜像，`docker push username/new-repo:tagname  `
+5. 保存镜像，加载镜像 
+    1) 可以保存镜像为 tar，使用 u 盘等设备复制到任意 docker 主机，再次加载镜像 
+    2) 保存：`docker save spring-boot-docker -o /home/spring-boot-docker.tar `
+    3) 加载：`docker load -i spring-boot-docker.tar `
+6. 阿里云操作 
+    1) 登录阿里云，密码就是开通镜像仓库时的密码 
+        `docker login --username=qwertyuiopasdf_aa registry.cn-hangzhou.aliyuncs.com `
+    2) 拉取镜像 
+        `docker pull registry.cn-hangzhou.aliyuncs.com/atguigumall/gulimall-nginx:v1.0 `
+    3) 推送镜像 
+        `docker tag [ImageId] registry.cn-hangzhou.aliyuncs.com/atguigumall/gulimall-nginx:v1`
+        `docker push registry.cn-hangzhou.aliyuncs.com/atguigumall/gulimall-nginx:v1
+`
