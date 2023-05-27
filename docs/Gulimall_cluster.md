@@ -1504,8 +1504,7 @@ spec:
 ![[Pasted image 20230504110506.png]]
 
 ## 流水线
-### 第一步
-#### gitee拉取代码 & 参数化构建&环境变量
+### gitee拉取代码 & 参数化构建&环境变量
 Jenkinsfile
 ``` 
 pipeline {
@@ -1534,15 +1533,11 @@ pipeline {
               sh 'echo 当前目录 `pwd`'
               sh "mvn sonar:sonar -gs `pwd`/mvn-settings.xml -Dsonar.branch=$BRANCH_NAME -Dsonar.login=$SONAR_TOKEN"
             }
-
           }
-
           timeout(time: 1, unit: 'HOURS') {
             waitForQualityGate true
           }
-
         }
-
       }
     }
     stage('构建镜像-推送镜像') {
@@ -1555,9 +1550,7 @@ pipeline {
             sh 'docker tag  $REGISTRY/$DOCKERHUB_NAMESPACE/$PROJECT_NAME:SNAPSHOT-$BRANCH_NAME-$BUILD_NUMBER $REGISTRY/$DOCKERHUB_NAMESPACE/$PROJECT_NAME:latest '
             sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/$PROJECT_NAME:latest '
           }
-
         }
-
       }
     }
     stage('部署到k8s') {
@@ -1583,7 +1576,6 @@ pipeline {
                 sh 'git tag -a $PROJECT_NAME-$PROJECT_VERSION -m "$PROJECT_VERSION" '
                 sh 'git push http://$GIT_USERNAME:$GIT_PASSWORD@gitee.com/$GITEE_ACCOUNT/gulimall.git --tags --ipv4'
             }
-
         }
       }
     }
@@ -1607,8 +1599,8 @@ pipeline {
 ```
 
 
-### 第二步
-#### Sonar代码质量分析
+
+### Sonar代码质量分析
 mvn-settings.xml
 ``` xml
 <settings>
@@ -1686,6 +1678,23 @@ mvn-settings.xml
 	<version>3.6.0.1398</version>
 </plugin>
 ```
+
+### 构建&推送镜像
+略
+
+### 流水线编写完成
+修改各个项目中K8S的部署文件，将`$APP_NAME:$TAG_NAME`修改为`$PROJECT_NAME:$PROJECT_VERSION`
+略
+
+### 移植数据库
+略
+
+### 流水线细节优化&解决OOM
+修改各个项目中K8S的部署文件，将`$PROJECT_NAME:$PROJECT_VERSION`修改为`$PROJECT_NAME:latest`
+
+修改各个项目里K8S配置文件中nodePort的值，这个值只能在30000-32767之间
+
+修改各个项目的Dockerfile里的启动参数，加上`"-Xms128m","-Xmx300m",`
 
 
 ![[Pasted image 20230504110529.png]]
