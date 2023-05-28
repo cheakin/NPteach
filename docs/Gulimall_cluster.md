@@ -1787,5 +1787,10 @@ ENTRYPOINT nginx -g "daemon off;"
 
 其他操作，略
 
-### 
+### 部署VUE项目 & 测试滚动更新部署admin-vue-app
+修改前端的生产地址，在index-prod.js中，`http://192.168.56.100:31003/api`
+然后构建前端项目，然后打包、上传
 
+其他操作，略
+
+### 
