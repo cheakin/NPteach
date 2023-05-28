@@ -1769,10 +1769,11 @@ public RedissonClient redisson(@Value("${spring.redis.host}")String host) throws
 略
 
 ## 最终部署
-### 第一次部署前置nginx
-
-
-### 商城系统上线
+![[Pasted image 20230504110529.png]]
+### 第一次部署前置nginx & 创建网关与应用路由 & 商城系统上线
+nginx的两个压缩包
+![[conf.tar.gz]]
+![[html.tar.gz]]
 nginx的Dockerfile
 ``` sh
 FROM nginx
@@ -1782,8 +1783,9 @@ ADD conf.tar.gz /etc/nginx
 EXPOSE 80
 ENTRYPOINT nginx -g "daemon off;"
 ```
-docker 
+然后再来一波打包和推送的操作
 
+其他操作，略
 
-
+### 
 
