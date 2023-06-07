@@ -669,4 +669,26 @@ minio/minio server /data
 >[MinIO | Java Client API Reference(官方)](https://docs.min.io/docs/java-client-api-reference.html)
 >[Java Client API参考文档 | Minio中文文档(中文)](http://docs.minio.org.cn/docs/master/java-client-api-reference#putObject)
 
+### 安装Rancher
+``` sh
+docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 --privileged --name rancher rancher/rancher:stable
+# --privileged：忽略证书
 
+#或
+docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 -v /mydata/rancher/rancher-data:/var/lib/rancher/ -v /etc/timezone:/etc/timezone -v /etc/localtime:/etc/localtime rancher/rancher:stable
+```
+
+### 安装MySQL
+``` sh
+docker run --name mysql -v /mydata/mysql/data:/var/lib/mysql -v /mydata/mysql/conf.d:/etc/mysql/conf.d -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql:3.7
+# -e MYSQL_ROOT_PASSWORD=123456 指定初始密码
+
+
+创建完后如果需要远程连接的话，执行下面指令。（高版本的话，下面指令要分开执行，不能合成一条）
+#创建账户
+create user 'root'@'%' identified by '123456';
+#赋予权限
+grant all privileges on *.* to 'root'@'%' with grant option;
+#刷新
+flush privileges;
+```
