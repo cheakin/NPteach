@@ -648,7 +648,25 @@ windows下开启了远程连接且已打开端口，但还是无法连接，可�
 
    略
 
+### 修改MySQL容器中的时区
+``` sh
+# 1. 进入mysql容器
+docker exec -it mysql /bin/bash
 
+#2. 设置系统时间
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
+
+# 3. 退出容器
+exit
+
+# 4. 重启mysql
+docker restart mysql
+
+
+# 5. 查看mysql时间
+select now()
+```
+> 参考：[Docker修改Mysql容器系统时间 - 简书 (jianshu.com)](https://www.jianshu.com/p/1fb02ae38fc5)
 
 ## 一些Docker容器的安装命令
 ### 安装MinIO
@@ -670,6 +688,7 @@ minio/minio server /data
 >[Java Client API参考文档 | Minio中文文档(中文)](http://docs.minio.org.cn/docs/master/java-client-api-reference#putObject)
 
 ### 安装Rancher
+#Rancher
 ``` sh
 docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 --privileged --name rancher rancher/rancher:stable
 # --privileged：忽略证书
@@ -679,16 +698,34 @@ docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 -v /mydata/rancher
 ```
 
 ### 安装MySQL
+#MySQL
 ``` sh
 docker run --name mysql -v /mydata/mysql/data:/var/lib/mysql -v /mydata/mysql/conf.d:/etc/mysql/conf.d -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql:3.7
 # -e MYSQL_ROOT_PASSWORD=123456 指定初始密码
+# -e TZ=Asia/Shanghai 设置时区，提前想好要不要设置
 
 
-创建完后如果需要远程连接的话，执行下面指令。（高版本的话，下面指令要分开执行，不能合成一条）
-#创建账户
-create user 'root'@'%' identified by '123456';
-#赋予权限
-grant all privileges on *.* to 'root'@'%' with grant option;
-#刷新
-flush privileges;
+# 创建完后如果需要远程连接的话，执行下面指令。（高版本的话，下面指令要分开执行，不能合成一条）
+create user 'root'@'%' identified by '123456';  # 创建账户
+grant all privileges on *.* to 'root'@'%' with grant option;  # 赋予权限
+flush privileges;  # 刷新
+
+
+# 修改时区1，启动时携带参数
+-e TZ=Asia/Shanghai
+
+# 修改时区2，设置容器时区
+docker exec -it mysql /bin/bash
+date
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+exit # 退出重启docker
+docker restart mysql
+
+# 修改时区3，修改mysql配置
+docker exec -it mysql /bin/bash # 进入容器 
+mysql -uroot -p # 连接 mysql 服务 
+set global time_zone = '+08:00'; # 设置全局会话时区 
+set session time_zone = '+08:00'; # 设置当前会话时区 
+show variables like '%time_zone%'; # 设置后查看 Mysql 时区配置属性。
+
 ```
