@@ -17,6 +17,9 @@ SpringCloud Alibaba简介
 熔断与限流（SpringCloud AlibabaSentinel）
 分布式事务处理（SpringCloud AlibabaSeata）
 
+### Gulimall
+尚硅谷的谷粒商城：[基础篇](./SpringCloud/GuliMall_base.md)、[高可用篇(上)](./SpringCloud/GuliMall_high (1).md)、[高可用篇(下)](./SpringCloud/GuliMall_high (2).md)、[集群篇](./SpringCloud/GuliMall_cluster.md)
+
 ### [Electron](./Electron.md)
 [Electron](./Electron.md) 将前端项目转化为桌面应用
 

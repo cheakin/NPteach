@@ -581,6 +581,23 @@ copy "%file%" "%file_bak%" >nul 2>nul
 move "%file_tmp%" "%file%"
 ```
 
+
+## 其他
+有的时候我们在安装一些给了密钥，但是没有设置密码的服务器时，可以通过下面的命令初始化密码：
+``` sh
+sudo -i
+echo root:123456 |chpasswd root # 123456即为密码
+sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config;
+sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config;
+service sshd restart
+
+
+# 修改密码使用
+passwd
+```
+
+
+
 ## 报错
 ### $'\r':command not found
 存现这种错误是因为 编写的 shell脚本是在win下编写的，每行结尾是\r\n 的Unix 结果行是\n 

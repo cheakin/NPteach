@@ -23,7 +23,7 @@ Elastic 的底层是开源库 Lucene。但是，你没法直接用 Lucene，必�
 保存在某个索引(Index)下，某种类型(Type)的一个数据文档(Document)，文档是json格式的，
 Document就像是MySQL中的某个Table里面的内容。每一行对应的列叫属性
 
-![](./assets/GuliMall.md/GuliMall_high/1659623601145.jpg)
+![](1659623601145.jpg)
 
 
 ElasticSearch7-去掉type概念
@@ -5853,7 +5853,7 @@ docker update nginx --restart=always
 
 ##### 配置nginx
 **ngin配置文件**
-![](./assets/GuliMall.md/GuliMall_high/1661572925281.jpg)
+![](1661572925281.jpg)
 
 我们将docker中nginx目录映射到了虚拟机的`/mydata/nginx`中了, 所以我们直接`vi /mydata/nginx/conf/nginx.conf`查看nginx的配置
 ``` shell
@@ -6039,7 +6039,7 @@ server {
 
 测试: 访问`http://gulimall.com/`能够正常访问到商城首页, 且访问`http://gulimall.com/api/product/attrattrgrouprelation/list`能偶正常返回json, 则证明成功
 
-![](./assets/GuliMall.md/GuliMall_high/1661602383885.jpg)
+![](1661602383885.jpg)
 
 
 ## 性能压测
@@ -6181,7 +6181,7 @@ spring:
   * 静态资源
 
 #### nginx动静分离
-![](./assets/GuliMall.md/GuliMall_high/1661789564930.jpg)
+![](1661789564930.jpg)
 1. 首先，把商品服务中静态文件夹 index 放到 nginx 下 /mydata/nginx/html/static目录；
 2. 给模板中所有静态资源的请求路径前都加上 /static；
 3. 修改 Nginx 配置文件 /mydata/nginx/conf/conf.d/gulimall.conf
@@ -6262,7 +6262,7 @@ private List<CategoryEntity> getParentCid(List<CategoryEntity> selectList, Long 
 **哪些数据适合放入缓存？**
 * 即时性、数据一致性要求不高的
 * 访问量大且更新频率不高的数据（读多，写少）
-![](./assets/GuliMall.md/GuliMall_high/1661863979953.jpg)
+![](1661863979953.jpg)
 
 **本地缓存**
 `CategoryServiceImpl`
@@ -6323,7 +6323,7 @@ public Map<String, List<Catelog2Vo>> getCatalogJson() {
 本地缓存的方式, 在单体应用中没有问题; 但在分布式服务中, 数据无法保证同时更新, 所以在分布式中无法使用本地缓存.
 
 所以可以选择使用**缓存中间件**来解决这个问题, 如: redis
-![](./assets/GuliMall.md/GuliMall_high/1661865417745.jpg)
+![](1661865417745.jpg)
 
 
 #### 整合redis测试
@@ -6577,13 +6577,13 @@ public Map<String, List<Catelog2Vo>> getCatalogJsonFromDB() {
 }
 ```
 给实例加锁的方式在单体应用中可以, 但在分布式中就无法有效的锁住了
-![](./assets/GuliMall.md/GuliMall_high/1661960337842.jpg)
+![](1661960337842.jpg)
 
 ### 分布式锁
 #### 分布式锁原理与原理
 redis 中有一个 SETNX 命令，该命令会向 redis 中保存一条数据，如果不存在则保存成功，存在则返回失败。
 我们约定保存成功即为加锁成功，之后加锁成功的线程才能执行真正的业务操作。
-![](./assets/GuliMall.md/GuliMall_high/1662036584048.jpg)
+![](1662036584048.jpg)
 
 `CategoryServiceImpl`
 ``` java
@@ -6871,10 +6871,10 @@ public String go() {
 
 #### 缓存一致性
 **双写模式**
-![](./assets/GuliMall.md/GuliMall_high/1662216036683.jpg)
+![](1662216036683.jpg)
 
 **失效模式**
-![](./assets/GuliMall.md/GuliMall_high/1662216345680.jpg)
+![](1662216345680.jpg)
 
 * 无论是双写模式还是失效模式，都会导致缓存的不一致问题。即多个实例同时更新会出事。怎么办？
   1. 如果是用户维度数据（订单数据、用户数据），这种并发几率非常小，不用考虑这个问题，缓存数据加 上过期时间，每隔一段时间触发读的主动更新即可
@@ -6888,7 +6888,7 @@ public String go() {
   * 遇到实时性、一致性要求高的数据，就应该查数据库，即使慢点。
 
 **Cannal**
-![](./assets/GuliMall.md/GuliMall_high/1662217400314.jpg)
+![](1662217400314.jpg)
 
 `CategoryServiceImpl`
 ``` java
@@ -6925,7 +6925,7 @@ public Map<String, List<Catelog2Vo>> getCatalogJsonFromDbWithRedissonLock() {
 官方文档: https://docs.spring.io/spring-framework/docs/5.2.22.RELEASE/spring-framework-reference/integration.html#cache
 
 **基础概念**
-![](./assets/GuliMall.md/GuliMall_high/1662219184233.jpg)
+![](1662219184233.jpg)
 
 #### 整合&体验@Cache
 **引入依赖**
@@ -7258,7 +7258,7 @@ server {
   predicates:
     - Host=search.gulimall.com
 ```
-![](./assets/GuliMall.md/GuliMall_high/1662477474041.jpg)
+![](1662477474041.jpg)
 
 测试, 访问`search.gulimall.com`, 能正常访问返回页面表示正常
 
@@ -7480,7 +7480,7 @@ public class MallSearchServiceImpl implements MallSearchService {
 
 }
 ```
-![](./assets/GuliMall.md/GuliMall_high/1662570156688.jpg)
+![](1662570156688.jpg)
 
 #### 检索DSL测试-查询部分
 *这里我的索引(mall_product)和视频中(procut)有出入, 所以我这里先将数据迁移到`product`索引下*

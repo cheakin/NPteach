@@ -1,6 +1,6 @@
 # 谷粒商城-集群篇(cluster)  
 ![[assets/谷粒商城-微服务架构图.jpg]]  
-  
+  ![[5f3f956585a84d1fbfb99caa3ac866ab.png]]
 ## k8s  
 ### 简介  
 Kubernetes 简称 k8s。是用于自动部署，扩展和管理容器化应用程序的开源系统。  
