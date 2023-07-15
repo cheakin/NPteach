@@ -54,9 +54,92 @@
 ![[Pasted image 20230713172301.png]]
 启动
 ![[Pasted image 20230713173416.png]]
+错误
+![[Pasted image 20230714000523.png]]
+### 埋点日志格式
+![[Pasted image 20230714000725.png]]
+#### 页面日志
+![[Pasted image 20230714000753.png]]
+#### 启动日志
+![[Pasted image 20230714001320.png]]
 
+### 服务准备和JDK准备
+1. 需要准备4G+50G的服务器3台
+    1. 保证可以连接外网
+    2. 如果是使用最小化安装所安装的系统，需要额外安装`epel-release`
+    3. 安装`net-tools`和`vim`
+2. 关闭防火墙
+    ``` sh
+    systemctl stop firewalld
+    systemctl disable firewalld.service
+```
+3. 创建用户，并修改密码（略）
+4. 为创建的用户分配root权限
+5. 在`/opt`目录下创建文件家，并修改所属主和所属组
+    1. 在`/opt`目录下创建`module`、`software`文件夹
+        ``` sh
+        mkdir /opt/module
+        mkdir /opt/software
+```
+    2. 修改所属主和所属组（略）
+    3. 查看文件夹所有者和所属组
+        ``` sh
+        cd /opt/
+        ll
+```
+6. 卸载自带的JDK（最小化安装略）
+    ``` sh
+    rpm -qa | grep -i java |xargs -n1 rpm -e --nodeps
+    
+    # rpm -qa：查询所安装的所有rpm软件包
+    # grep -i：忽略大小写
+    # xargs-nl：表示每次只传递一个参数
+```
 
+### 阿里云准备（备选）
+略
 
+### 集群同步脚本
+``` sh
+#!/bin/bash
+#1. 判断参数个数
+if [ $# -lt 1 ]
+then
+	echo Not Enough Arguement!
+	exit;
+fi
+#2. 遍历集群所有机器
+for host in pri-dev-bigdata-1 pri-dev-bigdata-2 pri-dev-bigdata-3
+do
+	echo ================= $host =================
+	#3. 遍历所有目录，挨个发送
+	for file in $@
+	do
+		#4. 判断文件是否存在
+		if [ -e $file ]
+		then
+			#5. 获取父目录
+			pdir=$(cd -P $(dirname $file); pwd)
+			#6. 获取当前文件的名称
+			fname=$(basename $file)
+			ssh $host "mkdir -p $pdir"
+			rsync -av $pdir/$fname $host:$pdir
+		else
+			echo $file does not exists!
+		fi
+	done
+done
+```
 
+### 免密登录配置
+``` sh
+# 使用root用户登录
+cd ~/.ssh/
+ssh-keygen -t rsa
 
+ssh-copy-id hadoop102
+ssh-copy-id hadoop103
+ssh-copy-id hadoop104
+```
 
+### 安装JDK
