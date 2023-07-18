@@ -89,7 +89,7 @@
 ```
 6. 卸载自带的JDK（最小化安装略）
     ``` sh
-    rpm -qa | grep -i java |xargs -n1 rpm -e --nodeps
+    rpm -qa | grep -i java | xargs -n1 rpm -e --nodeps
     
     # rpm -qa：查询所安装的所有rpm软件包
     # grep -i：忽略大小写
@@ -143,3 +143,93 @@ ssh-copy-id hadoop104
 ```
 
 ### 安装JDK
+``` sh
+# 卸载
+rpm -qa | grep -i java | xargs -n1 rpm -e --nodeps
+
+# 安装
+yum install java-1.8.0-openjdk-devel
+
+# 验证
+java -version
+```
+
+### Linux环境变量说明
+登录式shell和非登录式shell
+![[Pasted image 20230716120146.png]]
+
+### 模拟数据
+![[gmall_mock.zip]]
+
+同步模拟数据的脚本
+``` sh 
+#!/bin/bash
+for i in hadop102 hadop103 hadop104
+do
+	echo "-------------------- $i --------------------"
+	ssh $i "cd /opt/module/applog;java -jar gmall2020-mock-log-2021-10-10.jar >/dev/null 2>&1 &" 
+done
+
+
+cd
+cd bin/
+vim lg.sh
+
+chmod 777 lg.sh
+lg.sh
+```
+
+### haddop安装
+收集打印脚本`xcall`
+``` sh
+#!/bin/bash
+for i in hadop102 hadop103 hadop104
+do
+    echo "-------------------- $i --------------------"
+	ssh $i "$**" 
+done
+
+chmod 777 xcall
+```
+`core.xml`配置
+``` xml
+<configuration>
+	<!-- 指定NameNode地址 -->
+	<property>
+		<name>fs.defaultFS</name>
+		<value>hdfs://10.10.10.34:8020</value>
+	</property>
+	
+	<!-- 指定 hadoop数据的存储目录 -->
+	<property>
+		<name>hadoop.tmp.dir</name>
+		<value>/opt/module/hadoop/data</value>
+	</property>
+	
+	<!-- 配置HDES 网页登录使用的静态用户为miit -->
+	<property>
+		<name>hadoop.http.staticuser.user</name>
+		<value>miit</value>
+	</property>
+	<!-- 配置该miit(superUser)允许通过代理访问的主机节点 -->
+	<property>
+		<name>hadoop.proxyuseiqu.hosts</name>
+		<value>*</value>
+	</property>
+	<!-- 配置该atquigu(superUser)允许通过代理用户所属组 -->
+	<property>
+		<name>hadoop.proxyuser.miit.groups</name>
+		<value>*</value>
+	</property>
+	<!-- 配置该 miit(superUser)允许通过代理的用户-->
+	<property>
+		<name>hadoop .proxyyuser.miit.users</name>
+		<value>*</value>
+	</property>
+</configuration>
+```
+`hdfs.xml`配置
+``` xml
+```
+
+
