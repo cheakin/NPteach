@@ -197,7 +197,7 @@ chmod 777 xcall
 	<!-- 指定NameNode地址 -->
 	<property>
 		<name>fs.defaultFS</name>
-		<value>hdfs://10.10.10.34:8020</value>
+		<value>hdfs://hadoop103:8020</value>
 	</property>
 	
 	<!-- 指定 hadoop数据的存储目录 -->
@@ -230,6 +230,68 @@ chmod 777 xcall
 ```
 `hdfs.xml`配置
 ``` xml
+<configuration>
+	<!-- nn web 端访问地址 -->
+	<property>
+		<name>dfs.namenode.http-address</name>
+		<value>hadoop102:9870</value>
+	</property>
+	<!-- 2nn web 端访问地址-->
+	<property>
+		<name>dfsnamenode.secondary.http-address</name>
+		<value>hadoop104:9868</value>
+	</property>
+	<!-- 测试环境指定HDES 副本的数量1-->
+	<property>
+		<name>dfs.replication</name>
+		<value>3</value>
+	</property>
+</configuration>
+```
+xml
+``` xml
+<configuration>
+	<!-- 指定MR走shuffle -->
+	<property>
+		<name>yarn.nodemanager.aux-services</name>
+		<value>mapreduce shuffle</value>
+	</property>
+	<!-- 指定 ResourceManager的地址-->
+	<property>
+		<name>yarn.resourcemanager.hostname</name>
+		<value>10.10.10.35</value>
+	</property>
+	<!-- 环境变量的继承-->
+	<property>
+		<name>yarn.nodemanager.env-whitelist</name>
+		<value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME</value>
+	</property>
+	<!--yarn 单个容器允许分配的最大最小内存 -->
+	<property>
+		<name>yarn.scheduler.minimum-allocation-mb</name>
+		<value>512</value>
+	</property>
+	<property>
+		<name>yarn.scheduler.maximum-allocation-mb</name>
+		<value>4096</value>
+	</property>
+	<!-- yarn 容器允许管理的物理内存大小-->
+	<property>
+		<name>yarn.nodemanagerresource.memory-mb</name>
+		<value>4096</value>
+	</property>
+	<!-- 关闭 yarn 对物理内存和虚拟内存的限制检查 -->
+	<property>
+		<name>yarn.nodemanager.pmem-check-enabled</name>
+		<value>true</value>
+		</property>
+	<property>
+		<name>yarn.nodemanager.vmem-check-enabled</name>
+		<value>false</value>
+	</property>
+</configuration>
 ```
 
-
+xml
+``` xml
+```
