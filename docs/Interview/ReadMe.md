@@ -2,60 +2,60 @@
 **基本概念**
 JVM是可运行Java代码的假想计算机，包括一套指令集、一组寄存器、一个栈、一个垃圾回收、堆、一个存储方法域。JVMu是运行再操作系统只上的，它与硬件没有直接的交互。
 JVM
-    * java代码执行
-        * 代码编译为class，即javac
-        * 装载class，即Classloader
-        * 执行class
-            * 解释执行
-            * 编译执行
-                * client compiler
-                * server compiler
-    * 内存管理
-        * 内存空间
-            * 方法区
-            * 堆
-            * 方法栈
-            * 本地方法栈
-            * pc寄存器
-        * 内存分配
-            * 堆上分配
-            * TLAB分配
-            * 栈上分配
-        * 内存回收
-            * 算法
-                * Copy
-                * Mark-Sweep
-                * Mark-Compact
-            * Sun JDK
-                * 分代回收
-                    * 新生代可用的GC
-                        * 串行copying
-                        * 并行回收copying
-                        * 并行copying
-                    * Minor GC触发机制以及日志格式
-                    * 旧生代可用的GC
-                    * Full GC 触发机制以及日志格式
-                * GC参数
-                * G1
-        * 内存状况分析
-            * jconsle
-            * visualvm
-            * jmap
-            * MAT
-    * 线程资源同步和交互机制
-        * 线程资源同步
-            * 线程资源执行机制
-            * 线程资源同步机制
-                * Sunchronized的实现机制
-                * lock/unlock的实现机制
-        * 线程交互机制
-            * Object.wait/notify/notifyAll - Double check pattem
-            * 并发包提供的交互机制
-                * semaphore
-                * CountdownLatch
-        * 线程状态即分析方法
-            * jstack
-            * TDA
+    java代码执行
+        代码编译为class，即javac
+        装载class，即Classloader
+        执行class
+            解释执行
+            编译执行
+                client compiler
+                server compiler
+    内存管理
+        内存空间
+            方法区
+            堆
+            方法栈
+            本地方法栈
+            pc寄存器
+        内存分配
+            堆上分配
+            TLAB分配
+            栈上分配
+        内存回收
+            算法
+                Copy
+                Mark-Sweep
+                Mark-Compact
+            Sun JDK
+                分代回收
+                    新生代可用的GC
+                        串行copying
+                        并行回收copying
+                        并行copying
+                    Minor GC触发机制以及日志格式
+                    旧生代可用的GC
+                    Full GC 触发机制以及日志格式
+                GC参数
+                G1
+        内存状况分析
+            jconsle
+            visualvm
+            jmap
+            MAT
+    线程资源同步和交互机制
+        线程资源同步
+            线程资源执行机制
+            线程资源同步机制
+                Sunchronized的实现机制
+                lock/unlock的实现机制
+        线程交互机制
+            Object.wait/notify/notifyAll - Double check pattem
+            并发包提供的交互机制
+                semaphore
+                CountdownLatch
+        线程状态即分析方法
+            jstack
+            TDA
 
 **运行过程**
 java源文件通过编译器，生产相应的.Class文件，也即是字节码文件，而字节码文件又通过Java虚拟机中的解释器，变异成特定机器上的机器码
@@ -68,75 +68,75 @@ java源文件通过编译器，生产相应的.Class文件，也即是字节码�
 Hotspot JVM中Java线程与原生操作系统线程又直接的映射关系。当线程本地存储、缓冲区分配、同步对象、站、程序计数器等准备好以后，就会创建一个操作系统远程线程。Java线程结束，远程线程随之被回收。操作系统负责调度所有线程，并把他们分配到任何可用的CPU上。当远程线程初始化完毕，就会调用Java线程的run()方法。当线程结束时，会释放远程线程和Java线程的所有资源。
 
 ## JVM内存
-    * 线程私有 Thread Local
-        * 程序技术器 PC
-            * 指向虚拟机字节码指令的位置
-            * 唯一一个无 OOM 的区域
-        * 虚拟机栈 VM Stack
-            * 虚拟机栈和线程生命周期相同
-            * 一个线程中，没底啊用一个方法创建一个栈帧(Stack Fram)
-            * 栈帧的结构
-                * 本地变量表 Local Variable
-                * 操作数栈 Operand Stack
-                * 对运行时常量池的引用 Runtime Constant Pool Reference
-            * 异常
-                * 线程请求的栈深度大于JVM所允许的深度 StackOverflowError
-                * 若JVM允许动态扩展，若无法盛情到足够内存 OutOfmemoryError
-        * 本地方法栈 Native Method Stack
-            * 异常
-                * 线程请求的栈深度大于JVM所允许的深度 StackOverflowError
-                * 若JVM允许动态扩展，若无法盛情到足够内存 OutOfmemoryError
-    * 线程共享 Thread Shared
-        * 方法去(永久代) Method Area
-            * 运行时常量池Runtime Constant Pool
-        * 类实例(java堆)Objects
-            * 新生代
-                * eden
-                * from servivor
-                * to survivor
-            * 老年代
-            * 异常
-                * OutOfMemoryError
-    * 直接内存 Direct Memory
-        * 不受JVM GC管理
+    线程私有 Thread Local
+        程序技术器 PC
+            指向虚拟机字节码指令的位置
+            唯一一个无 OOM 的区域
+        虚拟机栈 VM Stack
+            虚拟机栈和线程生命周期相同
+            一个线程中，没底啊用一个方法创建一个栈帧(Stack Fram)
+            栈帧的结构
+                本地变量表 Local Variable
+                操作数栈 Operand Stack
+                对运行时常量池的引用 Runtime Constant Pool Reference
+            异常
+                线程请求的栈深度大于JVM所允许的深度 StackOverflowError
+                若JVM允许动态扩展，若无法盛情到足够内存 OutOfmemoryError
+        本地方法栈 Native Method Stack
+            异常
+                线程请求的栈深度大于JVM所允许的深度 StackOverflowError
+                若JVM允许动态扩展，若无法盛情到足够内存 OutOfmemoryError
+    线程共享 Thread Shared
+        方法去(永久代) Method Area
+            运行时常量池Runtime Constant Pool
+        类实例(java堆)Objects
+            新生代
+                eden
+                from servivor
+                to survivor
+            老年代
+            异常
+                OutOfMemoryError
+    直接内存 Direct Memory
+        不受JVM GC管理
 
 ## JVM GC垃圾回收与算法
-* gc要做的三件事
-    * 那些内存需要回收
-    * 什么时候回收
-    * 怎么回收
-* 哪些对象已经“死亡”
-    * 引用计数法Reference Counting——循环引用的问题
-    * 根搜索算法GC Roots Tracing
-        * 通过一系列成为GC Roots的点作为起点，向下搜索。当一个对象到任何GC Roots都没有引用链项链，说明其已经“死亡”
-        * GC Roots
-            * VM栈中的引用
-            * 方法去中的静态引用
-            * JNI中的引用
-* 垃圾收集算法
-    * 标记清除Mark-Sweep
-        * 效率低
-        * 内存碎片多
-    * 复制Coping
+gc要做的三件事
+    那些内存需要回收
+    什么时候回收
+    怎么回收
+哪些对象已经“死亡”
+    引用计数法Reference Counting——循环引用的问题
+    根搜索算法GC Roots Tracing
+        通过一系列成为GC Roots的点作为起点，向下搜索。当一个对象到任何GC Roots都没有引用链项链，说明其已经“死亡”
+        GC Roots
+            VM栈中的引用
+            方法去中的静态引用
+            JNI中的引用
+垃圾收集算法
+    标记清除Mark-Sweep
+        效率低
+        内存碎片多
+    复制Coping
         1. eden
         2. survivor
-    * 标记整理Mark-Compat
-    * 分代收集Generational Collecting
-* **垃圾收集器**
-    * Serial
-    * ParNew
-    * Parallel Scavenge
-    * Serial Old
-    * Parallel Old
-    * CMS - Concurrent Mark Sweep
-* 参数
-    * Xms
-    * Xmx
-    * Xmn
-    * -XX:+PrintGCDetails
-    * -XX:SurvivorRatio=8
-    * -XX:MaxTenuringThreshold
-    * -XX:-HandlePromotionFailure
+    标记整理Mark-Compat
+    分代收集Generational Collecting
+**垃圾收集器**
+    Serial
+    ParNew
+    Parallel Scavenge
+    Serial Old
+    Parallel Old
+    CMS - Concurrent Mark Sweep
+参数
+    Xms
+    Xmx
+    Xmn
+    -XX:+PrintGCDetails
+    -XX:SurvivorRatio=8
+    -XX:MaxTenuringThreshold
+    -XX:-HandlePromotionFailure
 
 ## Java四种引用类型
 强引用
@@ -273,5 +273,27 @@ JVM类加载机制分为五个部分：加载，(验证，准备，解析)，初
 
 # JAVA 集合
 
+## 接口继承关系和实现
+集合类存放于 Java.util 包中，主要有 3 种：set(集）、list(列表包含 Queue）和 map(映射)。 
+1. Collection：Collection 是集合 List、Set、Queue 的最基本的接口
+2. Iterator：迭代器，可以通过迭代器遍历集合中的数据 
+3. Map：是映射表的基础接口
+![[Pasted image 20230813000849.png]]
+集合框架
+    Collection
+        List
+            ArrayList
+            Vector
+            LinkedList
+        Set
+        Queue
+    Map
+    
 
+
+## List
+
+## Set
+
+## Map
 
