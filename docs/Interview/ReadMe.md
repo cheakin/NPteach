@@ -283,17 +283,113 @@ JVM类加载机制分为五个部分：加载，(验证，准备，解析)，初
     Collection
         List
             ArrayList
+                排列有序，可重复
+                底层使用数组
+                速度快，增删快，getter()和setter()方法快
+                线程不安全
+                当容量不够时，ArraryList时当前容量X1.5+1
             Vector
+                排列有序，可重复
+                子层使用数组
+                速度快，增删慢
+                线程安全，效率低
+                当容量不够时，Vector默认扩展一倍容量
             LinkedList
+                排列有序，可重复
+                底层使用双向循环链表数据结构
+                查询速度慢，增删快，add()和remove方法快
+                线程不安全
         Set
+            HashSet
+                排列无需，不可重复
+                底层使用Hash表实现
+                存取速度快
+                内部是HashMap
+            TreeSet
+                排列无需，不可重复
+                底层使用二叉树实现
+                排序存储
+                内部是TreeMap的SortedSet
+            LinkedHashSet
+                采用hash表存储，并用双向链表记录插入顺序
+                内部是LinkedHashMap
         Queue
+            在两端出入的List，所以可以用数组或链表来实现
     Map
-    
-
+        HashMap
+            键不可重复，值可重复
+            底层哈希表
+            线程不安全
+            允许key值为null，value也可以为null
+        HashTable
+            键不可重复，值可重复
+            底层hash表
+            线程安全
+            key、value都不允许为空
+        TreeMap
+            键不可重复，值可重复
+            底层二叉树
 
 ## List
+List 是有序的 Collection。Java List 一共三个实现类： 分别是 ArrayList、Vector 和 LinkedList。
+![[Pasted image 20230813181854.png]]
 
+### ArraryList(数组)
+当数组大小不满足时需要增加存储能力，就要将已经有数 组的数据复制到新的存储空间中。当从 ArrayList 的中间位置插入或者删除元素时，需要对数组进 行复制、移动、代价比较高。因此，它适合随机查找和遍历，不适合插入和删除。
+### Vector(数组实现、线程同步)
+是它支持线程的同步，即某一时刻只有一 个线程能够写 Vector。
+### LinkList(链表)
+LinkedList 是用链表结构存储数据的，很适合数据的动态插入和删除。
 ## Set
+值不能重复。如果想要让两个不同的对象视为相等的，就必须覆盖 Object 的 hashCode 方法和 equals 方 法
+![[Pasted image 20230813182240.png]]
+
+### HashSet(Hash表)
+HashSet 首先判断两个元素的哈希值，如果哈希值一样，接着会比较 equals 方法 如果 equls 结果为 true ，HashSet 就视为同一个元素。如果 equals 为 false 就不是同一个元素。
+一个 hashCode 位置上可以存放多个元素。所以值可以是多样的。
+
+### TreeSet（二叉树）
+TreeSet()是使用二叉树的原理对新 add()的对象按照指定的顺序排序（升序、降序），每增 加一个对象都会进行排序，将对象插入的二叉树指定的位置。
+Integer 和 String 对象都可以进行默认的 TreeSet 排序，而自定义类的对象是不可以的，自 己定义的类必须实现 Comparable 接口，并且覆写相应的 compareTo() 函数，才可以正常使用。
+### LinkedHashSet（HashSet+LinkedHashMap）
+略
 
 ## Map
+![[Pasted image 20230813182931.png]]
+### HashMap（数组+链表+红黑树）
+HashMap 根据键的 hashCode 值存储数据，大多数情况下可以直接定位到它的值，因而具有很快 的访问速度，但遍历顺序却是不确定的。 HashMap 最多只允许一条记录的键为 null，允许多条记 录的值为 null。HashMap 非线程安全，即任一时刻可以有多个线程同时写 HashMap，可能会导 致数据的不一致。如果需要满足线程安全，可以用 Collections 的 synchronizedMap 方法使 HashMap 具有线程安全的能力，或者使用 ConcurrentHashMap。
+#### Java7 实现
+大方向上，HashMap 里面是一个数组，然后数组中每个元素是一个单向链表。上图中，每个绿色 的实体是嵌套类 Entry 的实例，Entry 包含四个属性：key, value, hash 值和用于单向链表的 next。 
+1. capacity：当前数组容量，始终保持 2^n，可以扩容，扩容后数组大小为当前的 2 倍。 
+2. loadFactor：负载因子，默认为 0.75。
+3. threshold：扩容的阈值，等于 capacity * loadFactor
+![[Pasted image 20230813212422.png]]
+#### Java8实现
+最大的不同就是利用了红黑树，所以其由 数组+链表+红黑树 组成。
+根据 Java7 HashMap 的介绍，我们知道，查找的时候，根据 hash 值我们能够快速定位到数组的 具体下标，但是之后的话，需要顺着链表一个个比较下去才能找到我们需要的，时间复杂度取决 于链表的长度，为 O(n)。为了降低这部分的开销，在 Java8 中，当链表中的元素超过了 8 个以后， 会将链表转换为红黑树，在这些位置进行查找的时候可以降低时间复杂度为 O(logN)。
+![[Pasted image 20230813212436.png]]
 
+
+### ConcurrentHashMap
+![[Pasted image 20230813214044.png]]
+#### Segment 段
+ConcurrentHashMap 和 HashMap 思路是差不多的，但是因为它支持并发操作，所以要复杂一 些。整个 ConcurrentHashMap 由一个个 Segment 组成，Segment 代表”部分“或”一段“的 意思，所以很多地方都会将其描述为分段锁。注意，行文中，我很多地方用了“槽”来代表一个 segment。
+#### 线程安全（Segment 继承 ReentrantLock 加锁）
+简单理解就是，ConcurrentHashMap 是一个 Segment 数组，Segment 通过继承 ReentrantLock 来进行加锁，所以每次需要加锁的操作锁住的是一个 segment，这样只要保证每 个 Segment 是线程安全的，也就实现了全局的线程安全。
+
+#### 并行度（默认 16）
+concurrencyLevel：并行级别、并发数、Segment 数，怎么翻译不重要，理解它。默认是 16， 也就是说 ConcurrentHashMap 有 16 个 Segments，所以理论上，这个时候，最多可以同时支 持 16 个线程并发写，只要它们的操作分别分布在不同的 Segment 上。这个值可以在初始化的时 候设置为其他值，但是一旦初始化以后，它是不可以扩容的。再具体到每个 Segment 内部，其实 每个 Segment 很像之前介绍的 HashMap，不过它要保证线程安全，所以处理起来要麻烦些。
+#### Java8 实现 （引入了红黑树）
+![[Pasted image 20230813214155.png]]
+
+### HashTable（线程安全）
+Hashtable 是遗留类。Hashtable 不建议在新代码中使用，不需要线程安全 的场合可以用 HashMap 替换，需要线程安全的场合可以用 ConcurrentHashMap 替换。
+### TreeMap（可排序）
+TreeMap 实现 SortedMap 接口，能够把它保存的记录根据键排序，默认是按键值的升序排序， 也可以指定排序的比较器，当用 Iterator 遍历 TreeMap 时，得到的记录是排过序的。 如果使用排序的映射，建议使用 TreeMap。
+*在使用 TreeMap 时，key 必须实现 Comparable 接口或者在构造 TreeMap 传入自定义的 Comparator，否则会在运行时抛出 java.lang.ClassCastException 类型的异常。*
+
+### LinkHashMap（记录插入顺序）
+*LinkedHashMap 是 HashMap 的一个子类，保存了记录的插入顺序，在用 Iterator 遍历 LinkedHashMap 时，先得到的记录肯定是先插入的，也可以在构造时带参数，按照访问次序排序*
+
+# JAVA 多线程并发
+## JAVA 线程实现/创建方式
