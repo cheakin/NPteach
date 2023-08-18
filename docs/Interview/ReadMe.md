@@ -705,3 +705,69 @@ Java 语言提供了一种稍弱的同步机制，即 volatile 变量，用来�
     在访问 volatile 变量时不会执行加锁操作，因此也就不会使执行线程阻塞，因此 volatile 变量是一 种比 sychronized 关键字更轻量级的同步机制。volatile 适合这种场景：一个变量被多个线程共 享，线程直接给这个变量赋值。
 
 ### 如何在两个线程之间共享数据
+* 将数据抽象成一个类，并将数据的操作作为这个类的方法
+* Runnable 对象作为一个类的内部类
+### ThreadLocal 作用（线程本地存储）
+ThreadLocal，很多地方叫做线程本地变量，也有些地方叫做线程本地存储，ThreadLocal 的作用 是提供线程内的局部变量，**这种变量在线程的生命周期内起作用，减少同一个线程内多个函数**或者组件之间一些**公共变量的传递的复杂度**。
+
+使用场景
+    最常见的 ThreadLocal 使用场景为 用来解决 数据库连接、Session 管理等。
+
+## synchronized 和 ReentrantLock 的区别
+两者的共同点：
+    1. 都是用来协调多线程对共享对象、变量的访问 
+    2. 都是可重入锁，同一线程可以多次获得同一个锁 
+    3. 都保证了可见性和互斥性
+两者的不同点：
+    1. ReentrantLock 显示的获得、释放锁，synchronized 隐式获得释放锁 
+    2. ReentrantLock 可响应中断、可轮回，synchronized 是不可以响应中断的，为处理锁的不可用性提供了更高的灵活性 
+    3. ReentrantLock 是 API 级别的，synchronized 是 JVM 级别的 
+    4. ReentrantLock 可以实现公平锁 
+    5. ReentrantLock 通过 Condition 可以绑定多个条件 
+    6. 底层实现不一样， synchronized 是同步阻塞，使用的是悲观并发策略，lock 是同步非阻 塞，采用的是乐观并发策略 
+    7. Lock 是一个接口，而 synchronized 是 Java 中的关键字，synchronized 是内置的语言实现。 
+    8. synchronized 在发生异常时，会自动释放线程占有的锁，因此不会导致死锁现象发生； 而 Lock 在发生异常时，如果没有主动通过 unLock()去释放锁，则很可能造成死锁现象， 因此使用 Lock 时需要在 finally 块中释放锁。 
+    9. Lock 可以让等待锁的线程响应中断，而 synchronized 却不行，使用 synchronized 时， 等待的线程会一直等待下去，不能够响应中断。 
+    10. 通过 Lock 可以知道有没有成功获取锁，而 synchronized 却无法办到。 
+    11. Lock 可以提高多个线程进行读操作的效率，既就是实现读写锁等。
+
+## ConcurrentHashMap 并发
+### 减小锁粒度
+减小锁粒度是指缩小锁定对象的范围，从而减小锁冲突的可能性，从而提高系统的并发能力。减 小锁粒度是一种削弱多线程锁竞争的有效手段，这种技术典型的应用是 ConcurrentHashMap(高 性能的 HashMap)类的实现。对于 HashMap 而言，最重要的两个方法是 get 与 set 方法，如果我 们对整个 HashMap 加锁，可以得到线程安全的对象，但是加锁粒度太大。**Segment 的大小也被 称为 ConcurrentHashMap 的并发度**。
+### ConcurrentHashMap 分段锁
+ConcurrentHashMap，它内部细分了若干个小的 HashMap，称之为段(Segment)。**默认情况下 一个 ConcurrentHashMap 被进一步细分为 16 个段，既就是锁的并发度**。 
+如果需要在 ConcurrentHashMap 中添加一个新的表项，并不是将整个 HashMap 加锁，而是首 先根据 hashcode 得到该表项应该存放在哪个段中，然后对该段加锁，并完成 put 操作。在多线程 环境中，如果多个线程同时进行 put操作，只要被加入的表项不存放在同一个段中，则线程间可以 做到真正的并行。
+
+ConcurrentHashMap 是由 Segment 数组结构和 HashEntry 数组结构组成
+    ConcurrentHashMap 是由 Segment 数组结构和 HashEntry 数组结构组成。Segment 是一种可 重入锁 ReentrantLock，在 ConcurrentHashMap 里扮演锁的角色，HashEntry 则用于存储键值 对数据。一个 ConcurrentHashMap 里包含一个 Segment 数组，Segment 的结构和 HashMap 类似，是一种数组和链表结构， 一个 Segment 里包含一个 HashEntry 数组，每个 HashEntry 是 一个链表结构的元素， **每个 Segment 守护一个 HashEntry 数组里的元素,当对 HashEntry 数组的 数据进行修改时，必须首先获得它对应的 Segment 锁**。
+
+## Java 中用到的线程调度
+### 抢占式调度：
+    抢占式调度指的是每条线程执行的时间、线程的切换都由系统控制，系统控制指的是在系统某种 运行机制下，可能每条线程都分同样的执行时间片，也可能是某些线程执行的时间片较长.
+### 协同式调度：
+    协同式调度指某一线程执行完后主动通知系统切换到另一线程上执行，这种模式就像接力赛一样
+### 线程让出 cpu 的情况：
+    1. 当前运行线程主动放弃 CPU，JVM 暂时放弃 CPU 操作（基于时间片轮转调度的 JVM 操作系 统不会让线程永久放弃 CPU，或者说放弃本次时间片的执行权），例如调用 yield()方法。 
+    2. 当前运行线程因为某些原因进入阻塞状态，例如阻塞在 I/O 上。 
+    3. 当前运行线程结束，即运行完 run()方法里面的任务。
+
+## 进程调度算法
+此处略，仅提及一下。
+### 优先调度算法
+1. 先来先服务调度算法（FCFS）
+2. 短作业(进程)优先调度算法
+### 高优先权优先调度算法
+1. 非抢占式优先权算法
+2. 抢占式优先权调度算法
+3. 高响应比优先调度算法
+### 基于时间片的轮转调度算法
+1. 时间片轮转法
+2. 多级反馈队列调度算法
+
+## 什么是 CAS（比较并交换-乐观锁机制-锁自旋）
+略
+
+## 什么是 AQS（抽象的队列同步器）
+略
+
+# JAVA 基础
