@@ -771,3 +771,150 @@ ConcurrentHashMap 是由 Segment 数组结构和 HashEntry 数组结构组成
 略
 
 # JAVA 基础
+## JAVA 异常分类及处理
+### 异常分类
+Throwable
+    Error(内存异常)
+        AWTEroor
+        ThreadDeath
+    Exception
+        CheckedException(受检异常, 编译器报错)
+            SQLException
+            IOException
+            ClassNotFundException
+            ......
+        RuntimeExcetion(非受检异常, 运行时报错)
+                NullPointerException
+                ArithmeticException
+                ClassCastException
+                ArraryIndexOutOfBundsException
+                ......
+
+### 异常的处理方式
+* 遇到问题不进行具体处理，而是继续抛给调用者 （throw,throws）
+* try catch 捕获异常针对性处理方式
+
+## JAVA 反射
+### 动态语言
+动态语言，是指程序在运行时可以改变其结构：新的函数可以引进，已有的函数可以被删除等结 构上的变化。比如常见的 JavaScript 就是动态语言，除此之外 Ruby,Python 等也属于动态语言， 而 C、C++则不属于动态语言。从反射角度说 JAVA 属于半动态语言。
+### 反射机制概念 （运行状态中知道类所有的属性和方法）
+在 Java 中的反射机制是指**在运行状态中，对于任意一个类都能够知道这个类所有的属性和方法； 并且对于任意一个对象，都能够调用它的任意一个方法**；这种动态获取信息以及动态调用对象方 法的功能成为 Java 语言的反射机制。
+### 反射的应用场合
+* 编译时类型和运行时类型
+    ``` java
+    Person p=new Student();
+    ```
+    其中编译时类型为 Person，运行时类型为 Student。
+* 编译时类型无法获取具体方法
+### Java 反射 API
+反射 API 用来生成 JVM 中的类、接口或则对象的信息
+    1. Class 类：反射的核心类，可以获取类的属性，方法等信息。 
+    2. Field 类：Java.lang.reflec 包中的类，表示类的成员变量，可以用来获取和设置类之中的属性 值。 
+    3. Method 类： Java.lang.reflec 包中的类，表示类的方法，它可以用来获取类中的方法信息或 者执行方法。 
+    4. Constructor 类： Java.lang.reflec 包中的类，表示类的构造方法。
+### 反射使用步骤（获取 Class 对象、调用对象方法）
+1. 获取想要操作的类的 Class 对象，他是反射的核心，通过 Class 对象我们可以任意调用类的方 法。 
+2. 调用 Class 类中的方法，既就是反射的使用阶段。 
+3. 使用反射 API 来操作这些信息。
+### 获取 Class 对象的 3 种方法
+* 调用某个对象的 getClass()方法 
+    ``` java
+    Person p=new Person(); 
+    Class clazz=p.getClass();
+```
+* 调用某个类的 class 属性来获取该类对应的 Class 对象
+    ``` java
+    Class clazz=Person.class; 
+```
+* 使用 Class 类中的 forName()静态方法(最安全/性能最好) 
+    ``` java
+    Class clazz=Class.forName("类的全路径"); 
+```
+当我们获得了想要操作的类的 Class 对象后，可以通过 Class 类中的方法获取并查看该类中的方法 和属性。
+``` java
+//获取 Person 类的 Class 对象 
+Class clazz=Class.forName("reflection.Person"); 
+
+//获取 Person 类的所有方法信息 
+Method[] method=clazz.getDeclaredMethods(); 
+for(Method m:method){ 
+    System.out.println(m.toString()); 
+} 
+
+//获取 Person 类的所有成员属性信息 
+Field[] field=clazz.getDeclaredFields(); 
+for(Field f:field){ 
+    System.out.println(f.toString()); 
+} 
+
+//获取 Person 类的所有构造方法信息 
+Constructor[] constructor=clazz.getDeclaredConstructors(); 
+for(Constructor c:constructor){ 
+    System.out.println(c.toString()); 
+}
+```
+### 创建对象的两种方法
+* Class 对象的 newInstance()
+* 调用 Constructor 对象的 newInstance()
+
+## JAVA 注解
+略
+## JAVA 内部类
+此处略，仅提及一下。
+* 静态内部类
+* 成员内部类
+* 局部内部类（定义在方法中的类）
+* 匿名内部类（要继承一个父类或者实现一个接口、直接使用 new 来生成一个对象的引用）
+## JAVA 泛型
+泛型提供了编译时类型安全检测机制，该机制允许程序员在编译时检测到非法的类型。泛型的本 质是参数化类型，也就是说所操作的数据类型被指定为一个参数。比如我们要写一个排序方法， 能够对整型数组、字符串数组甚至其他任何类型的数组进行排序，我们就可以使用 Java 泛型。
+### 泛型方法 <\E>
+你可以写一个泛型方法，该方法在调用时可以接收不同类型的参数。根据传递给泛型方法的参数 类型，编译器适当地处理每一个方法调用。
+``` java
+// 泛型方法 printArray 
+public static <E> void printArray( E[] inputArray ) { 
+    for ( E element : inputArray ){ 
+        System.out.printf( "%s ", element ); 
+    } 
+}
+```
+1.  <\? extends T>表示该通配符所代表的类型是 T 类型的子类。 
+2. <\? super T>表示该通配符所代表的类型是 T 类型的父类。
+### 泛型类 <\T>
+泛型类的声明和非泛型类的声明类似，除了在类名后面添加了类型参数声明部分。和泛型方法一 样，泛型类的类型参数声明部分也包含一个或多个类型参数，参数间用逗号隔开。一个泛型参数， 也被称为一个类型变量，是用于指定一个泛型类型名称的标识符。因为他们接受一个或多个参数， 这些类被称为参数化的类或参数化的类型。
+``` java
+public class Box<T> { 
+    private T t; 
+    public void add(T t) { 
+        this.t = t; 
+    } 
+    public T get() { 
+        return t; 
+    } 
+}
+```
+### 类型通配符 ?
+类型通配符一般是使用 ? 代替具体的类型参数。例如 List 在逻辑上是 List,List 等所有 List<具体类型实参>的父类。
+### 类型擦除
+**Java 中的泛型基本上都是在编译器这个层次来实现的。在生成的 Java 字节代码中是不包含泛型中的类型信息的**。使用泛型的时候加上的类型参数，会被编译器在编译的时候去掉。这个 过程就称为类型擦除。如在代码中定义的 List和 List等类型，在编译之后 都会变成 List。JVM 看到的只是 List，而由泛型附加的类型信息对 JVM 来说是不可见的。 类型擦除的基本过程也比较简单，首先是找到用来替换类型参数的具体类。这个具体类一般 是 Object。如果指定了类型参数的上界的话，则使用这个上界。把代码中的类型参数都替换 成具体的类。
+## JAVA 序列化(创建可复用的 Java 对象)
+此处略，仅提及一下。
+* 保存(持久化)对象及其状态到内存或者磁盘
+* 序列化对象以字节数组保持-静态成员不保存
+* 序列化用户远程对象传
+* Serializable 实现序列
+    * writeObject 和 readObject 自定义序列化策略
+    * 序列化 ID
+    * 序列化并不保存静态变量
+* Transient 关键字阻止该变量被序列化到文件中
+## JAVA 复制
+将一个对象的引用复制给另外一个对象，一共有三种方式。第一种方式是直接赋值，第二种方式 是浅拷贝，第三种是深拷贝。所以大家知道了哈，这三种概念实际上都是为了拷贝对象。
+### 直接赋值复制
+### 浅复制（复制引用但不复制引用的对象）
+创建一个新对象，然后将当前对象的非静态字段复制到该新对象，**如果字段是值类型的， 那么对该字段执行复制；如果该字段是引用类型的话，则复制引用但不复制引用的对象**。 
+因此，原始对象及其副本引用同一个对象。
+### 深复制（复制对象和其应用对象）
+深拷贝不仅复制对象本身，而且复制对象包含的引用指向的所有对象。
+### 序列化（深 clone 一中实现）
+在 Java 语言里深复制一个对象，常常可以先使对象实现 Serializable 接口，然后把对 象（实际上只是对象的一个拷贝）写到一个流里，再从流里读出来，便可以重建对象。
+
+# Spring 原理
