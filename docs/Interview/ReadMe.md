@@ -954,3 +954,14 @@ Spring 常用模块
         MVC 框架是一个全功能的构建Web应用程序的 MVC 实现。通过策略接口，MVC 框架编程为高度可配置的，MVC 容纳了大量试图技术，其中包括 JSP、Velocity、Tiles、iText 和 POI 。
 
 ## Spring 主要包
+略
+## Spring 常用注解
+bean 注入与装配的的方式有很多种，可以通过 xml，get set 方式，构造函数或者注解等。简单易 用的方式就是使用 Spring 的注解了，Spring 提供了大量的注解方式。
+
+详情，略（已掌握）
+
+## 第三方结合
+
+
+
+
