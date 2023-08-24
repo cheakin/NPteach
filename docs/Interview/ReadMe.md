@@ -999,21 +999,21 @@ BeanFactory 是 Spring 框架的基础设施，面向 Spring 本身；Applicatio
 ![[Pasted image 20230823230226.png]]
 
 ##### BeanDefinitionRegistry 注册表 
-Spring 配置文件中每一个节点元素在 Spring 容器里都通过一个 BeanDefinition 对象表示，它描述了 Bean 的配置信息。而 BeanDefinitionRegistry 接口提供了向容器手工注册 BeanDefinition 对象的方法。 
+1. Spring 配置文件中每一个节点元素在 Spring 容器里都通过一个 BeanDefinition 对象表示，它描述了 Bean 的配置信息。而 BeanDefinitionRegistry 接口提供了向容器手工注册 BeanDefinition 对象的方法。 
 ##### BeanFactory 顶层接口 
-位于类结构树的顶端 ，它最主要的方法就是 getBean(String beanName)，该方法从容器中返回特定名称的 Bean，BeanFactory 的功能通过其他的接口得到不断扩展
+2. 位于类结构树的顶端 ，它最主要的方法就是 getBean(String beanName)，该方法从容器中返回特定名称的 Bean，BeanFactory 的功能通过其他的接口得到不断扩展
 ##### ListableBeanFactory 
-该接口定义了访问容器中 Bean 基本信息的若干方法，如查看 Bean 的个数、获取某一类型 Bean 的配置名、查看容器中是否包括某一 Bean 等方法； 
+3. 该接口定义了访问容器中 Bean 基本信息的若干方法，如查看 Bean 的个数、获取某一类型 Bean 的配置名、查看容器中是否包括某一 Bean 等方法； 
 ##### HierarchicalBeanFactory 父子级联 
-父子级联 IOC 容器的接口，子容器可以通过接口方法访问父容器； 通过 HierarchicalBeanFactory 接口， **Spring 的 IOC 容器可以建立父子层级关联的容器体系**，子容器可以访问父容器中的 Bean，但父容器不能访问子容器的 Bean。Spring 使用父子容器实现了很多功能，比如**在 Spring MVC 中，展现层 Bean 位于一个子容器中，而业务层和持久 层的 Bean 位于父容器中。这样，展现层 Bean 就可以引用业务层和持久层的 Bean，而业务层和持久层的 Bean 则看不到展现层的 Bean。** 
+4. 父子级联 IOC 容器的接口，子容器可以通过接口方法访问父容器； 通过 HierarchicalBeanFactory 接口， **Spring 的 IOC 容器可以建立父子层级关联的容器体系**，子容器可以访问父容器中的 Bean，但父容器不能访问子容器的 Bean。Spring 使用父子容器实现了很多功能，比如**在 Spring MVC 中，展现层 Bean 位于一个子容器中，而业务层和持久 层的 Bean 位于父容器中。这样，展现层 Bean 就可以引用业务层和持久层的 Bean，而业务层和持久层的 Bean 则看不到展现层的 Bean。** 
 ##### ConfigurableBeanFactory 
-是一个重要的接口，增强了 IOC 容器的可定制性，它定义了设置类装载器、属性编辑器、容器初始化后置处理器等方法； 
+5. 是一个重要的接口，增强了 IOC 容器的可定制性，它定义了设置类装载器、属性编辑器、容器初始化后置处理器等方法； 
 ##### AutowireCapableBeanFactory 自动装配 
-定义了将容器中的 Bean 按某种规则（如按名字匹配、按类型匹配等）进行自动装配的方法； 
+6. 定义了将容器中的 Bean 按某种规则（如按名字匹配、按类型匹配等）进行自动装配的方法； 
 ##### SingletonBeanRegistry 运行期间注册单例 Bean 
-定义了允许在运行期间向容器注册单实例 Bean 的方法；对于单实例（ singleton）的 Bean 来说，**BeanFactory 会缓存 Bean 实例，所以第二次使用 getBean() 获取 Bean 时将直接从 IOC 容器的缓存中获取 Bean 实例**。Spring 在 DefaultSingletonBeanRegistry 类中提供了一个用于缓存单实例 Bean 的缓存器，它是一个用 HashMap 实现的缓存器，单实例的 Bean 以 beanName 为键保存在这个 HashMap 中。 
+7. 定义了允许在运行期间向容器注册单实例 Bean 的方法；对于单实例（ singleton）的 Bean 来说，**BeanFactory 会缓存 Bean 实例，所以第二次使用 getBean() 获取 Bean 时将直接从 IOC 容器的缓存中获取 Bean 实例**。Spring 在 DefaultSingletonBeanRegistry 类中提供了一个用于缓存单实例 Bean 的缓存器，它是一个用 HashMap 实现的缓存器，单实例的 Bean 以 beanName 为键保存在这个 HashMap 中。 
 ##### 依赖日志框框 
-**在初始化 BeanFactory 时，必须为其提供一种日志框架**，比如使用 Log4J， 即在类路径下提 供 Log4J 配置文件，这样启动 Spring 容器才不会报错。
+8. **在初始化 BeanFactory 时，必须为其提供一种日志框架**，比如使用 Log4J， 即在类路径下提 供 Log4J 配置文件，这样启动 Spring 容器才不会报错。
 
 #### ApplicationContext 面向开发应用
 ApplicationContext 由 BeanFactory 派生而来，提供了更多面向实际应用的功能。 ApplicationContext 继承了 HierarchicalBeanFactory 和 ListableBeanFactory 接口，在此基础 上，还通过多个其他的接口扩展了 BeanFactory 的功能：
@@ -1026,3 +1026,86 @@ ApplicationContext 由 BeanFactory 派生而来，提供了更多面向实际应
 6. LifeCycle：该接口是 Spring 2.0 加入的，该接口提供了 start()和 stop()两个方法，主要用于控制异步处理过程。在具体使用时，该接口同时被 ApplicationContext 实现及具体 Bean 实现， ApplicationContext 会将 start/stop 的信息传递给容器中所有实现了该接口的 Bean，以达到管理和控制 JMX、任务调度等目的。 
 7. ConfigurableApplicationContext 扩展于 ApplicationContext，它新增加了两个主要的方法： refresh()和 close()，让 ApplicationContext 具有启动、刷新和关闭应用上下文的能力。在应用上下文关闭的情况下调用 refresh()即可启动应用上下文，在已经启动的状态下，调用 refresh()则清除缓存并重新装载配置信息，而调用 close()则可关闭应用 上下文。
 #### WebApplication 体系架构
+WebApplicationContext 是专门为 Web 应用准备的，它允许从相对于 Web 根目录的路径中装载配置文件完成初始化工作。从 WebApplicationContext 中可以获得 ServletContext 的引用，**整个 Web 应用上下文对象将作为属性放置到 ServletContext 中**，以便 Web 应用环境可以访问 Spring 应用上下文。
+![[Pasted image 20230824215939.png]]
+
+### Spring Bean 作用域
+Spring 3 中为 Bean 定义了 5 中作用域，**分别为 singleton（单例）、prototype（原型）、 request、session 和 global session**，5 种作用域说明如下：
+#### singleton：单例模式（多线程下不安全）
+singleton：单例模式，Spring IOC 容器中只会存在一个共享的 Bean 实例，无论有多少个 Bean 引用它，始终指向同一对象。**该模式在多线程下是不安全的**。Singleton 作用域是 Spring 中的缺省作用域，也可以显示的将 Bean 定义为 singleton 模式，配置为：`<bean id="userDao" class="com.ioc.UserDaoImpl" scope="singleton"/>`
+#### prototype:原型模式每次使用时创建
+prototype:原型模式，**每次通过 Spring 容器获取 prototype 定义的 bean 时，容器都将创建 一个新的 Bean 实例，每个 Bean 实例都有自己的属性和状态**，而 singleton 全局只有一个对 象。根据经验，**对有状态的bean使用 prototype 作用域，而对无状态的 bean 使用 singleton 作用域**。
+#### Request：一次 request 一个实例
+request：在**一次 Http 请求中，容器会返回该 Bean 的同一实例**。而对不同的 Http 请求则会 产生新的 Bean，而且该 **bean 仅在当前 Http Request 内有效**，当前 Http 请求结束，该 bean 实例也将会被销毁。
+`<bean id="loginAction" class="com.cnblogs.Login" scope="request"/>`
+#### session
+session：在一次 Http Session 中，容器会返回该 Bean 的同一实例。而对不同的 Session 请求则会创建新的实例，该 bean 实例仅在当前 Session 内有效。同 Http 请求相同，每一次 session 请求创建新的实例，而不同的实例之间不共享属性，且实例仅在自己的 session 请求内有效，请求结束，则实例将被销毁。
+`<bean id="userPreference" class="com.ioc.UserPreference" scope="session"/>`
+#### global Session
+global Session：在一个全局的 Http Session 中，容器会返回该 Bean 的同一个实例，仅在 使用 portlet context 时有效。
+
+### Spring Bean 生命周期
+![[Pasted image 20230824221604.png]]
+#### 实例化 
+1. 实例化一个 Bean，也就是我们常说的 new。 
+#### IOC 依赖注入 
+2. 按照 Spring 上下文对实例化的 Bean 进行配置，也就是 IOC 注入。 
+#### setBeanName 实现 
+3. 如果这个 Bean 已经实现了 BeanNameAware 接口，会调用它实现的 setBeanName(String) 方法，此处传递的就是 Spring 配置文件中 Bean 的 id 值 
+#### BeanFactoryAware 实现 
+4. 如果这个 Bean 已经实现了 BeanFactoryAware 接口，会调用它实现的 setBeanFactory， setBeanFactory(BeanFactory) 传递的是 Spring 工厂自身（可以用这个方式来获取其它 Bean， 只需在 Spring 配置文件中配置一个普通的 Bean 就可以）。 
+#### ApplicationContextAware 实现 
+5. 如果这个 Bean 已经实现了 ApplicationContextAware 接口，会调用 setApplicationContext(ApplicationContext) 方法，传入 Spring 上下文（同样这个方式也 可以实现步骤 4 的内容，但比 4 更好，因为 ApplicationContext 是 BeanFactory 的子接口，有更多的实现方法） 
+#### postProcessBeforeInitialization 接口实现-初始化预处理 
+6. 如果这个 Bean 关联了 **BeanPostProcessor 接口，将会调用 postProcessBeforeInitialization(Object obj, String s)方法，BeanPostProcessor 经常被用 作是 Bean 内容的更改，并且由于这个是在 Bean 初始化结束时调用那个的方法，也可以被应 用于内存或缓存技术。** 
+#### init-method 
+7. 如果 Bean 在 Spring 配置文件中配置了 init-method 属性会自动调用其配置的初始化方法。 
+#### postProcessAfterInitialization 
+8. 如果这个 Bean 关联了 BeanPostProcessor 接口，将会调用 postProcessAfterInitialization(Object obj, String s) 方法。 注：**以上工作完成以后就可以应用这个 Bean 了**，那这个 Bean 是一个 Singleton 的，所以一 般情况下我们调用同一个 id 的 Bean 会是在内容地址相同的实例，当然在 Spring 配置文件中也可以配置非 Singleton。 
+#### Destroy 过期自动清理阶段 
+9. 当 Bean 不再需要时，会经过清理阶段，如果 Bean 实现了 DisposableBean 这个接口，会调用那个其实现的 destroy()方法； 
+#### destroy-method 自配置清理 
+10. 最后，如果这个 Bean 的 Spring 配置中配置了 destroy-method 属性，会自动调用其配置的销毁方法。
+
+11. bean 标签有两个重要的属性**（init-method 和 destroy-method）。用它们你可以自己定制 初始化和注销方法。它们也有相应的注解（@PostConstruct 和@PreDestroy）**。
+    `<bean id="" class="" init-method="初始化方法" destroy-method="销毁方法">`
+
+### Spring 依赖注入四种方式
+此处略，仅提及一下。
+* 构造器注入
+* setter 方法注入
+* 静态工厂注入
+* 实例工厂
+
+## Spring APO 原理
+### 概念
+"横切"的技术，剖解开封装的对象内部，并将那些影响了多个类的公共行为封装到一个可重用模块， 并将其命名为"Aspect"，即切面。所谓"切面"，简单说就是那些与业务无关，却为业务模块所共同调用的逻辑或责任封装起来，便于减少系统的重复代码，降低模块之间的耦合度，并有利于未 来的可操作性和可维护性。 
+使用"横切"技术，AOP 把软件系统分为两个部分：核心关注点和横切关注点。业务处理的主要流程是核心关注点，与之关系不大的部分是横切关注点。横切关注点的一个特点是，他们经常发生 在核心关注点的多处，而各处基本相似，比如权限认证、日志、事物。AOP 的作用在于分离系统中的各种关注点，将核心关注点和横切关注点分离开来。 
+AOP 主要应用场景有：
+1. Authentication 权限 
+2. Caching 缓存 
+3. Context passing 内容传递 
+4. Error handling 错误处理 
+5. Lazy loading 懒加载 
+6. Debugging 调试 
+7. logging, tracing, profiling and monitoring 记录跟踪 优化 校准 
+8. Performance optimization 性能优化 
+9. Persistence 持久化 
+10. Resource pooling 资源池 
+11. Synchronization 同步 
+12. Transactions 事务
+### AOP 核心概念
+1. 切面（aspect）：类是对物体特征的抽象，切面就是对横切关注点的抽象 
+2. 横切关注点：对哪些方法进行拦截，拦截后怎么处理，这些关注点称之为横切关注点。 
+3. 连接点（joinpoint）：**被拦截到的点**，因为 Spring 只支持方法类型的连接点，所以在 Spring 中连接点指的就是被拦截到的方法，实际上连接点还可以是字段或者构造器。 
+4. 切入点（pointcut）：对连接点进行拦截的定义 
+5. 通知（advice）：所谓通知指的就是指拦截到连接点之后要执行的代码，**通知分为前置、后置、 异常、最终、环绕通知五类**。 
+6. 目标对象：代理的目标对象 
+7. 织入（weave）：将切面应用到目标对象并导致代理对象创建的过程
+### AOP 两种代理方式
+Spring 提供了两种方式来生成代理对象: JDKProxy 和 Cglib，具体使用哪种方式生成由 AopProxyFactory 根据 AdvisedSupport 对象的配置来决定。**默认的策略是如果目标类是接口， 则使用 JDK 动态代理技术，否则使用 Cglib 来生成代理**。
+#### JDK 动态接口代理
+JDK 动态代理主要涉及到 java.lang.reflect 包中的两个类：**Proxy** 和 **InvocationHandler**。 
+**InvocationHandler是一个接口，通过实现该接口定义横切逻辑，并通过反射机制调用目标类的代码，动态将横切逻辑和业务逻辑编制在一起。Proxy 利用 InvocationHandler 动态创建 一个符合某一接口的实例，生成目标类的代理对象。**
+### CGLib 动态代理
+CGLib 全称为 Code Generation Library，是一个强大的高性能，**高质量的代码生成类库， 可以在运行期扩展 Java 类与实现 Java 接口**，CGLib 封装了 asm，可以再运行期动态生成新 的 class。和 JDK 动态代理相比较：JDK 创建代理有一个限制，就是只能为接口创建代理实例， 而对于没有通过接口定义业务方法的类，则可以通过 CGLib 创建动态代理。
