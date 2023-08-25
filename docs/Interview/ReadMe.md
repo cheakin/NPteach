@@ -1107,5 +1107,113 @@ Spring 提供了两种方式来生成代理对象: JDKProxy 和 Cglib，具体�
 #### JDK 动态接口代理
 JDK 动态代理主要涉及到 java.lang.reflect 包中的两个类：**Proxy** 和 **InvocationHandler**。 
 **InvocationHandler是一个接口，通过实现该接口定义横切逻辑，并通过反射机制调用目标类的代码，动态将横切逻辑和业务逻辑编制在一起。Proxy 利用 InvocationHandler 动态创建 一个符合某一接口的实例，生成目标类的代理对象。**
-### CGLib 动态代理
+#### CGLib 动态代理
 CGLib 全称为 Code Generation Library，是一个强大的高性能，**高质量的代码生成类库， 可以在运行期扩展 Java 类与实现 Java 接口**，CGLib 封装了 asm，可以再运行期动态生成新 的 class。和 JDK 动态代理相比较：JDK 创建代理有一个限制，就是只能为接口创建代理实例， 而对于没有通过接口定义业务方法的类，则可以通过 CGLib 创建动态代理。
+### 实现原理
+略
+
+## Spring MVC 原理
+Spring 的模型-视图-控制器（MVC）框架是围绕一个 DispatcherServlet 来设计的，这个 Servlet 会把请求分发给各个处理器，并支持可配置的处理器映射、视图渲染、本地化、时区与主题渲染 等，甚至还能支持文件上传。
+### MVC 流程
+![[Pasted image 20230825201923.png]]
+#### Http 请求到 DispatcherServlet
+(1)客户端请求提交到 DispatcherServlet。
+#### HandlerMapping 寻找处理器
+(2)由 DispatcherServlet 控制器查询一个或多个 HandlerMapping，找到处理请求的 Controller。
+#### 调用处理器 Controller
+(3)DispatcherServlet 将请求提交到 Controller。
+#### Controller 调用业务逻辑处理后，返回 ModelAndView
+(4)(5)调用业务处理和返回结果：Controller 调用业务逻辑处理后，返回 ModelAndView。
+#### DispatcherServlet 查询 ModelAndView
+(6)(7)处理视图映射并返回模型： DispatcherServlet 查询一个或多个 ViewResoler 视图解析器， 找到 ModelAndView 指定的视图。
+#### ModelAndView 反馈浏览器 HTTP
+(8)Http 响应：视图负责将结果显示到客户端。
+
+### MVC 常用注解
+mvc 注解
+    视图解析器
+        @Controller：略
+        @RestController：略
+        @Component：略
+        @Respository：略
+        @Service：略
+    参数解析
+        @ResponseBody
+            异步请求
+            该注解用于将 Controller 的方法返回的对象，通过适当的 HttpMessageConverter 转换为指定格式后，写入到 Response 对象的 body 数据区
+            返回的数据不是 html 标签的页面，而是其他某种格式的数据是（如json、xml等）使用
+        @RequestMapping
+            一个用来处理请求地址映射的注解，可用与类或方法上。用于类上，表示类中的所有相应请求的方法都是改地址作为父路径
+        @Autowired
+            它可以对类成员变量、方法机构造函数进行标注，完成自动装配的工作。通过 @Autowired 的使用来小时 set , get 方法
+        @PathVariable
+            用于将请求URL中的模板变量映射到功能处理方法的参数上，即取出uri模板中的变量作为参数
+        @RequestParam
+            主要用于在SpringMVC后台控制层获取参数，类似一种是 request.getParamter("name")
+        @ResuestHeader
+            可以把Request请求header部分的值绑定到方法的参数上
+## Spring Boot 原理
+Spring Boot 是由 Pivotal 团队提供的全新框架，其设计目的是用来简化新 Spring 应用的初始搭建以及开发过程。该框架使用了特定的方式来进行配置，从而使开发人员不再需要定义样板化的配置。通过这种方式，Spring Boot 致力于在蓬勃发展的快速应用开发领域(rapid application development)成为领导者。其特点如下：
+1. 创建独立的 Spring 应用程序 
+2. 嵌入的 Tomcat，无需部署 WAR 文件 
+3. 简化 Maven 配置 
+4. 自动配置 Spring 
+5. 提供生产就绪型功能，如指标，健康检查和外部配置 
+6. 绝对没有代码生成和对 XML 没有要求配置
+## JPA 原理
+### 事务
+事务是计算机应用中不可或缺的组件模型，它保证了用户操作的原子性 ( Atomicity )、一致性 ( Consistency )、隔离性 ( Isolation ) 和持久性 ( Durabilily )。
+### 本地事务
+紧密依赖于底层资源管理器（例如数据库连接 )，**事务处理局限在当前事务资源内**。此种事务处理方式不存在对应用服务器的依赖，因而部署灵活却无法支持多数据源的分布式事务。在数据库连 接中使用本地事务示例如下：
+``` java
+public void transferAccount() { 
+    Connection conn = null; 
+    Statement stmt = null; 
+    try { 
+        conn = getDataSource().getConnection(); 
+        // 将自动提交设置为 false，若设置为 true 则数据库将会把每一次数据更新认定为一个事务并自动提交 
+        conn.setAutoCommit(false); 
+        stmt = conn.createStatement(); 
+        // 将 A 账户中的金额减少 500 
+        stmt.execute("update t_account set amount = amount - 500 where account_id = 'A'");
+        // 将 B 账户中的金额增加 500 
+        stmt.execute("update t_account set amount = amount + 500 where account_id = 'B'"); 
+        // 提交事务 
+        conn.commit(); 
+        // 事务提交：转账的两步操作同时成功 
+    } catch (SQLException sqle) { 
+        // 发生异常，回滚在本事务中的操做 
+        conn.rollback(); 
+        // 事务回滚：转账的两步操作完全撤销 
+        stmt.close(); 
+        conn.close(); 
+    } 
+}
+```
+### 分布式事务
+Java 事务编程接口（JTA：Java Transaction API）和 Java 事务服务 (JTS；Java Transaction Service) 为 J2EE 平台提供了分布式事务服务。分布式事务（Distributed Transaction）包括事务管理器（Transaction Manager）和一个或多个支持 XA 协议的资源管理器 ( Resource Manager )。我们可以将资源管理器看做任意类型的持久化数据存储；事务管理器承担着所有事务参与单元的协调与控制。
+### 两阶段提交
+两阶段提交主要保证了分布式事务的原子性：即所有结点要么全做要么全不做，所谓的两个阶段是指：**第一阶段：准备阶段；第二阶段：提交阶段。**
+#### 准备阶段
+事务协调者(事务管理器)给每个参与者(资源管理器)发送 Prepare 消息，每个参与者要么直接返回失败(如权限验证失败)，**要么在本地执行事务，写本地的 redo 和 undo 日志，但不提交**，到达一种"万事俱备，只欠东风”的状态。
+#### 提交阶段
+如果协调者收到了参与者的失败消息或者超时，直接给每个参与者发送回滚(Rollback)消息；否则，发送提交(Commit)消息；参与者根据协调者的指令执行提交或者回滚操作，释放所有事务处理过程中使用的锁资源。（注意:**必须在最后阶段释放锁资源**）
+将提交分成两阶段进行的目的很明确，就是尽可能晚地提交事务，让事务在提交前尽可能地完成所有能完成的工作。
+## Mybatis 缓存
+Mybatis 中有一级缓存和二级缓存，默认情况下一级缓存是开启的，而且是不能关闭的。一级缓存是指 SqlSession 级别的缓存，当在同一个 SqlSession 中进行相同的 SQL 语句查询时，第二次以后的查询不会从数据库查询，而是直接从缓存中获取，一级缓存最多缓存 1024 条 SQL。二级缓存是指可以跨 SqlSession 的缓存。是 mapper 级别的缓存，对于 mapper 级别的缓存不同的 sqlsession 是可以共享的。
+![[Pasted image 20230825205857.png]]
+### Mybatis 的一级缓存原理（sqlsession 级别）
+第一次发出一个查询 sql，sql 查询结果写入 sqlsession 的一级缓存中，缓存使用的数据结构是一 个 map。 
+    **key：MapperID+offset+limit+Sql+所有的入参** 
+    value：用户信息 
+同一个 sqlsession 再次发出相同的 sql，就从缓存中取出数据。**如果两次中间出现 commit 操作 （修改、添加、删除），本 sqlsession 中的一级缓存区域全部清空，下次再去缓存中查询不到所以要从数据库查询**，从数据库查询到再写入缓存。
+### 二级缓存原理（mapper 基本）
+二级缓存的范围是 mapper 级别（mapper 同一个命名空间），mapper 以命名空间为单位创建缓存数据结构，结构是 map。mybatis 的二级缓存是通过 CacheExecutor 实现的。CacheExecutor 其实是 Executor 的代理对象。所有的查询操作，在 CacheExecutor 中都会先匹配缓存中是否存 在，不存在则查询数据库。
+    key：MapperID+offset+limit+Sql+所有的入参
+具体使用需要配置： 
+    1. Mybatis 全局配置中启用二级缓存配置 
+    2. 在对应的 Mapper.xml 中配置 cache 节点 
+    3. 在对应的 select 查询节点中添加 useCache=true
+
+## Tomcat 架构
+略
