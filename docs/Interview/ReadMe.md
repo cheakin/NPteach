@@ -1317,3 +1317,26 @@ HTTPS（全称：Hypertext Transfer Protocol over Secure Socket Layer），是�
 3. 如果确认证书有效，那么生成对称秘钥并使用服务器的公共秘钥进行加密。然后发送给服务器，服务器使用它的私钥对它进行解密，这样两台计算机可以开始进行对称加密进行通信。
 ![[Pasted image 20230829231507.png]]
 ## CDN 原理
+CND 一般包含分发服务系统、负载均衡系统和管理系统
+
+此处略，仅提及一下。
+* 分发服务系统
+* 负载均衡系统
+* 管理系统
+
+# 日志
+## Slf4j
+略
+## Log4j
+略
+## LogBack
+略
+## ELK
+ELK 是软件集合 Elasticsearch、Logstash、Kibana 的简称，由这三个软件及其相关的组件可以打 造大规模日志实时处理系统。
+* Elasticsearch 是一个基于 Lucene 的、支持全文索引的分布式存储和索引引擎，主要负责将 日志索引并存储起来，方便业务方检索查询。 
+* Logstash 是一个日志收集、过滤、转发的中间件，主要负责将各条业务线的各类日志统一收 集、过滤后，转发给 Elasticsearch 进行下一步处理。 
+* Kibana 是一个可视化工具，主要负责查询 Elasticsearch 的数据并以可视化的方式展现给业 务方，比如各类饼图、直方图、区域图等。
+![[Pasted image 20230830232631.png]]
+
+# Zookeeper
+略
