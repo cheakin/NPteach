@@ -1592,6 +1592,48 @@ keepalive 起初是为 LVS 设计的，专门用来**监控 lvs 各个服务节�
 ## Nginx 反向代理负载均衡
 普通的负载均衡软件，如 LVS，**其实现的功能只是对请求数据包的转发、传递**，从负载均衡下的节点服务器来看，接收到的请求还是来自访问负载均衡器的客户端的真实用户；而反向代理就不一样了，**反向代理服务器在接收访问用户请求后，会代理用户重新发起请求代理下的节点服务器**， 最后把数据返回给客户端用户。在节点服务器看来，访问的节点服务器的客户端用户就是反向代理服务器，而非真实的网站访问用户。
 ### upstream_module 和健康检测
-ngx_http_upstream_module 是负载均衡模块，可以实现网站的负载均衡功能即节点的健康检 查，upstream 模块允许 Nginx 定义一组或多组节点服务器组，使用时可通过 proxy_pass 代理方 式把网站的请求发送到事先定义好的对应 Upstream 组 的名字上。
+**ngx_http_upstream_module 是负载均衡模块，可以实现网站的负载均衡功能即节点的健康检查**，upstream 模块允许 Nginx 定义一组或多组节点服务器组，使用时可通过 proxy_pass 代理方 式把网站的请求发送到事先定义好的对应 Upstream 组的名字上。
 
+| upstream 模块内参数 | 参数说明 |
+| -- | -- |
+| weight | 服务器权重 |
+| max_fails Nginx | 尝试连接后端主机失败的此时，这是值是配合 proxy_next_upstream、 fastcgi_next_upstream 和 memcached_next_upstream 这三个参数来使用的。当 Nginx 接收后端服务器返回这三个参数定义的状态码时，会将这个请求转发给正常工作的的后端服务器。如 404、503、503，max_files=1 |
+| fail_timeout | max_fails 和 fail_timeout 一般会关联使用，如果某台 server 在 fail_timeout 时间内出现了 max_fails 次连接失败，那么 Nginx 会认为其已经挂掉，从而在 fail_timeout 时间内不再去请求它，fail_timeout 默认是 10s，max_fails 默认是 1，即默认情况只要是发生错误就认为服务器挂了，如果将 max_fails 设置为 0，则表示取消这项检查 |
+| backup | 表示当前 server 是备用服务器，只有其它非 backup 后端服务器都挂掉了或很忙才会分配请求给它|
+| down | 标志服务器永远不可用，可配合 ip_hash 使用 |
+``` sh
+upstream lvsServer { 
+    server 191.168.1.11 weight=5 ; 
+    server 191.168.1.22:82; 
+    server example.com:8080 
+    max_fails=2  fail_timeout=10s backup; 
+    #域名的话需要解析的哦，内网记得 hosts 
+}
+```
+### proxy_pass 请求转发
+proxy_pass 指令属于 ngx_http_proxy_module 模块，此模块可以将请求转发到另一台服务器， 在实际的反向代理工作中，会通过 location 功能匹配指定的 URI，然后把接收到服务匹配 URI 的请求通过 proyx_pass 抛给定义好的 upstream 节点池。
+``` sh
+location /download/ { 
+    proxy_pass http://download/vedio/; 
+} 
+#这是前端代理节点的设置
+#交给后端 upstream 为 download 的节点
+```
+
+| proxy 模块参数 | 说明 |
+| -- | -- |
+| proxy_next_upstream | 什么情况下将请求传递到下一个 upstream |
+| proxy_limite_rate | 限制从后端服务器读取响应的速率 |
+| proyx_set_header | 设置 http 请求 header 传给后端服务器节点，如：可实现让代理后端的服务器节点获取访问客户端的这是 ip |
+| client_body_buffer_size | 客户端请求主体缓冲区大小 |
+| proxy_connect_timeout | 代理与后端节点服务器连接的超时时间 |
+| proxy_send_timeout | 后端节点数据回传的超时时间 |
+| proxy_read_timeout | 设置 Nginx 从代理的后端服务器获取信息的时间，表示连接成功建立后，Nginx 等待后端服务器的响应时间 |
+| proxy_buffer_size | 设置缓冲区大小 |
+| proxy_buffers | 设置缓冲区的数量和大小 |
+| proyx_busy_buffers_size | 用于设置系统很忙时可以使用的 proxy_buffers 大小，推荐为 proxy_buffers的2倍 |
+| proxy_temp_file_write_size | 指定 proxy 缓存临时文件的大小 |
+### HAProxy
+略
+# 数据库
 
