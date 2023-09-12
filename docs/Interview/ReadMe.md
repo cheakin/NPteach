@@ -2001,3 +2001,8 @@ Task 分为 Map Task 和 Reduce Task 两种， 均由 TaskTracker 启动。 HDFS
     TaskTracker 为 Task 准备好运行环境后， 便会启动 Task。 在运行过程中， 每个 Task 的最 新进度首先由 Task 通过 RPC 汇报给 TaskTracker， 再由 TaskTracker 汇报给 JobTracker。
 5. 作业完成
     待所有 Task 执行完毕后， 整个作业执行成功。
+# Spark
+略
+# Storm
+略
+# YARN
