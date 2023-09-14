@@ -2006,3 +2006,30 @@ Task 分为 Map Task 和 Reduce Task 两种， 均由 TaskTracker 启动。 HDFS
 # Storm
 略
 # YARN
+## 概念
+YARN 是一个资源管理、任务调度的框架，主要包含三大模块：ResourceManager（RM）、 NodeManager（NM）、ApplicationMaster（AM）。其中，ResourceManager 负责所有资源的监控、分配和管理； ApplicationMaster 负责每一个具体应用程序的调度和协调； NodeManager 负责每一个节点的维护。对于所有的 applications，RM 拥有绝对的控制权和对资 源的分配权。而每个 AM 则会和 RM 协商资源，同时和 NodeManager 通信来执行和监控 task。 几个模块之间的关系如图所示。
+![[Pasted image 20230914224507.png]]
+* ResourceManager
+* NodeManager
+* NodeManager
+# 机器学习
+* 决策树 
+* 随机森林算法 
+* 逻辑回归 
+* SVM 
+* 朴素贝叶斯 
+* K 最近邻算法 
+* K 均值算法 
+* Adaboost 算法 
+* 神经网络 
+* 马尔可夫
+# 云计算
+## SaaS
+SaaS 是 Software-as-a-Service（软件即服务）
+## PaaS
+PaaS 是 Platform-as-a-Service 的缩写，意思是平台即服务。 把服务器平台作为一种服务提供的商业模式。通过网络进行程序提供的服务称之为 SaaS(Software as a Service)，而云计算时代相 应的服务器平台或者开发环境作为服务进行提供就成为了 PaaS(Platform as a Service)。
+## IaaS
+IaaS（Infrastructure as a Service），即基础设施即服务。提供给消费者的服务是对所有设施的利用，包括处理、存储、网络和其它基本的计算资源，用户能够部署和运行任意软件，包括操作系统和应用程序。
+![[Pasted image 20230914224910.png]]
+## Docker
+略
