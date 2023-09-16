@@ -700,7 +700,7 @@ docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 -v /mydata/rancher
 ### 安装MySQL
 #MySQL
 ``` sh
-docker run --name mysql -v /mydata/mysql/data:/var/lib/mysql -v /mydata/mysql/conf.d:/etc/mysql/conf.d -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql:3.7
+docker run --name mysql -v /mydata/mysql/data:/var/lib/mysql -v /mydata/mysql/conf.d:/etc/mysql/conf.d -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 -d mysql:5.7
 # -e MYSQL_ROOT_PASSWORD=123456 指定初始密码
 # -e TZ=Asia/Shanghai 设置时区，提前想好要不要设置
 
