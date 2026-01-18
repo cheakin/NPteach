@@ -1,0 +1,39 @@
+# 什么是守护进程?
+# 1.一种"依附于主进程存在的子进程"，一旦主进程结束，它就会被自动终止。
+# 2.简言之:主进程一死，守护进程必跟着死。
+
+# 守护进程的使用场景:
+# 1.后台监控类任务
+# 2.日志/统计/采样类任务
+# 3.辅助型"陪跑任务"
+
+import os
+import time
+from multiprocessing import Process
+
+
+def monitor():
+    while True:
+        try:
+            with open('log.txt', 'r', encoding='utf-8') as file:
+                lines = sum(1 for _ in file)
+        except FileNotFoundError:
+            lines = 0
+        print(f'守护进程({os.getpid()})：log.txt行数共{lines}行')
+        time.sleep(1)
+
+
+if __name__ == '__main__':
+    print(f'我是主进程({os.getpid()})的【第一行】代码')
+
+    p1 = Process(target=monitor, daemon=True)
+    p1.start()
+
+    # 向文件中写入数据
+    with open('log.txt', 'a', encoding='utf-8') as file:
+        for index in range(10):
+            file.write('hello' + str(index) + '\n')
+            file.flush()
+            time.sleep(1)
+
+    print(f'我是主进程({os.getpid()})的【最后行】代码')
