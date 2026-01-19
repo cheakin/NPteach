@@ -7,6 +7,14 @@
 # 2.日志/统计/采样类任务
 # 3.辅助型"陪跑任务"
 
+# 注意点:
+#   1.守护进程必须是 子进程。
+#   2.主进程结束，守护进程也会随之结束。
+#   3.守护进程中，不允许再创建新的子进程。
+#   4.必须在 start 之前，start()之后，不能再设置daemor数学
+
+
+
 import os
 import time
 from multiprocessing import Process
@@ -22,12 +30,18 @@ def monitor():
         print(f'守护进程({os.getpid()})：log.txt行数共{lines}行')
         time.sleep(1)
 
+def test():
+    for index in range(30):
+        print(f'我是test,进程pid:{os.getpid()}')
+        time.sleep(1)
 
 if __name__ == '__main__':
     print(f'我是主进程({os.getpid()})的【第一行】代码')
 
     p1 = Process(target=monitor, daemon=True)
+    p2 = Process(target=test)
     p1.start()
+    p2.start()
 
     # 向文件中写入数据
     with open('log.txt', 'a', encoding='utf-8') as file:
